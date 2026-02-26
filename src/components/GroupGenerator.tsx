@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useStore, Student } from '../store';
-import { Users, Shuffle, Download, UserPlus, AlertTriangle } from 'lucide-react';
+import { Users, Shuffle, Download, UserPlus, AlertTriangle, Settings2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function GroupGenerator() {
   const students = useStore((state) => state.students);
   const [groups, setGroups] = useState<Student[][]>([]);
+  const [generationMode, setGenerationMode] = useState<'groupCount' | 'groupSize'>('groupCount');
   const [groupCount, setGroupCount] = useState(4);
+  const [groupSize, setGroupSize] = useState(4);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateGroups = () => {
@@ -16,7 +18,16 @@ export default function GroupGenerator() {
     
     // Small delay for animation effect
     setTimeout(() => {
-      const newGroups: Student[][] = Array.from({ length: Math.max(1, groupCount) }, () => []);
+      let calculatedGroupCount = groupCount;
+      
+      if (generationMode === 'groupSize') {
+        // Calculate how many groups we need to ensure no group exceeds the max size
+        // while keeping them as balanced as possible.
+        calculatedGroupCount = Math.ceil(students.length / Math.max(1, groupSize));
+      }
+
+      calculatedGroupCount = Math.max(1, calculatedGroupCount);
+      const newGroups: Student[][] = Array.from({ length: calculatedGroupCount }, () => []);
       
       // Shuffle array function
       const shuffle = (array: Student[]) => {
@@ -37,13 +48,13 @@ export default function GroupGenerator() {
       // Distribute flagged students first to keep them separated as much as possible
       flagged.forEach(student => {
         newGroups[currentGroup].push(student);
-        currentGroup = (currentGroup + 1) % groupCount;
+        currentGroup = (currentGroup + 1) % calculatedGroupCount;
       });
 
       // Distribute the rest
       unflagged.forEach(student => {
         newGroups[currentGroup].push(student);
-        currentGroup = (currentGroup + 1) % groupCount;
+        currentGroup = (currentGroup + 1) % calculatedGroupCount;
       });
 
       setGroups(newGroups);
@@ -59,19 +70,36 @@ export default function GroupGenerator() {
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Randomly divide your class into groups. Flagged students are automatically separated.</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-            <span className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800">
-              Number of Groups:
-            </span>
-            <input
-              type="number"
-              min="1"
-              max={Math.max(1, students.length)}
-              value={groupCount}
-              onChange={(e) => setGroupCount(parseInt(e.target.value) || 1)}
-              className="w-16 px-3 py-2 text-center bg-transparent outline-none text-slate-900 dark:text-white font-medium"
-            />
+            <select
+              value={generationMode}
+              onChange={(e) => setGenerationMode(e.target.value as 'groupCount' | 'groupSize')}
+              className="px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-800 outline-none cursor-pointer"
+            >
+              <option value="groupCount">Number of Groups</option>
+              <option value="groupSize">Max Students per Group</option>
+            </select>
+            
+            {generationMode === 'groupCount' ? (
+              <input
+                type="number"
+                min="1"
+                max={Math.max(1, students.length)}
+                value={groupCount}
+                onChange={(e) => setGroupCount(parseInt(e.target.value) || 1)}
+                className="w-16 px-3 py-2 text-center bg-transparent outline-none text-slate-900 dark:text-white font-medium"
+              />
+            ) : (
+              <input
+                type="number"
+                min="1"
+                max={Math.max(1, students.length)}
+                value={groupSize}
+                onChange={(e) => setGroupSize(parseInt(e.target.value) || 1)}
+                className="w-16 px-3 py-2 text-center bg-transparent outline-none text-slate-900 dark:text-white font-medium"
+              />
+            )}
           </div>
           
           <button
