@@ -59,10 +59,13 @@ This will generate optimized static files in the `dist` directory, which can be 
 - **Dashboard**: Overview of today's classes and quick stats.
 - **Take Attendance**: Record daily attendance with support for past dates.
 - **Student Roster**: Manage your students, import from Excel, and flag students who need special attention.
-- **Class Schedule**: Calendar view to manage classwork, tests, and exams.
+- **Monthly Reports**: Generate and export attendance summaries to Excel.
+- **Daily Timetable**: Manage your weekly class schedule with time slots, subjects, and lessons. Export 1-month or semester-long lesson plans to Excel.
+- **Calendar Events**: Calendar view to manage classwork, tests, and exams. Includes a detailed event modal and the ability to export/import your schedule to/from Excel.
 - **Visual Seating**: Drag-and-drop seating chart with an auto-fill feature that respects flagged students (keeps them separated).
 - **Random Picker**: Fun, animated tool to randomly select a student for participation.
-- **Monthly Reports**: Generate and export attendance summaries to Excel.
+- **Smart Groups**: Automatically generate student groups for projects or activities, with an option to keep flagged students separated.
+- **Settings & Backup**: Manually export and import your database, and view instructions for setting up automatic cloud sync via Google Drive Desktop.
 
 ## Tech Stack
 - React 18
