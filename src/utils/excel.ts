@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Student, AttendanceRecord, TimetableSlot } from '../store';
+import { Student, AttendanceRecord, TimetableSlot, CalendarEvent } from '../store';
 import { format, getDaysInMonth, parseISO, startOfMonth, addDays, addMonths, isWeekend } from 'date-fns';
 
 export function importStudentsFromExcel(file: File): Promise<Student[]> {
@@ -178,4 +178,89 @@ export function exportTimetableToExcel(
   
   const fileName = `Lesson_Plan_${duration}_${startDateStr}.xlsx`;
   XLSX.writeFile(workbook, fileName);
+}
+
+export function exportScheduleToExcel(events: CalendarEvent[]) {
+  const data = events.map(e => ({
+    'Date (YYYY-MM-DD)': e.date,
+    'Title': e.title,
+    'Type': e.type,
+    'Description': e.description || ''
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Auto-size columns
+  const wscols = [
+    { wch: 18 }, // Date
+    { wch: 30 }, // Title
+    { wch: 15 }, // Type
+    { wch: 50 }  // Description
+  ];
+  worksheet['!cols'] = wscols;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedule');
+  
+  XLSX.writeFile(workbook, 'Class_Schedule.xlsx');
+}
+
+export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        
+        // Use raw: false to get formatted strings for dates if they are formatted as dates in Excel
+        const json = XLSX.utils.sheet_to_json(sheet, { raw: false, dateNF: 'yyyy-mm-dd' });
+        
+        const events: CalendarEvent[] = json.map((row: any, index) => {
+          // Find the date column (could be 'Date', 'Date (YYYY-MM-DD)', 'date')
+          let dateStr = row['Date (YYYY-MM-DD)'] || row['Date'] || row['date'];
+          
+          // Basic cleanup if it's MM/DD/YYYY or similar
+          if (dateStr && dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+              // Assume MM/DD/YYYY to YYYY-MM-DD
+              if (parts[2].length === 4) {
+                dateStr = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+              }
+            }
+          }
+
+          // Ensure it matches YYYY-MM-DD format roughly
+          if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            // Fallback to today if invalid
+            dateStr = format(new Date(), 'yyyy-MM-dd');
+          }
+
+          const title = row['Title'] || row['title'] || `Imported Event ${index + 1}`;
+          
+          let type = row['Type'] || row['type'] || 'Other';
+          if (!['Classwork', 'Test', 'Exam', 'Other'].includes(type)) {
+            type = 'Other';
+          }
+
+          return {
+            id: `evt_import_${Date.now()}_${index}`,
+            date: dateStr,
+            title: String(title),
+            type: type as any,
+            description: row['Description'] || row['description'] || ''
+          };
+        });
+        
+        resolve(events);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsBinaryString(file);
+  });
 }

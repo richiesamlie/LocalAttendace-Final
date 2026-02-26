@@ -94,6 +94,7 @@ interface AppState {
   setRecord: (record: AttendanceRecord) => void;
   setDailyNote: (date: string, note: string) => void;
   addEvent: (event: CalendarEvent) => void;
+  addEvents: (events: CalendarEvent[]) => void;
   updateEvent: (id: string, data: Partial<CalendarEvent>) => void;
   removeEvent: (id: string) => void;
   addTimetableSlot: (slot: TimetableSlot) => void;
@@ -158,6 +159,7 @@ export const useStore = create<AppState>()(
           dailyNotes: { ...state.dailyNotes, [date]: note },
         })),
       addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
+      addEvents: (newEvents) => set((state) => ({ events: [...state.events, ...newEvents] })),
       updateEvent: (id, data) => set((state) => ({
         events: state.events.map((e) => (e.id === id ? { ...e, ...data } : e)),
       })),

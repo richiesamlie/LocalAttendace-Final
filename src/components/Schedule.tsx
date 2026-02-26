@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload } from 'lucide-react';
+import { exportScheduleToExcel, importScheduleFromExcel } from '../utils/excel';
 
 export default function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -15,9 +16,11 @@ export default function Schedule() {
   
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const events = useStore((state) => state.events);
   const addEvent = useStore((state) => state.addEvent);
+  const addEvents = useStore((state) => state.addEvents);
   const updateEvent = useStore((state) => state.updateEvent);
   const removeEvent = useStore((state) => state.removeEvent);
 
@@ -68,6 +71,31 @@ export default function Schedule() {
     setSelectedEvent(null);
   };
 
+  const handleExport = () => {
+    exportScheduleToExcel(events);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const importedEvents = await importScheduleFromExcel(file);
+      if (importedEvents.length > 0) {
+        addEvents(importedEvents);
+        alert(`Successfully imported ${importedEvents.length} events!`);
+      }
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Failed to import schedule. Please check the file format.');
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const getEventIcon = (type: EventType) => {
     switch (type) {
       case 'Classwork': return <BookOpen className="w-4 h-4" />;
@@ -93,7 +121,29 @@ export default function Schedule() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Class Schedule</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage classwork, tests, and exams.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleImport}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={events.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </button>
           <input
             type="month"
             value={format(currentDate, 'yyyy-MM')}

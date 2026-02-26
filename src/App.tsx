@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Menu, X, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock } from 'lucide-react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Menu, X, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useStore } from './store';
 import Dashboard from './components/Dashboard';
@@ -72,61 +72,83 @@ export default function App() {
           </div>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2 mt-4">
+        <nav className="flex-1 px-4 space-y-1 mt-2 overflow-y-auto custom-scrollbar pb-4">
           <NavItem 
             icon={<Home className="w-5 h-5" />} 
             label="Dashboard" 
             active={currentPage === 'dashboard'} 
             onClick={() => navigate('dashboard')} 
           />
-          <NavItem 
-            icon={<CheckSquare className="w-5 h-5" />} 
-            label="Take Attendance" 
-            active={currentPage === 'attendance'} 
-            onClick={() => navigate('attendance')} 
-          />
-          <NavItem 
-            icon={<Users className="w-5 h-5" />} 
-            label="Student Roster" 
-            active={currentPage === 'roster'} 
-            onClick={() => navigate('roster')} 
-          />
-          <NavItem 
-            icon={<Clock className="w-5 h-5" />} 
-            label="Daily Timetable" 
-            active={currentPage === 'timetable'} 
-            onClick={() => navigate('timetable')} 
-          />
-          <NavItem 
-            icon={<CalendarDays className="w-5 h-5" />} 
-            label="Calendar Events" 
-            active={currentPage === 'schedule'} 
-            onClick={() => navigate('schedule')} 
-          />
-          <NavItem 
-            icon={<LayoutGrid className="w-5 h-5" />} 
-            label="Visual Seating" 
-            active={currentPage === 'seating'} 
-            onClick={() => navigate('seating')} 
-          />
-          <NavItem 
-            icon={<Shuffle className="w-5 h-5" />} 
-            label="Random Picker" 
-            active={currentPage === 'picker'} 
-            onClick={() => navigate('picker')} 
-          />
-          <NavItem 
-            icon={<Users className="w-5 h-5" />} 
-            label="Smart Groups" 
-            active={currentPage === 'groups'} 
-            onClick={() => navigate('groups')} 
-          />
-          <NavItem 
-            icon={<FileSpreadsheet className="w-5 h-5" />} 
-            label="Monthly Reports" 
-            active={currentPage === 'reports'} 
-            onClick={() => navigate('reports')} 
-          />
+
+          <div className="my-2 border-t border-slate-100 dark:border-slate-800/60" />
+
+          <NavGroup title="Students & Records" icon={<Users className="w-5 h-5" />} defaultExpanded={true}>
+            <NavItem 
+              icon={<CheckSquare className="w-4 h-4" />} 
+              label="Take Attendance" 
+              active={currentPage === 'attendance'} 
+              onClick={() => navigate('attendance')} 
+              subItem
+            />
+            <NavItem 
+              icon={<UserCircle className="w-4 h-4" />} 
+              label="Student Roster" 
+              active={currentPage === 'roster'} 
+              onClick={() => navigate('roster')} 
+              subItem
+            />
+            <NavItem 
+              icon={<FileSpreadsheet className="w-4 h-4" />} 
+              label="Monthly Reports" 
+              active={currentPage === 'reports'} 
+              onClick={() => navigate('reports')} 
+              subItem
+            />
+          </NavGroup>
+
+          <NavGroup title="Schedule & Planning" icon={<CalendarDays className="w-5 h-5" />} defaultExpanded={true}>
+            <NavItem 
+              icon={<Clock className="w-4 h-4" />} 
+              label="Daily Timetable" 
+              active={currentPage === 'timetable'} 
+              onClick={() => navigate('timetable')} 
+              subItem
+            />
+            <NavItem 
+              icon={<BookOpen className="w-4 h-4" />} 
+              label="Calendar Events" 
+              active={currentPage === 'schedule'} 
+              onClick={() => navigate('schedule')} 
+              subItem
+            />
+          </NavGroup>
+
+          <NavGroup title="Classroom Tools" icon={<Wrench className="w-5 h-5" />} defaultExpanded={false}>
+            <NavItem 
+              icon={<LayoutGrid className="w-4 h-4" />} 
+              label="Visual Seating" 
+              active={currentPage === 'seating'} 
+              onClick={() => navigate('seating')} 
+              subItem
+            />
+            <NavItem 
+              icon={<Shuffle className="w-4 h-4" />} 
+              label="Random Picker" 
+              active={currentPage === 'picker'} 
+              onClick={() => navigate('picker')} 
+              subItem
+            />
+            <NavItem 
+              icon={<Users className="w-4 h-4" />} 
+              label="Smart Groups" 
+              active={currentPage === 'groups'} 
+              onClick={() => navigate('groups')} 
+              subItem
+            />
+          </NavGroup>
+
+          <div className="my-2 border-t border-slate-100 dark:border-slate-800/60" />
+
           <NavItem 
             icon={<SettingsIcon className="w-5 h-5" />} 
             label="Settings & Backup" 
@@ -135,7 +157,7 @@ export default function App() {
           />
         </nav>
 
-        <div className="p-4 mt-auto space-y-4">
+        <div className="p-4 mt-auto space-y-4 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={toggleTheme}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -146,11 +168,6 @@ export default function App() {
               <><Sun className="w-4 h-4" /> Light Mode</>
             )}
           </button>
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium text-center">
-              All data is saved locally on your device for privacy and portability.
-            </p>
-          </div>
         </div>
       </aside>
 
@@ -172,12 +189,36 @@ export default function App() {
   );
 }
 
-function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) {
+function NavGroup({ title, icon, children, defaultExpanded = false }: { title: string, icon: React.ReactNode, children: React.ReactNode, defaultExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return (
+    <div className="mb-1">
+      <button 
+        onClick={() => setExpanded(!expanded)} 
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {icon}
+          {title}
+        </div>
+        {expanded ? <ChevronDown className="w-4 h-4 opacity-50" /> : <ChevronRight className="w-4 h-4 opacity-50" />}
+      </button>
+      {expanded && (
+        <div className="mt-1 space-y-1 relative before:absolute before:inset-y-0 before:left-[26px] before:w-px before:bg-slate-200 dark:before:bg-slate-800 pl-11 pr-2">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NavItem({ icon, label, active, onClick, subItem = false }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void, subItem?: boolean }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all",
+        "w-full flex items-center gap-3 rounded-xl font-medium transition-all",
+        subItem ? "px-3 py-2 text-sm" : "px-4 py-3",
         active 
           ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400" 
           : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-50"
