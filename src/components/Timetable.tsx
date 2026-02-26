@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useStore, TimetableSlot } from '../store';
-import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check } from 'lucide-react';
+import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { exportTimetableToExcel } from '../utils/excel';
+import { format } from 'date-fns';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WORK_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
@@ -15,6 +17,10 @@ export default function Timetable() {
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay());
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Export states
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportMonth, setExportMonth] = useState(format(new Date(), 'yyyy-MM'));
 
   const [formData, setFormData] = useState({
     startTime: '08:00',
@@ -62,6 +68,11 @@ export default function Timetable() {
     setFormData({ startTime: '08:00', endTime: '09:00', subject: '', lesson: '' });
   };
 
+  const handleExport = (duration: 'month' | 'semester') => {
+    exportTimetableToExcel(timetable, exportMonth, duration);
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -69,17 +80,71 @@ export default function Timetable() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Daily Class Schedule</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage your weekly timetable, subjects, and lessons.</p>
         </div>
-        <button
-          onClick={() => {
-            setIsAdding(true);
-            setEditingId(null);
-            setFormData({ startTime: '08:00', endTime: '09:00', subject: '', lesson: '' });
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add Class
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={timetable.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" />
+              Export Plan
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+                  <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> Export Lesson Plan
+                  </h3>
+                  <button onClick={() => setShowExportMenu(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Start Month</label>
+                    <input
+                      type="month"
+                      value={exportMonth}
+                      onChange={(e) => setExportMonth(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleExport('month')}
+                      className="w-full py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm"
+                    >
+                      Export 1 Month Plan
+                    </button>
+                    <button
+                      onClick={() => handleExport('semester')}
+                      className="w-full py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm"
+                    >
+                      Export Semester Plan (6 Months)
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                    Generates an Excel file with your weekly schedule mapped out for every day.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              setIsAdding(true);
+              setEditingId(null);
+              setFormData({ startTime: '08:00', endTime: '09:00', subject: '', lesson: '' });
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Class
+          </button>
+        </div>
       </div>
 
       {/* Day Selector */}

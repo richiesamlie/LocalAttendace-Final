@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import { Student, AttendanceRecord } from '../store';
-import { format, getDaysInMonth, parseISO, startOfMonth, addDays } from 'date-fns';
+import { Student, AttendanceRecord, TimetableSlot } from '../store';
+import { format, getDaysInMonth, parseISO, startOfMonth, addDays, addMonths, isWeekend } from 'date-fns';
 
 export function importStudentsFromExcel(file: File): Promise<Student[]> {
   return new Promise((resolve, reject) => {
@@ -120,4 +120,62 @@ export function generateTemplate() {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
   XLSX.writeFile(workbook, 'Student_Roster_Template.xlsx');
+}
+
+export function exportTimetableToExcel(
+  timetable: TimetableSlot[],
+  startDateStr: string, // 'YYYY-MM'
+  duration: 'month' | 'semester'
+) {
+  const startDate = parseISO(`${startDateStr}-01`);
+  const endDate = duration === 'month' 
+    ? addMonths(startDate, 1) 
+    : addMonths(startDate, 6); // 6 months for a semester
+
+  const data: any[] = [];
+  let currentDate = startDate;
+
+  // Loop through every day until the end date
+  while (currentDate < endDate) {
+    if (!isWeekend(currentDate)) {
+      const dayOfWeek = currentDate.getDay();
+      
+      // Find classes for this day
+      const classesForDay = timetable
+        .filter(slot => slot.dayOfWeek === dayOfWeek)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+      classesForDay.forEach(slot => {
+        data.push({
+          'Date': format(currentDate, 'yyyy-MM-dd'),
+          'Day': format(currentDate, 'EEEE'),
+          'Time': `${slot.startTime} - ${slot.endTime}`,
+          'Subject': slot.subject,
+          'Lesson / Topic': slot.lesson || '',
+          'Notes / Progress': '' // Blank column for teacher to write in
+        });
+      });
+    }
+    currentDate = addDays(currentDate, 1);
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Auto-size columns
+  const wscols = [
+    { wch: 12 }, // Date
+    { wch: 10 }, // Day
+    { wch: 15 }, // Time
+    { wch: 20 }, // Subject
+    { wch: 30 }, // Lesson
+    { wch: 30 }  // Notes
+  ];
+  worksheet['!cols'] = wscols;
+
+  const workbook = XLSX.utils.book_new();
+  const sheetName = duration === 'month' ? 'Monthly Plan' : 'Semester Plan';
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  
+  const fileName = `Lesson_Plan_${duration}_${startDateStr}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
 }

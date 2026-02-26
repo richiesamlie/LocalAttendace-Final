@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useStore, EventType } from '../store';
+import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2 } from 'lucide-react';
 
 export default function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -12,9 +12,13 @@ export default function Schedule() {
   const [eventTitle, setEventTitle] = useState('');
   const [eventType, setEventType] = useState<EventType>('Classwork');
   const [eventDesc, setEventDesc] = useState('');
+  
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isEditingEvent, setIsEditingEvent] = useState(false);
 
   const events = useStore((state) => state.events);
   const addEvent = useStore((state) => state.addEvent);
+  const updateEvent = useStore((state) => state.updateEvent);
   const removeEvent = useStore((state) => state.removeEvent);
 
   const monthStart = startOfMonth(currentDate);
@@ -27,17 +31,41 @@ export default function Schedule() {
     e.preventDefault();
     if (!eventTitle.trim()) return;
     
-    addEvent({
-      id: `evt_${Date.now()}`,
-      date: selectedDate,
-      title: eventTitle,
-      type: eventType,
-      description: eventDesc
-    });
+    if (isEditingEvent && selectedEvent) {
+      updateEvent(selectedEvent.id, {
+        title: eventTitle,
+        type: eventType,
+        description: eventDesc
+      });
+      setSelectedEvent(null);
+      setIsEditingEvent(false);
+    } else {
+      addEvent({
+        id: `evt_${Date.now()}`,
+        date: selectedDate,
+        title: eventTitle,
+        type: eventType,
+        description: eventDesc
+      });
+    }
     
     setEventTitle('');
     setEventDesc('');
     setIsAddingEvent(false);
+  };
+
+  const handleEditEvent = (event: CalendarEvent) => {
+    setEventTitle(event.title);
+    setEventType(event.type);
+    setEventDesc(event.description || '');
+    setSelectedEvent(event);
+    setIsEditingEvent(true);
+    setIsAddingEvent(true);
+  };
+
+  const handleDeleteEvent = (id: string) => {
+    removeEvent(id);
+    setSelectedEvent(null);
   };
 
   const getEventIcon = (type: EventType) => {
@@ -142,7 +170,13 @@ export default function Schedule() {
               {format(parseISO(selectedDate), 'MMMM do, yyyy')}
             </h3>
             <button
-              onClick={() => setIsAddingEvent(true)}
+              onClick={() => {
+                setIsAddingEvent(true);
+                setIsEditingEvent(false);
+                setEventTitle('');
+                setEventDesc('');
+                setEventType('Classwork');
+              }}
               className="p-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors"
             >
               <Plus className="w-5 h-5" />
@@ -152,8 +186,13 @@ export default function Schedule() {
           {isAddingEvent && (
             <form onSubmit={handleAddEvent} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 mb-4 space-y-3">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-slate-900 dark:text-white text-sm">New Event</h4>
-                <button type="button" onClick={() => setIsAddingEvent(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                <h4 className="font-medium text-slate-900 dark:text-white text-sm">
+                  {isEditingEvent ? 'Edit Event' : 'New Event'}
+                </h4>
+                <button type="button" onClick={() => {
+                  setIsAddingEvent(false);
+                  setIsEditingEvent(false);
+                }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -190,7 +229,7 @@ export default function Schedule() {
                 type="submit"
                 className="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors"
               >
-                Save Event
+                {isEditingEvent ? 'Update Event' : 'Save Event'}
               </button>
             </form>
           )}
@@ -203,29 +242,88 @@ export default function Schedule() {
               </div>
             ) : (
               selectedDateEvents.map(event => (
-                <div key={event.id} className={cn("rounded-2xl p-4 border relative group", getEventColor(event.type))}>
+                <button
+                  key={event.id}
+                  onClick={() => setSelectedEvent(event)}
+                  className={cn("w-full text-left rounded-2xl p-4 border relative group transition-all hover:shadow-md", getEventColor(event.type))}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 font-semibold mb-1">
                       {getEventIcon(event.type)}
                       <span>{event.title}</span>
                     </div>
-                    <button
-                      onClick={() => removeEvent(event.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                   <div className="text-xs font-medium opacity-75 mb-2 uppercase tracking-wider">{event.type}</div>
                   {event.description && (
-                    <p className="text-sm opacity-90 whitespace-pre-wrap">{event.description}</p>
+                    <p className="text-sm opacity-90 whitespace-pre-wrap line-clamp-2">{event.description}</p>
                   )}
-                </div>
+                </button>
               ))
             )}
           </div>
         </div>
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && !isEditingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className={cn("p-6 border-b", getEventColor(selectedEvent.type).replace('bg-', 'bg-opacity-50 bg-'))}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/50 dark:bg-black/20 rounded-xl">
+                    {getEventIcon(selectedEvent.type)}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                      {selectedEvent.title}
+                    </h2>
+                    <p className="text-sm font-medium opacity-80 uppercase tracking-wider mt-1">
+                      {selectedEvent.type} • {format(parseISO(selectedEvent.date), 'MMM do, yyyy')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="p-2 bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-2">Description</h3>
+              {selectedEvent.description ? (
+                <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap text-sm leading-relaxed">
+                  {selectedEvent.description}
+                </p>
+              ) : (
+                <p className="text-slate-400 dark:text-slate-500 italic text-sm">
+                  No description provided.
+                </p>
+              )}
+            </div>
+            
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+              <button
+                onClick={() => handleDeleteEvent(selectedEvent.id)}
+                className="flex items-center gap-2 px-4 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl font-medium transition-colors text-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+              <button
+                onClick={() => handleEditEvent(selectedEvent)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm text-sm"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit Event
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
