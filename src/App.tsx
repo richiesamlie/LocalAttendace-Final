@@ -9,6 +9,7 @@ import Reports from './components/Reports';
 import Schedule from './components/Schedule';
 import SeatingChart from './components/SeatingChart';
 import RandomPicker from './components/RandomPicker';
+import GroupGenerator from './components/GroupGenerator';
 import Settings from './components/Settings';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
       case 'schedule': return <Schedule />;
       case 'seating': return <SeatingChart />;
       case 'picker': return <RandomPicker />;
+      case 'groups': return <GroupGenerator />;
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
       default: return <Dashboard navigate={setCurrentPage} />;
@@ -104,6 +106,12 @@ export default function App() {
             label="Random Picker" 
             active={currentPage === 'picker'} 
             onClick={() => navigate('picker')} 
+          />
+          <NavItem 
+            icon={<Users className="w-5 h-5" />} 
+            label="Smart Groups" 
+            active={currentPage === 'groups'} 
+            onClick={() => navigate('groups')} 
           />
           <NavItem 
             icon={<FileSpreadsheet className="w-5 h-5" />} 
