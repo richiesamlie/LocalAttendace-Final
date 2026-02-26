@@ -1,0 +1,59 @@
+name: Nightly Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create Zip Archive
+        run: |
+          # Create a zip file containing the entire repository
+          # Exclude the .git folder and node_modules (since node_modules is OS-specific)
+          zip -r LocalAttendance-Nightly.zip . -x "*.git*" -x "node_modules/*"
+
+      - name: Update Nightly Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly
+          git push -f origin nightly
+
+      - name: Publish Nightly Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: nightly
+          name: "Nightly Build"
+          body: |
+            Automated nightly build generated from the latest commit.
+            
+            **How to use:**
+            1. Download the `LocalAttendance-Nightly.zip` file below.
+            2. Extract the folder to your computer.
+            3. Double-click `start-app.bat` to run the app. (It will automatically install the required dependencies on the first run).
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: "LocalAttendance-Nightly.zip"
+          token: ${{ secrets.GITHUB_TOKEN }}
