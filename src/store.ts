@@ -70,11 +70,21 @@ export interface CalendarEvent {
   description?: string;
 }
 
+export interface TimetableSlot {
+  id: string;
+  dayOfWeek: number; // 0 = Sunday, 1 = Monday, etc.
+  startTime: string; // e.g., "08:00"
+  endTime: string; // e.g., "09:00"
+  subject: string;
+  lesson: string;
+}
+
 interface AppState {
   students: Student[];
   records: AttendanceRecord[];
   dailyNotes: Record<string, string>;
   events: CalendarEvent[];
+  timetable: TimetableSlot[];
   seatingLayout: Record<string, string>; // key: "row-col", value: studentId
   theme: 'light' | 'dark';
   setStudents: (students: Student[]) => void;
@@ -85,6 +95,9 @@ interface AppState {
   setDailyNote: (date: string, note: string) => void;
   addEvent: (event: CalendarEvent) => void;
   removeEvent: (id: string) => void;
+  addTimetableSlot: (slot: TimetableSlot) => void;
+  updateTimetableSlot: (id: string, data: Partial<TimetableSlot>) => void;
+  removeTimetableSlot: (id: string) => void;
   updateSeat: (seatId: string, studentId: string | null) => void;
   setSeatingLayout: (layout: Record<string, string>) => void;
   clearSeatingLayout: () => void;
@@ -99,6 +112,7 @@ export const useStore = create<AppState>()(
       records: [],
       dailyNotes: {},
       events: [],
+      timetable: [],
       seatingLayout: {},
       theme: 'light',
       setStudents: (students) => set({ students }),
@@ -144,6 +158,11 @@ export const useStore = create<AppState>()(
         })),
       addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
       removeEvent: (id) => set((state) => ({ events: state.events.filter((e) => e.id !== id) })),
+      addTimetableSlot: (slot) => set((state) => ({ timetable: [...state.timetable, slot] })),
+      updateTimetableSlot: (id, data) => set((state) => ({
+        timetable: state.timetable.map((s) => (s.id === id ? { ...s, ...data } : s)),
+      })),
+      removeTimetableSlot: (id) => set((state) => ({ timetable: state.timetable.filter((s) => s.id !== id) })),
       updateSeat: (seatId, studentId) => set((state) => {
         const newSeating = { ...state.seatingLayout };
         
@@ -168,7 +187,7 @@ export const useStore = create<AppState>()(
         set((state) => ({
           theme: state.theme === 'light' ? 'dark' : 'light',
         })),
-      clearData: () => set({ students: [], records: [], dailyNotes: {}, events: [], seatingLayout: {} }),
+      clearData: () => set({ students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
     }),
     {
       name: 'teacher-assistant-storage',

@@ -15,12 +15,18 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   }, []);
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
+  const currentDayOfWeek = currentTime.getDay();
   const allRecords = useStore((state) => state.records);
   const records = allRecords.filter((r) => r.date === todayStr);
   const students = useStore((state) => state.students);
   const dailyNotes = useStore((state) => state.dailyNotes);
   const events = useStore((state) => state.events);
+  const timetable = useStore((state) => state.timetable || []);
   const todayNote = dailyNotes[todayStr];
+
+  const todaysClasses = timetable
+    .filter(slot => slot.dayOfWeek === currentDayOfWeek)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   const targetTime = setMinutes(setHours(new Date(), 8), 15);
   const isBeforeTarget = isBefore(currentTime, targetTime);
@@ -146,6 +152,44 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
                 <p className="text-3xl font-light text-orange-600 dark:text-orange-400">{records.filter(r => r.status === 'Late').length}</p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 md:col-span-2">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-500" />
+                <span>Today's Classes</span>
+              </div>
+              <button onClick={() => navigate('timetable')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                Manage Timetable
+              </button>
+            </h3>
+            
+            {todaysClasses.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {todaysClasses.map(slot => (
+                  <div key={slot.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700/50 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
+                        {slot.startTime} - {slot.endTime}
+                      </div>
+                      <div className="font-semibold text-slate-900 dark:text-white">{slot.subject}</div>
+                      {slot.lesson && <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{slot.lesson}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                <p className="text-slate-500 dark:text-slate-400 text-sm">No classes scheduled for today.</p>
+                <button onClick={() => navigate('timetable')} className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                  Set up your timetable
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 md:col-span-2">

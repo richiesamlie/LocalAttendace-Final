@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Menu, X, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon } from 'lucide-react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Menu, X, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useStore } from './store';
 import Dashboard from './components/Dashboard';
@@ -7,6 +7,7 @@ import TakeAttendance from './components/TakeAttendance';
 import Roster from './components/Roster';
 import Reports from './components/Reports';
 import Schedule from './components/Schedule';
+import Timetable from './components/Timetable';
 import SeatingChart from './components/SeatingChart';
 import RandomPicker from './components/RandomPicker';
 import GroupGenerator from './components/GroupGenerator';
@@ -31,6 +32,7 @@ export default function App() {
       case 'dashboard': return <Dashboard navigate={setCurrentPage} />;
       case 'attendance': return <TakeAttendance />;
       case 'roster': return <Roster />;
+      case 'timetable': return <Timetable />;
       case 'schedule': return <Schedule />;
       case 'seating': return <SeatingChart />;
       case 'picker': return <RandomPicker />;
@@ -90,8 +92,14 @@ export default function App() {
             onClick={() => navigate('roster')} 
           />
           <NavItem 
+            icon={<Clock className="w-5 h-5" />} 
+            label="Daily Timetable" 
+            active={currentPage === 'timetable'} 
+            onClick={() => navigate('timetable')} 
+          />
+          <NavItem 
             icon={<CalendarDays className="w-5 h-5" />} 
-            label="Class Schedule" 
+            label="Calendar Events" 
             active={currentPage === 'schedule'} 
             onClick={() => navigate('schedule')} 
           />
