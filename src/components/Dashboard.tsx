@@ -72,6 +72,8 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
 
   const todayHoliday = events.find(e => e.date === todayStr && e.type === 'Holiday');
 
+  const [activeTab, setActiveTab] = useState<'schedule' | 'events' | 'notes'>('schedule');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -171,114 +173,158 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 md:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-500" />
-                <span>Today's Classes</span>
-              </div>
-              <button onClick={() => navigate('timetable')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                Manage Timetable
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 md:col-span-2 overflow-hidden">
+            <div className="flex border-b border-slate-100 dark:border-slate-800 overflow-x-auto hide-scrollbar bg-slate-50/50 dark:bg-slate-800/20">
+              <button
+                onClick={() => setActiveTab('schedule')}
+                className={cn(
+                  "px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors",
+                  activeTab === 'schedule'
+                    ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                )}
+              >
+                <Clock className="w-4 h-4" /> Today's Classes
               </button>
-            </h3>
-            
-            {todayHoliday ? (
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800/50 flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center shrink-0">
-                  <Palmtree className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-300">No Classes Today</h4>
-                  <p className="text-emerald-700 dark:text-emerald-400 mt-1">
-                    Today is marked as an off day for: <strong>{todayHoliday.title}</strong>
-                  </p>
-                  {todayHoliday.description && (
-                    <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">{todayHoliday.description}</p>
+              <button
+                onClick={() => setActiveTab('events')}
+                className={cn(
+                  "px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors",
+                  activeTab === 'events'
+                    ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                )}
+              >
+                <Calendar className="w-4 h-4" /> Upcoming Events
+              </button>
+              {todayNote && (
+                <button
+                  onClick={() => setActiveTab('notes')}
+                  className={cn(
+                    "px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors",
+                    activeTab === 'notes'
+                      ? "border-amber-500 text-amber-600 dark:text-amber-400 bg-white dark:bg-slate-900"
+                      : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  )}
+                >
+                  <FileText className="w-4 h-4" /> Today's Notes
+                </button>
+              )}
+            </div>
+
+            <div className="p-6 sm:p-8">
+              {activeTab === 'schedule' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Class Timetable</h3>
+                    <button onClick={() => navigate('timetable')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                      Manage Timetable
+                    </button>
+                  </div>
+                  
+                  {todayHoliday ? (
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800/50 flex items-center gap-4">
+                      <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center shrink-0">
+                        <Palmtree className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-300">No Classes Today</h4>
+                        <p className="text-emerald-700 dark:text-emerald-400 mt-1">
+                          Today is marked as an off day for: <strong>{todayHoliday.title}</strong>
+                        </p>
+                        {todayHoliday.description && (
+                          <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">{todayHoliday.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : todaysClasses.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {todaysClasses.map(slot => (
+                        <div key={slot.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700/50 flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                            <BookOpen className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
+                              {slot.startTime} - {slot.endTime}
+                            </div>
+                            <div className={cn("font-semibold", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
+                              {slot.subject || 'Unassigned Subject'}
+                            </div>
+                            {slot.lesson && <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{slot.lesson}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">No classes scheduled for today.</p>
+                      <button onClick={() => navigate('timetable')} className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                        Set up your timetable
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
-            ) : todaysClasses.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {todaysClasses.map(slot => (
-                  <div key={slot.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700/50 flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                      <BookOpen className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
-                        {slot.startTime} - {slot.endTime}
-                      </div>
-                      <div className={cn("font-semibold", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
-                        {slot.subject || 'Unassigned Subject'}
-                      </div>
-                      {slot.lesson && <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{slot.lesson}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
-                <p className="text-slate-500 dark:text-slate-400 text-sm">No classes scheduled for today.</p>
-                <button onClick={() => navigate('timetable')} className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                  Set up your timetable
-                </button>
-              </div>
-            )}
-          </div>
+              )}
 
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800 md:col-span-2">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-indigo-500" />
-                <span>Upcoming Events</span>
-              </div>
-              <button onClick={() => navigate('schedule')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-                View All
-              </button>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {upcomingEvents.length > 0 ? (
-                upcomingEvents.map(event => {
-                  const isEventToday = event.date === todayStr;
-                  return (
-                    <div key={event.id} className={cn("rounded-2xl p-4 border", getEventColor(event.type))}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 font-semibold mb-1 text-sm">
-                          {getEventIcon(event.type)}
-                          <span className="truncate">{event.title}</span>
-                        </div>
-                        {isEventToday && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20">
-                            Today
-                          </span>
-                        )}
+              {activeTab === 'events' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Upcoming Events</h3>
+                    <button onClick={() => navigate('schedule')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                      View Calendar
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {upcomingEvents.length > 0 ? (
+                      upcomingEvents.map(event => {
+                        const isEventToday = event.date === todayStr;
+                        return (
+                          <div key={event.id} className={cn("rounded-2xl p-4 border", getEventColor(event.type))}>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2 font-semibold mb-1 text-sm">
+                                {getEventIcon(event.type)}
+                                <span className="truncate">{event.title}</span>
+                              </div>
+                              {isEventToday && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/50 dark:bg-black/20">
+                                  Today
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="text-[10px] font-medium opacity-75 uppercase tracking-wider">{event.type}</div>
+                              {!isEventToday && (
+                                <div className="text-xs font-medium opacity-90">{format(parseISO(event.date), 'MMM d')}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-3 text-slate-500 dark:text-slate-400 text-sm italic text-center py-4">
+                        No upcoming events scheduled.
                       </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="text-[10px] font-medium opacity-75 uppercase tracking-wider">{event.type}</div>
-                        {!isEventToday && (
-                          <div className="text-xs font-medium opacity-90">{format(parseISO(event.date), 'MMM d')}</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="col-span-3 text-slate-500 dark:text-slate-400 text-sm italic text-center py-4">
-                  No upcoming events scheduled.
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'notes' && todayNote && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Daily Remarks</h3>
+                    <button onClick={() => navigate('attendance')} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
+                      Edit Notes
+                    </button>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-6 border border-amber-100 dark:border-amber-800/30">
+                    <p className="text-amber-800 dark:text-amber-200/80 whitespace-pre-wrap leading-relaxed">{todayNote}</p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-
-          {todayNote && (
-            <div className="bg-amber-50 dark:bg-amber-900/10 rounded-3xl p-8 shadow-sm border border-amber-100 dark:border-amber-800/30 md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-                <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-300">Today's Notes</h3>
-              </div>
-              <p className="text-amber-800 dark:text-amber-200/80 whitespace-pre-wrap">{todayNote}</p>
-            </div>
-          )}
         </div>
       )}
     </div>
