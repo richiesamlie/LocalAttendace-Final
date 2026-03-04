@@ -44,7 +44,7 @@ const apiStorage: StateStorage = {
 };
 
 export type AttendanceStatus = 'Present' | 'Absent' | 'Sick' | 'Late';
-export type EventType = 'Classwork' | 'Test' | 'Exam' | 'Other';
+export type EventType = 'Classwork' | 'Test' | 'Exam' | 'Holiday' | 'Other';
 
 export interface Student {
   id: string;

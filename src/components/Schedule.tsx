@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree } from 'lucide-react';
 import { exportScheduleToExcel, importScheduleFromExcel } from '../utils/excel';
 
 export default function Schedule() {
@@ -101,6 +101,7 @@ export default function Schedule() {
       case 'Classwork': return <BookOpen className="w-4 h-4" />;
       case 'Test': return <PenTool className="w-4 h-4" />;
       case 'Exam': return <GraduationCap className="w-4 h-4" />;
+      case 'Holiday': return <Palmtree className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
@@ -110,6 +111,7 @@ export default function Schedule() {
       case 'Classwork': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
       case 'Test': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
       case 'Exam': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800';
+      case 'Holiday': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
       default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
     }
   };
@@ -265,6 +267,7 @@ export default function Schedule() {
                 <option value="Classwork">Classwork</option>
                 <option value="Test">Test</option>
                 <option value="Exam">Exam</option>
+                <option value="Holiday">Holiday / No Class</option>
                 <option value="Other">Other</option>
               </select>
               

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore, EventType } from '../store';
 import { format, isBefore, setHours, setMinutes, subDays, isAfter, parseISO } from 'date-fns';
-import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell } from 'lucide-react';
+import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
@@ -50,6 +50,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
       case 'Classwork': return <BookOpen className="w-4 h-4" />;
       case 'Test': return <PenTool className="w-4 h-4" />;
       case 'Exam': return <GraduationCap className="w-4 h-4" />;
+      case 'Holiday': return <Palmtree className="w-4 h-4" />;
       default: return <Bell className="w-4 h-4" />;
     }
   };
@@ -59,6 +60,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
       case 'Classwork': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
       case 'Test': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
       case 'Exam': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800';
+      case 'Holiday': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
       default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
     }
   };
@@ -67,6 +69,8 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
     .filter(e => e.date === todayStr || isAfter(parseISO(e.date), new Date()))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 3);
+
+  const todayHoliday = events.find(e => e.date === todayStr && e.type === 'Holiday');
 
   return (
     <div className="space-y-6">
@@ -178,7 +182,22 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
               </button>
             </h3>
             
-            {todaysClasses.length > 0 ? (
+            {todayHoliday ? (
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-6 border border-emerald-200 dark:border-emerald-800/50 flex items-center gap-4">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center shrink-0">
+                  <Palmtree className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-emerald-900 dark:text-emerald-300">No Classes Today</h4>
+                  <p className="text-emerald-700 dark:text-emerald-400 mt-1">
+                    Today is marked as an off day for: <strong>{todayHoliday.title}</strong>
+                  </p>
+                  {todayHoliday.description && (
+                    <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">{todayHoliday.description}</p>
+                  )}
+                </div>
+              </div>
+            ) : todaysClasses.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {todaysClasses.map(slot => (
                   <div key={slot.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-700/50 flex items-start gap-3">
