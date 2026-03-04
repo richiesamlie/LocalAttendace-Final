@@ -1,4 +1,4 @@
-name: Nightly Release
+name: Automated Release
 
 on:
   push:
@@ -30,33 +30,30 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Set Version
+        id: version
+        # This generates a version like v1.0.1, v1.0.2 based on the GitHub run number
+        run: echo "VERSION=v1.0.${{ github.run_number }}" >> $GITHUB_ENV
+
       - name: Create Zip Archive
         run: |
           # Create a zip file containing the entire repository
           # Exclude the .git folder and node_modules (since node_modules is OS-specific)
-          zip -r LocalAttendance-Nightly.zip . -x "*.git*" -x "node_modules/*"
+          zip -r LocalAttendance-${{ env.VERSION }}.zip . -x "*.git*" -x "node_modules/*"
 
-      - name: Update Nightly Tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -f nightly
-          git push -f origin nightly
-
-      - name: Publish Nightly Release
+      - name: Publish Release
         uses: ncipollo/release-action@v1
         with:
-          tag: nightly
-          name: "Nightly Build"
+          tag: ${{ env.VERSION }}
+          name: "Release ${{ env.VERSION }}"
           body: |
-            Automated nightly build generated from the latest commit.
+            Automated build generated from the latest commit.
             
             **How to use:**
-            1. Download the `LocalAttendance-Nightly.zip` file below.
+            1. Download the `LocalAttendance-${{ env.VERSION }}.zip` file below.
             2. Extract the folder to your computer.
             3. Double-click `start-app.bat` to run the app. (It will automatically install the required dependencies on the first run).
-          prerelease: true
-          allowUpdates: true
-          replacesArtifacts: true
-          artifacts: "LocalAttendance-Nightly.zip"
+          prerelease: false
+          makeLatest: true
+          artifacts: "LocalAttendance-${{ env.VERSION }}.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
