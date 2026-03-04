@@ -26,7 +26,20 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
 
   const todaysClasses = timetable
     .filter(slot => slot.dayOfWeek === currentDayOfWeek)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) => {
+      const parseTime = (timeStr: string) => {
+        if (!timeStr) return 0;
+        const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+        if (!match) return 0;
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const modifier = match[3]?.toLowerCase();
+        if (modifier === 'pm' && h < 12) h += 12;
+        if (modifier === 'am' && h === 12) h = 0;
+        return h * 60 + m;
+      };
+      return parseTime(a.startTime) - parseTime(b.startTime);
+    });
 
   const targetTime = setMinutes(setHours(new Date(), 8), 15);
   const isBeforeTarget = isBefore(currentTime, targetTime);
@@ -176,7 +189,9 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
                       <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
                         {slot.startTime} - {slot.endTime}
                       </div>
-                      <div className="font-semibold text-slate-900 dark:text-white">{slot.subject}</div>
+                      <div className={cn("font-semibold", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
+                        {slot.subject || 'Unassigned Subject'}
+                      </div>
                       {slot.lesson && <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{slot.lesson}</div>}
                     </div>
                   </div>

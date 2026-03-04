@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
 import { useStore, TimetableSlot } from '../store';
-import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List } from 'lucide-react';
+import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List, Copy } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { exportTimetableToExcel } from '../utils/excel';
 import { format } from 'date-fns';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WORK_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
+
+const parseTime = (timeStr: string) => {
+  if (!timeStr) return 0;
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+  if (!match) return 0;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const modifier = match[3]?.toLowerCase();
+  if (modifier === 'pm' && h < 12) h += 12;
+  if (modifier === 'am' && h === 12) h = 0;
+  return h * 60 + m;
+};
 
 export default function Timetable() {
   const timetable = useStore((state) => state.timetable || []);
@@ -32,7 +44,7 @@ export default function Timetable() {
 
   const slotsForDay = timetable
     .filter(slot => slot.dayOfWeek === selectedDay)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) => parseTime(a.startTime) - parseTime(b.startTime));
 
   const handleSave = () => {
     if (!formData.subject.trim() || !formData.startTime || !formData.endTime) return;
@@ -274,7 +286,29 @@ export default function Timetable() {
               <Clock className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg text-slate-900 dark:text-white font-semibold">No classes scheduled</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1">Click "Add Class" to build your timetable for {DAYS[selectedDay]}.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">Click "Add Class" to build your timetable for {DAYS[selectedDay]}.</p>
+            
+            {selectedDay !== 1 && timetable.some(s => s.dayOfWeek === 1) && (
+              <button
+                onClick={() => {
+                  const mondaySlots = timetable.filter(slot => slot.dayOfWeek === 1).sort((a, b) => parseTime(a.startTime) - parseTime(b.startTime));
+                  mondaySlots.forEach(slot => {
+                    addTimetableSlot({
+                      id: crypto.randomUUID(),
+                      dayOfWeek: selectedDay,
+                      startTime: slot.startTime,
+                      endTime: slot.endTime,
+                      subject: '',
+                      lesson: ''
+                    });
+                  });
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+                Copy Times from Monday
+              </button>
+            )}
           </div>
         ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -320,7 +354,9 @@ export default function Timetable() {
                   </div>
 
                   <div className="mb-2">
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{slot.subject}</h3>
+                    <h3 className={cn("text-xl font-bold leading-tight", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
+                      {slot.subject || 'Unassigned Subject'}
+                    </h3>
                   </div>
                   
                   <div className="mt-auto pt-4">
@@ -364,7 +400,9 @@ export default function Timetable() {
                   <div className="flex items-start gap-3">
                     <BookOpen className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                     <div>
-                      <div className="font-medium text-slate-900 dark:text-white">{slot.subject}</div>
+                      <div className={cn("font-medium", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
+                        {slot.subject || 'Unassigned Subject'}
+                      </div>
                       <div className="text-xs text-slate-500 dark:text-slate-400">Subject</div>
                     </div>
                   </div>
