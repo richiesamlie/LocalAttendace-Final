@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useStore, AttendanceStatus } from '../store';
 import { format, isToday } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Check, X, Thermometer, Clock, Save, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { Check, X, Thermometer, Clock, Save, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   
   const date = activeTab === 'today' ? format(new Date(), 'yyyy-MM-dd') : selectedDate;
   
@@ -120,15 +121,43 @@ export default function TakeAttendance() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Daily Notes / Remarks</label>
-          <textarea
-            key={`note-${date}`}
-            defaultValue={todayNote}
-            onBlur={(e) => setDailyNote(date, e.target.value)}
-            placeholder="Add any general notes for today (e.g., 'Heavy rain, many students late')"
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white resize-none h-24"
-          />
+        <div className="border-b border-slate-100 dark:border-slate-800">
+          <button
+            onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+            className="w-full flex items-center justify-between p-4 sm:p-6 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "p-2 rounded-xl transition-colors",
+                todayNote ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+              )}>
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Daily Notes / Remarks</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {todayNote ? "You have notes for this day." : "Add general notes for this day (e.g., weather, events)."}
+                </p>
+              </div>
+            </div>
+            {isNotesExpanded ? (
+              <ChevronDown className="w-5 h-5 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-slate-400" />
+            )}
+          </button>
+          
+          {isNotesExpanded && (
+            <div className="px-6 pb-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <textarea
+                key={`note-${date}`}
+                defaultValue={todayNote}
+                onBlur={(e) => setDailyNote(date, e.target.value)}
+                placeholder="Add any general notes for today (e.g., 'Heavy rain, many students late')"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white resize-none h-24"
+              />
+            </div>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
 import { importStudentsFromExcel, generateTemplate } from '../utils/excel';
-import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function Roster() {
@@ -18,6 +18,7 @@ export default function Roster() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [editName, setEditName] = useState('');
   const [editRoll, setEditRoll] = useState('');
   const [editParentName, setEditParentName] = useState('');
@@ -116,36 +117,59 @@ export default function Roster() {
               className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
             />
           </div>
-          <button
-            onClick={generateTemplate}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Template
-          </button>
           
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
-          >
-            <Upload className="w-4 h-4" />
-            {isImporting ? 'Importing...' : 'Import Excel'}
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel Tools</span>
+            </button>
+
+            {showMoreMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 space-y-1">
+                  <button
+                    onClick={() => {
+                      generateTemplate();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors text-left"
+                  >
+                    <Download className="w-4 h-4 text-slate-400" />
+                    Download Template
+                  </button>
+                  
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      handleFileUpload(e);
+                      setShowMoreMenu(false);
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isImporting}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-xl transition-colors text-left disabled:opacity-50"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {isImporting ? 'Importing...' : 'Import from Excel'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             onClick={startAddStudent}
             className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add Student
+            <span className="hidden sm:inline">Add Student</span>
           </button>
         </div>
       </div>

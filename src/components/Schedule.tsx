@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree, FileSpreadsheet } from 'lucide-react';
 import { exportScheduleToExcel, importScheduleFromExcel } from '../utils/excel';
 
 export default function Schedule() {
@@ -16,6 +16,7 @@ export default function Schedule() {
   
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const events = useStore((state) => state.events);
@@ -124,28 +125,52 @@ export default function Schedule() {
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage classwork, tests, and exams.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImport}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-          <button
-            onClick={handleExport}
-            disabled={events.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel Tools</span>
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 space-y-1">
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      handleImport(e);
+                      setShowExportMenu(false);
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors text-left"
+                  >
+                    <Upload className="w-4 h-4 text-slate-400" />
+                    Import Schedule
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      handleExport();
+                      setShowExportMenu(false);
+                    }}
+                    disabled={events.length === 0}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-xl transition-colors text-left disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export Schedule
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <input
             type="month"
             value={format(currentDate, 'yyyy-MM')}
