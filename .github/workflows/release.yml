@@ -47,12 +47,14 @@ jobs:
           tag: ${{ env.VERSION }}
           name: "Release ${{ env.VERSION }}"
           body: |
-            Automated build generated from the latest commit.
-            
             **How to use:**
             1. Download the `LocalAttendance-${{ env.VERSION }}.zip` file below.
             2. Extract the folder to your computer.
             3. Double-click `start-app.bat` to run the app. (It will automatically install the required dependencies on the first run).
+            
+            ---
+            ### 📝 Changelog
+          generateReleaseNotes: true
           prerelease: false
           makeLatest: true
           artifacts: "LocalAttendance-${{ env.VERSION }}.zip"
