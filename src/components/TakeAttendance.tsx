@@ -123,8 +123,9 @@ export default function TakeAttendance() {
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Daily Notes / Remarks</label>
           <textarea
-            value={todayNote}
-            onChange={(e) => setDailyNote(date, e.target.value)}
+            key={`note-${date}`}
+            defaultValue={todayNote}
+            onBlur={(e) => setDailyNote(date, e.target.value)}
             placeholder="Add any general notes for today (e.g., 'Heavy rain, many students late')"
             className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white resize-none h-24"
           />
@@ -145,7 +146,7 @@ export default function TakeAttendance() {
                 const status = record?.status;
 
                 return (
-                  <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr key={`${date}-${student.id}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{student.name}</td>
                     <td className="px-6 py-4">
@@ -185,8 +186,8 @@ export default function TakeAttendance() {
                         <input
                           type="text"
                           placeholder={`Reason for being ${status.toLowerCase()}...`}
-                          value={record?.reason || ''}
-                          onChange={(e) => handleReasonChange(student.id, e.target.value)}
+                          defaultValue={record?.reason || ''}
+                          onBlur={(e) => handleReasonChange(student.id, e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm transition-all dark:text-white"
                         />
                       ) : (
