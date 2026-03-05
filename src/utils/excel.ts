@@ -105,6 +105,26 @@ export function exportMonthlyReportToExcel(
   });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
+  
+  // Auto-size columns
+  if (data.length > 0) {
+    const wscols = Object.keys(data[0]).map(key => {
+      const maxContentLength = data.reduce((max, row) => {
+        const content = row[key] ? String(row[key]) : '';
+        return Math.max(max, content.length);
+      }, key.length);
+      return { wch: Math.min(Math.max(maxContentLength + 2, 5), 30) };
+    });
+    worksheet['!cols'] = wscols;
+  }
+
+  // Print setup
+  worksheet['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
+  worksheet['!margins'] = { left: 0.4, right: 0.4, top: 0.4, bottom: 0.4, header: 0.3, footer: 0.3 };
+  
+  // Freeze top row and first two columns
+  worksheet['!views'] = [{ state: 'frozen', xSplit: 2, ySplit: 1 }];
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, format(monthDate, 'MMM yyyy'));
   
@@ -119,6 +139,12 @@ export function generateTemplate() {
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
+  
+  // Print setup
+  worksheet['!pageSetup'] = { orientation: 'portrait', fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
+  worksheet['!margins'] = { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
+  worksheet['!cols'] = [{ wch: 15 }, { wch: 30 }];
+
   XLSX.writeFile(workbook, 'Student_Roster_Template.xlsx');
 }
 
@@ -203,6 +229,13 @@ export function exportTimetableToExcel(
   }
   worksheet['!cols'] = wscols;
 
+  // Print setup
+  worksheet['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
+  worksheet['!margins'] = { left: 0.4, right: 0.4, top: 0.4, bottom: 0.4, header: 0.3, footer: 0.3 };
+  
+  // Freeze top row
+  worksheet['!views'] = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
   const workbook = XLSX.utils.book_new();
   const sheetName = duration === 'weekly' ? 'Weekly Template' : duration === 'month' ? 'Monthly Plan' : 'Semester Plan';
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -229,6 +262,13 @@ export function exportScheduleToExcel(events: CalendarEvent[]) {
     { wch: 50 }  // Description
   ];
   worksheet['!cols'] = wscols;
+
+  // Print setup
+  worksheet['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0, paperSize: 9 };
+  worksheet['!margins'] = { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
+  
+  // Freeze top row
+  worksheet['!views'] = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Schedule');
