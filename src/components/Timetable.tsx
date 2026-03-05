@@ -81,7 +81,7 @@ export default function Timetable() {
     setFormData({ startTime: '08:00', endTime: '09:00', subject: '', lesson: '' });
   };
 
-  const handleExport = (duration: 'month' | 'semester') => {
+  const handleExport = (duration: 'weekly' | 'month' | 'semester') => {
     exportTimetableToExcel(timetable, exportMonth, duration);
     setShowExportMenu(false);
   };
@@ -153,20 +153,26 @@ export default function Timetable() {
                   </div>
                   <div className="space-y-2">
                     <button
+                      onClick={() => handleExport('weekly')}
+                      className="w-full py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm"
+                    >
+                      Export Weekly Template (No Dates)
+                    </button>
+                    <button
                       onClick={() => handleExport('month')}
                       className="w-full py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm"
                     >
-                      Export 1 Month Plan
+                      Export 1 Month Plan (With Dates)
                     </button>
                     <button
                       onClick={() => handleExport('semester')}
                       className="w-full py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm"
                     >
-                      Export Semester Plan (6 Months)
+                      Export Semester Plan (With Dates)
                     </button>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-                    Generates an Excel file with your weekly schedule mapped out for every day.
+                    Generate an Excel file with your schedule. Monthly and Semester plans map out every specific date.
                   </p>
                 </div>
               </div>
