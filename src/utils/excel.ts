@@ -9,21 +9,53 @@ export function importStudentsFromExcel(file: File): Promise<Student[]> {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
+        
+        if (!workbook.SheetNames.length) {
+          throw new Error("The Excel file contains no sheets.");
+        }
+
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(sheet);
         
-        const students: Student[] = json.map((row: any, index) => ({
-          id: `std_${Date.now()}_${index}`,
-          name: row['Name'] || row['name'] || row['Student Name'] || `Student ${index + 1}`,
-          rollNumber: String(row['Roll Number'] || row['rollNumber'] || row['Roll'] || row['ID'] || `${index + 1}`),
-        }));
+        if (!json || json.length === 0) {
+          throw new Error("The Excel sheet is empty or contains no readable data.");
+        }
+
+        const students: Student[] = [];
+        const rollNumbers = new Set<string>();
+
+        for (let index = 0; index < json.length; index++) {
+          const row: any = json[index];
+          const name = row['Name'] || row['name'] || row['Student Name'];
+          const rollNumberRaw = row['Roll Number'] || row['rollNumber'] || row['Roll'] || row['ID'];
+          
+          if (!name || String(name).trim() === '') {
+            throw new Error(`Row ${index + 2}: Missing student name. Please ensure the 'Name' column is filled.`);
+          }
+
+          const rollNumber = rollNumberRaw !== undefined && rollNumberRaw !== null 
+            ? String(rollNumberRaw).trim() 
+            : `${index + 1}`;
+
+          if (rollNumbers.has(rollNumber)) {
+            throw new Error(`Row ${index + 2}: Duplicate Roll Number '${rollNumber}' found. Roll numbers must be unique.`);
+          }
+          rollNumbers.add(rollNumber);
+
+          students.push({
+            id: `std_${Date.now()}_${index}`,
+            name: String(name).trim(),
+            rollNumber: rollNumber,
+          });
+        }
+        
         resolve(students);
       } catch (err) {
         reject(err);
       }
     };
-    reader.onerror = (err) => reject(err);
+    reader.onerror = (err) => reject(new Error("Failed to read the file."));
     reader.readAsBinaryString(file);
   });
 }
@@ -328,55 +360,89 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
+        
+        if (!workbook.SheetNames.length) {
+          throw new Error("The Excel file contains no sheets.");
+        }
+
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         
         // Use raw: false to get formatted strings for dates if they are formatted as dates in Excel
         const json = XLSX.utils.sheet_to_json(sheet, { raw: false, dateNF: 'yyyy-mm-dd' });
         
-        const events: CalendarEvent[] = json.map((row: any, index) => {
+        if (!json || json.length === 0) {
+          throw new Error("The Excel sheet is empty or contains no readable data.");
+        }
+
+        const events: CalendarEvent[] = [];
+
+        for (let index = 0; index < json.length; index++) {
+          const row: any = json[index];
+          
           // Find the date column (could be 'Date', 'Date (YYYY-MM-DD)', 'date')
           let dateStr = row['Date (YYYY-MM-DD)'] || row['Date'] || row['date'];
           
+          if (!dateStr || String(dateStr).trim() === '') {
+            throw new Error(`Row ${index + 2}: Missing date. Please ensure the 'Date' column is filled.`);
+          }
+
+          dateStr = String(dateStr).trim();
+
           // Basic cleanup if it's MM/DD/YYYY or similar
-          if (dateStr && dateStr.includes('/')) {
+          if (dateStr.includes('/')) {
             const parts = dateStr.split('/');
             if (parts.length === 3) {
               // Assume MM/DD/YYYY to YYYY-MM-DD
               if (parts[2].length === 4) {
                 dateStr = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+              } else if (parts[0].length === 4) {
+                // YYYY/MM/DD
+                dateStr = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
               }
             }
           }
 
           // Ensure it matches YYYY-MM-DD format roughly
-          if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            // Fallback to today if invalid
-            dateStr = format(new Date(), 'yyyy-MM-dd');
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            throw new Error(`Row ${index + 2}: Invalid date format '${dateStr}'. Please use YYYY-MM-DD format.`);
           }
 
-          const title = row['Title'] || row['title'] || `Imported Event ${index + 1}`;
+          const title = row['Title'] || row['title'];
+          if (!title || String(title).trim() === '') {
+            throw new Error(`Row ${index + 2}: Missing event title. Please ensure the 'Title' column is filled.`);
+          }
           
-          let type = row['Type'] || row['type'] || 'Other';
-          if (!['Classwork', 'Test', 'Exam', 'Other'].includes(type)) {
-            type = 'Other';
+          let type = row['Type'] || row['type'];
+          if (!type || String(type).trim() === '') {
+            throw new Error(`Row ${index + 2}: Missing event type. Please ensure the 'Type' column is filled.`);
+          }
+          
+          type = String(type).trim();
+          const validTypes = ['Classwork', 'Test', 'Exam', 'Other'];
+          
+          // Case-insensitive match for type
+          const matchedType = validTypes.find(t => t.toLowerCase() === type.toLowerCase());
+          
+          if (!matchedType) {
+            throw new Error(`Row ${index + 2}: Invalid event type '${type}'. Valid types are: Classwork, Test, Exam, Other.`);
           }
 
-          return {
+          events.push({
             id: `evt_import_${Date.now()}_${index}`,
             date: dateStr,
-            title: String(title),
-            type: type as any,
+            title: String(title).trim(),
+            type: matchedType as any,
             description: row['Description'] || row['description'] || ''
-          };
-        });
+          });
+        }
         
         resolve(events);
       } catch (err) {
         reject(err);
       }
     };
-    reader.onerror = (err) => reject(err);
+    reader.onerror = (err) => reject(new Error("Failed to read the file."));
     reader.readAsBinaryString(file);
   });
 }

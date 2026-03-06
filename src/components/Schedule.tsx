@@ -88,7 +88,7 @@ export default function Schedule() {
       }
     } catch (error) {
       console.error('Import failed:', error);
-      alert('Failed to import schedule. Please check the file format.');
+      alert(error instanceof Error ? error.message : 'Failed to import schedule. Please check the file format.');
     }
     
     // Reset input

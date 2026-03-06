@@ -35,7 +35,7 @@ export default function Roster() {
       // Replace the roster automatically to avoid confirm prompt issues in iframe
       setStudents(importedStudents);
     } catch (error) {
-      alert('Error importing students. Please ensure it is a valid Excel file.');
+      alert(error instanceof Error ? error.message : 'Error importing students. Please ensure it is a valid Excel file.');
       console.error(error);
     } finally {
       setIsImporting(false);
