@@ -36,6 +36,13 @@ npm run dev
 ### 4. Open the App
 After running the start command, your terminal will display a local URL (usually `http://localhost:5173` or `http://localhost:3000`). Open this URL in your web browser to use the app.
 
+### 5. Accessing on your Internal Network (Internal Site)
+Because the server runs on `0.0.0.0`, you can access this application from any other device (like your phone, tablet, or another computer) connected to the same Wi-Fi or internal network:
+1. Find your computer's local IP address (e.g., `192.168.1.50`).
+   - On Windows: Open Command Prompt and type `ipconfig`, look for "IPv4 Address".
+   - On Mac: Open Terminal and type `ipconfig getifaddr en0`.
+2. Open a web browser on your other device and navigate to `http://YOUR_IP_ADDRESS:3000` (e.g., `http://192.168.1.50:3000`).
+
 ## Windows Automation (Run on Startup)
 
 If you are using Windows, you can automate the application to start automatically every time you turn on your computer:
@@ -64,8 +71,20 @@ This will generate optimized static files in the `dist` directory, which can be 
 - **Calendar Events**: Calendar view to manage classwork, tests, and exams. Includes a detailed event modal and the ability to export/import your schedule to/from Excel.
 - **Visual Seating**: Drag-and-drop seating chart with an auto-fill feature that respects flagged students (keeps them separated).
 - **Random Picker**: Fun, animated tool to randomly select a student for participation.
-- **Smart Groups**: Automatically generate student groups for projects or activities, with an option to keep flagged students separated.
+- **Smart Groups**: Automatically generate student groups for projects or activities. Includes a "Separate flagged" toggle to ensure students needing special attention are distributed across different groups.
 - **Settings & Backup**: Manually export and import your database, and view instructions for setting up automatic cloud sync via Google Drive Desktop.
+
+## Screenshots
+
+*(Replace these placeholder images with actual screenshots of your app for GitHub)*
+
+| Dashboard | Student Roster |
+| :---: | :---: |
+| <img src="https://placehold.co/600x400/1e293b/ffffff?text=Dashboard" alt="Dashboard" width="100%"/> | <img src="https://placehold.co/600x400/1e293b/ffffff?text=Student+Roster" alt="Student Roster" width="100%"/> |
+
+| Visual Seating | Smart Groups |
+| :---: | :---: |
+| <img src="https://placehold.co/600x400/1e293b/ffffff?text=Visual+Seating" alt="Visual Seating" width="100%"/> | <img src="https://placehold.co/600x400/1e293b/ffffff?text=Smart+Groups" alt="Smart Groups" width="100%"/> |
 
 ## Tech Stack
 - React 18

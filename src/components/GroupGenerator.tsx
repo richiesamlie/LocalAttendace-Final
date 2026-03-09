@@ -10,6 +10,7 @@ export default function GroupGenerator() {
   const [groupCount, setGroupCount] = useState(4);
   const [groupSize, setGroupSize] = useState(4);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [preventFlaggedGrouping, setPreventFlaggedGrouping] = useState(true);
 
   const generateGroups = () => {
     if (students.length === 0) return;
@@ -26,9 +27,6 @@ export default function GroupGenerator() {
         calculatedGroupCount = Math.ceil(students.length / Math.max(1, groupSize));
       }
 
-      calculatedGroupCount = Math.max(1, calculatedGroupCount);
-      const newGroups: Student[][] = Array.from({ length: calculatedGroupCount }, () => []);
-      
       // Shuffle array function
       const shuffle = (array: Student[]) => {
         const newArray = [...array];
@@ -43,19 +41,35 @@ export default function GroupGenerator() {
       const flagged = shuffle(students.filter(s => s.isFlagged));
       const unflagged = shuffle(students.filter(s => !s.isFlagged));
 
+      if (preventFlaggedGrouping) {
+        calculatedGroupCount = Math.max(calculatedGroupCount, flagged.length);
+      }
+
+      calculatedGroupCount = Math.max(1, calculatedGroupCount);
+      const newGroups: Student[][] = Array.from({ length: calculatedGroupCount }, () => []);
+
       let currentGroup = 0;
 
-      // Distribute flagged students first to keep them separated as much as possible
-      flagged.forEach(student => {
-        newGroups[currentGroup].push(student);
-        currentGroup = (currentGroup + 1) % calculatedGroupCount;
-      });
+      if (preventFlaggedGrouping) {
+        // Distribute flagged students first to keep them separated
+        flagged.forEach(student => {
+          newGroups[currentGroup].push(student);
+          currentGroup = (currentGroup + 1) % calculatedGroupCount;
+        });
 
-      // Distribute the rest
-      unflagged.forEach(student => {
-        newGroups[currentGroup].push(student);
-        currentGroup = (currentGroup + 1) % calculatedGroupCount;
-      });
+        // Distribute the rest
+        unflagged.forEach(student => {
+          newGroups[currentGroup].push(student);
+          currentGroup = (currentGroup + 1) % calculatedGroupCount;
+        });
+      } else {
+        // Just shuffle everyone and distribute
+        const allStudents = shuffle([...students]);
+        allStudents.forEach(student => {
+          newGroups[currentGroup].push(student);
+          currentGroup = (currentGroup + 1) % calculatedGroupCount;
+        });
+      }
 
       setGroups(newGroups);
       setIsGenerating(false);
@@ -67,10 +81,20 @@ export default function GroupGenerator() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Group Generator</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Randomly divide your class into groups. Flagged students are automatically separated.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Randomly divide your class into groups.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl shadow-sm">
+            <input
+              type="checkbox"
+              checked={preventFlaggedGrouping}
+              onChange={(e) => setPreventFlaggedGrouping(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:checked:bg-indigo-500"
+            />
+            Separate flagged
+          </label>
+
           <div className="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
             <select
               value={generationMode}
