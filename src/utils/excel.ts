@@ -24,14 +24,17 @@ export function importStudentsFromExcel(file: File): Promise<Student[]> {
 
         const students: Student[] = [];
         const rollNumbers = new Set<string>();
+        const errors: string[] = [];
 
         for (let index = 0; index < json.length; index++) {
           const row: any = json[index];
+          const rowNum = index + 2;
           const name = row['Name'] || row['name'] || row['Student Name'];
           const rollNumberRaw = row['Roll Number'] || row['rollNumber'] || row['Roll'] || row['ID'];
           
           if (!name || String(name).trim() === '') {
-            throw new Error(`Row ${index + 2}: Missing student name. Please ensure the 'Name' column is filled.`);
+            errors.push(`Row ${rowNum}: Missing student name. Please ensure the 'Name' column is filled.`);
+            continue;
           }
 
           const rollNumber = rollNumberRaw !== undefined && rollNumberRaw !== null 
@@ -39,7 +42,8 @@ export function importStudentsFromExcel(file: File): Promise<Student[]> {
             : `${index + 1}`;
 
           if (rollNumbers.has(rollNumber)) {
-            throw new Error(`Row ${index + 2}: Duplicate Roll Number '${rollNumber}' found. Roll numbers must be unique.`);
+            errors.push(`Row ${rowNum}: Duplicate Roll Number '${rollNumber}' found. Roll numbers must be unique.`);
+            continue;
           }
           rollNumbers.add(rollNumber);
 
@@ -50,7 +54,14 @@ export function importStudentsFromExcel(file: File): Promise<Student[]> {
           });
         }
         
-        resolve(students);
+        if (errors.length > 0) {
+          const errorMsg = `Import failed with ${errors.length} error(s):\n\n` + 
+            errors.slice(0, 10).join('\n') + 
+            (errors.length > 10 ? `\n...and ${errors.length - 10} more.` : '');
+          reject(new Error(errorMsg));
+        } else {
+          resolve(students);
+        }
       } catch (err) {
         reject(err);
       }
@@ -381,15 +392,18 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
         }
 
         const events: CalendarEvent[] = [];
+        const errors: string[] = [];
 
         for (let index = 0; index < json.length; index++) {
           const row: any = json[index];
+          const rowNum = index + 2;
           
           // Find the date column (could be 'Date', 'Date (YYYY-MM-DD)', 'date')
           let dateStr = row['Date (YYYY-MM-DD)'] || row['Date'] || row['date'];
           
           if (!dateStr || String(dateStr).trim() === '') {
-            throw new Error(`Row ${index + 2}: Missing date. Please ensure the 'Date' column is filled.`);
+            errors.push(`Row ${rowNum}: Missing date. Please ensure the 'Date' column is filled.`);
+            continue;
           }
 
           dateStr = String(dateStr).trim();
@@ -410,17 +424,20 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
 
           // Ensure it matches YYYY-MM-DD format roughly
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            throw new Error(`Row ${index + 2}: Invalid date format '${dateStr}'. Please use YYYY-MM-DD format.`);
+            errors.push(`Row ${rowNum}: Invalid date format '${dateStr}'. Please use YYYY-MM-DD format.`);
+            continue;
           }
 
           const title = row['Title'] || row['title'];
           if (!title || String(title).trim() === '') {
-            throw new Error(`Row ${index + 2}: Missing event title. Please ensure the 'Title' column is filled.`);
+            errors.push(`Row ${rowNum}: Missing event title. Please ensure the 'Title' column is filled.`);
+            continue;
           }
           
           let type = row['Type'] || row['type'];
           if (!type || String(type).trim() === '') {
-            throw new Error(`Row ${index + 2}: Missing event type. Please ensure the 'Type' column is filled.`);
+            errors.push(`Row ${rowNum}: Missing event type. Please ensure the 'Type' column is filled.`);
+            continue;
           }
           
           type = String(type).trim();
@@ -430,7 +447,8 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
           const matchedType = validTypes.find(t => t.toLowerCase() === type.toLowerCase());
           
           if (!matchedType) {
-            throw new Error(`Row ${index + 2}: Invalid event type '${type}'. Valid types are: Classwork, Test, Exam, Other.`);
+            errors.push(`Row ${rowNum}: Invalid event type '${type}'. Valid types are: Classwork, Test, Exam, Other.`);
+            continue;
           }
 
           events.push({
@@ -442,7 +460,14 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
           });
         }
         
-        resolve(events);
+        if (errors.length > 0) {
+          const errorMsg = `Import failed with ${errors.length} error(s):\n\n` + 
+            errors.slice(0, 10).join('\n') + 
+            (errors.length > 10 ? `\n...and ${errors.length - 10} more.` : '');
+          reject(new Error(errorMsg));
+        } else {
+          resolve(events);
+        }
       } catch (err) {
         reject(err);
       }

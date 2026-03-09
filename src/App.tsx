@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Menu, X, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Menu, X, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield } from 'lucide-react';
 import { cn } from './utils/cn';
 import { useStore } from './store';
 import Dashboard from './components/Dashboard';
@@ -13,6 +13,7 @@ import RandomPicker from './components/RandomPicker';
 import GroupGenerator from './components/GroupGenerator';
 import ExamTimer from './components/ExamTimer';
 import Settings from './components/Settings';
+import AdminDashboard from './components/AdminDashboard';
 
 function ClassSwitcher() {
   const classes = useStore((state) => state.classes);
@@ -163,6 +164,7 @@ export default function App() {
       case 'timer': return <ExamTimer />;
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
+      case 'admin': return <AdminDashboard />;
       default: return <Dashboard navigate={setCurrentPage} />;
     }
   };
@@ -296,6 +298,13 @@ export default function App() {
             label="Settings & Backup" 
             active={currentPage === 'settings'} 
             onClick={() => navigate('settings')} 
+          />
+
+          <NavItem 
+            icon={<Shield className="w-5 h-5" />} 
+            label="Admin Dashboard" 
+            active={currentPage === 'admin'} 
+            onClick={() => navigate('admin')} 
           />
         </nav>
 

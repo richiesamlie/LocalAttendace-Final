@@ -16,6 +16,7 @@ export default function Settings() {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isMassiveBackingUp, setIsMassiveBackingUp] = useState(false);
 
   useEffect(() => {
     const hostname = window.location.hostname;
@@ -122,54 +123,79 @@ export default function Settings() {
     alert('Admin password updated successfully.');
   };
 
-  const handleMassiveBackup = () => {
-    const state = useStore.getState();
-    
-    // Helper to determine semester
-    const isSem1 = (dateStr: string) => {
-      const month = new Date(dateStr).getMonth();
-      return month >= 6 && month <= 11; // Jul (6) to Dec (11)
-    };
-    const isSem2 = (dateStr: string) => {
-      const month = new Date(dateStr).getMonth();
-      return month >= 0 && month <= 5; // Jan (0) to Jun (5)
-    };
-
-    const processClasses = (filterFn: (date: string) => boolean) => {
-      return state.classes.map(c => ({
-        ...c,
-        records: c.records.filter(r => filterFn(r.date)),
-        dailyNotes: Object.fromEntries(Object.entries(c.dailyNotes).filter(([date]) => filterFn(date))),
-        events: c.events.filter(e => filterFn(e.date))
-      }));
-    };
-
-    const massiveBackup = {
-      metadata: {
-        exportDate: new Date().toISOString(),
-        type: "Massive Semester Backup",
-        version: "1.1"
-      },
-      data: {
-        "Semester 1 (Jul-Dec)": {
-          classes: processClasses(isSem1)
-        },
-        "Semester 2 (Jan-Jun)": {
-          classes: processClasses(isSem2)
+  const handleMassiveBackup = async () => {
+    setIsMassiveBackingUp(true);
+    try {
+      // Fetch latest from server to avoid internet lag/sync issues
+      const response = await fetch('/api/data');
+      if (!response.ok) throw new Error('Failed to fetch database');
+      const data = await response.json();
+      
+      let state = useStore.getState();
+      
+      // Try to use the server state if available and valid
+      if (data['teacher-assistant-storage']) {
+        try {
+          const parsedStorage = JSON.parse(data['teacher-assistant-storage']);
+          if (parsedStorage && parsedStorage.state) {
+            state = parsedStorage.state;
+          }
+        } catch (e) {
+          console.warn('Could not parse server state, falling back to local state', e);
         }
       }
-    };
+      
+      // Helper to determine semester
+      const isSem1 = (dateStr: string) => {
+        const month = new Date(dateStr).getMonth();
+        return month >= 6 && month <= 11; // Jul (6) to Dec (11)
+      };
+      const isSem2 = (dateStr: string) => {
+        const month = new Date(dateStr).getMonth();
+        return month >= 0 && month <= 5; // Jan (0) to Jun (5)
+      };
 
-    const jsonString = JSON.stringify(massiveBackup, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      const processClasses = (filterFn: (date: string) => boolean) => {
+        return (state.classes || []).map((c: any) => ({
+          ...c,
+          records: (c.records || []).filter((r: any) => filterFn(r.date)),
+          dailyNotes: Object.fromEntries(Object.entries(c.dailyNotes || {}).filter(([date]) => filterFn(date))),
+          events: (c.events || []).filter((e: any) => filterFn(e.date))
+        }));
+      };
+
+      const massiveBackup = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          type: "Massive Semester Backup",
+          version: "1.1"
+        },
+        data: {
+          "Semester 1 (Jul-Dec)": {
+            classes: processClasses(isSem1)
+          },
+          "Semester 2 (Jan-Jun)": {
+            classes: processClasses(isSem2)
+          }
+        }
+      };
+
+      const jsonString = JSON.stringify(massiveBackup, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Massive backup failed:', error);
+      alert('Failed to generate massive backup. Please check your connection.');
+    } finally {
+      setIsMassiveBackingUp(false);
+    }
   };
 
   return (
@@ -350,10 +376,11 @@ export default function Settings() {
                     </p>
                     <button
                       onClick={handleMassiveBackup}
-                      className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors w-full sm:w-auto"
+                      disabled={isMassiveBackingUp}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Archive className="w-5 h-5" />
-                      Download Massive Backup
+                      <Archive className={`w-5 h-5 ${isMassiveBackingUp ? 'animate-pulse' : ''}`} />
+                      {isMassiveBackingUp ? 'Generating Backup...' : 'Download Massive Backup'}
                     </button>
                   </div>
                 )}
