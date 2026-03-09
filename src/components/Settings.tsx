@@ -1,12 +1,29 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
+import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2, Trash2, Lock, Unlock, ShieldAlert, Archive } from 'lucide-react';
 
 export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const clearAllData = useStore((state) => state.clearAllData);
+  const storedAdminPassword = useStore((state) => state.adminPassword || 'admin123');
+  const updateAdminPassword = useStore((state) => state.updateAdminPassword);
+
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [isInternalSite, setIsInternalSite] = useState(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    // Check if it's an IP address (internal network) or the AI Studio preview environment
+    const isIP = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
+    const isPreview = hostname.includes('run.app');
+    setIsInternalSite(isIP || isPreview);
+  }, []);
 
   // We need to access the raw state to export it
   const handleExportBackup = async () => {
@@ -88,6 +105,71 @@ export default function Settings() {
         window.location.reload();
       }
     }
+  };
+
+  const handleUpdatePassword = () => {
+    if (!newPassword || !confirmNewPassword) {
+      alert('Please fill in both password fields.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      alert('New passwords do not match.');
+      return;
+    }
+    updateAdminPassword(newPassword);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    alert('Admin password updated successfully.');
+  };
+
+  const handleMassiveBackup = () => {
+    const state = useStore.getState();
+    
+    // Helper to determine semester
+    const isSem1 = (dateStr: string) => {
+      const month = new Date(dateStr).getMonth();
+      return month >= 6 && month <= 11; // Jul (6) to Dec (11)
+    };
+    const isSem2 = (dateStr: string) => {
+      const month = new Date(dateStr).getMonth();
+      return month >= 0 && month <= 5; // Jan (0) to Jun (5)
+    };
+
+    const processClasses = (filterFn: (date: string) => boolean) => {
+      return state.classes.map(c => ({
+        ...c,
+        records: c.records.filter(r => filterFn(r.date)),
+        dailyNotes: Object.fromEntries(Object.entries(c.dailyNotes).filter(([date]) => filterFn(date))),
+        events: c.events.filter(e => filterFn(e.date))
+      }));
+    };
+
+    const massiveBackup = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        type: "Massive Semester Backup",
+        version: "1.1"
+      },
+      data: {
+        "Semester 1 (Jul-Dec)": {
+          classes: processClasses(isSem1)
+        },
+        "Semester 2 (Jan-Jun)": {
+          classes: processClasses(isSem2)
+        }
+      }
+    };
+
+    const jsonString = JSON.stringify(massiveBackup, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -192,23 +274,105 @@ export default function Settings() {
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-rose-100 dark:border-rose-900/30 p-6 sm:p-8">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center shrink-0">
-            <Trash2 className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+            <ShieldAlert className="w-6 h-6 text-rose-600 dark:text-rose-400" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-rose-700 dark:text-rose-400">Danger Zone</h2>
+            <h2 className="text-lg font-semibold text-rose-700 dark:text-rose-400">Admin Danger Zone</h2>
             <p className="text-slate-600 dark:text-slate-400 text-sm mt-2 leading-relaxed">
-              Reset the application for a new academic year. This will permanently delete all classes, students, attendance records, seating charts, and events.
+              Advanced administrative actions. These features are locked to prevent accidental data loss or misuse.
             </p>
 
-            <div className="mt-6">
-              <button
-                onClick={handleResetData}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-                Reset Academic Year
-              </button>
-            </div>
+            {!isAdminUnlocked ? (
+              <div className="mt-6 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                  <Lock className="w-4 h-4" /> Admin Password Required
+                </h3>
+                <div className="flex gap-3">
+                  <input 
+                    type="password" 
+                    value={adminPasswordInput}
+                    onChange={(e) => setAdminPasswordInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (adminPasswordInput === storedAdminPassword) setIsAdminUnlocked(true);
+                        else alert('Incorrect password');
+                      }
+                    }}
+                    placeholder="Enter admin password..."
+                    className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
+                  />
+                  <button 
+                    onClick={() => {
+                      if (adminPasswordInput === storedAdminPassword) setIsAdminUnlocked(true);
+                      else alert('Incorrect password');
+                    }}
+                    className="px-6 py-2.5 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-medium hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-2"
+                  >
+                    <Unlock className="w-4 h-4" />
+                    Unlock
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Default password is: admin123</p>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Change Admin Password</h3>
+                  <div className="space-y-3">
+                    <input 
+                      type="password" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="New password"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all"
+                    />
+                    <input 
+                      type="password" 
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all"
+                    />
+                    <button
+                      onClick={handleUpdatePassword}
+                      className="px-6 py-2.5 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-medium hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      Update Password
+                    </button>
+                  </div>
+                </div>
+
+                {isInternalSite && (
+                  <div className="p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-2xl">
+                    <h3 className="text-sm font-medium text-amber-900 dark:text-amber-400 mb-1">Massive Semester Backup</h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-500 mb-4">
+                      Export all class data, timetables, and student monthly records organized by semester.
+                    </p>
+                    <button
+                      onClick={handleMassiveBackup}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors w-full sm:w-auto"
+                    >
+                      <Archive className="w-5 h-5" />
+                      Download Massive Backup
+                    </button>
+                  </div>
+                )}
+
+                <div className="p-5 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 rounded-2xl">
+                  <h3 className="text-sm font-medium text-rose-900 dark:text-rose-400 mb-1">Reset Academic Year</h3>
+                  <p className="text-sm text-rose-700 dark:text-rose-500 mb-4">
+                    Permanently delete all classes, students, attendance records, seating charts, and events.
+                  </p>
+                  <button
+                    onClick={handleResetData}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors w-full sm:w-auto"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    Reset Academic Year
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

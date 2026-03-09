@@ -101,6 +101,7 @@ interface AppState {
   timetable: TimetableSlot[];
   seatingLayout: Record<string, string>; // key: "row-col", value: studentId
   theme: 'light' | 'dark';
+  adminPassword?: string;
 
   addClass: (name: string) => void;
   removeClass: (id: string) => void;
@@ -126,6 +127,7 @@ interface AppState {
   toggleTheme: () => void;
   clearData: () => void;
   clearAllData: () => void;
+  updateAdminPassword: (password: string) => void;
 }
 
 const updateCurrentClass = (state: AppState, updates: Partial<AppState>) => {
@@ -149,6 +151,7 @@ export const useStore = create<AppState>()(
       timetable: [],
       seatingLayout: {},
       theme: 'light',
+      adminPassword: 'admin123',
 
       addClass: (name) => set((state) => {
         const newClass: ClassData = {
@@ -332,6 +335,8 @@ export const useStore = create<AppState>()(
           seatingLayout: {},
         };
       }),
+
+      updateAdminPassword: (password) => set(() => ({ adminPassword: password })),
     }),
     {
       name: 'teacher-assistant-storage',
