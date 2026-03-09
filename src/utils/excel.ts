@@ -74,6 +74,7 @@ export function exportMonthlyReportToExcel(
   monthString: string, 
   students: Student[], 
   records: AttendanceRecord[],
+  className: string = 'Class',
   options: ExportOptions = {
     includeRollNumber: true,
     includeName: true,
@@ -160,7 +161,8 @@ export function exportMonthlyReportToExcel(
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, format(monthDate, 'MMM yyyy'));
   
-  XLSX.writeFile(workbook, `Attendance_Report_${monthString}.xlsx`);
+  const safeClassName = className.replace(/[^a-z0-9]/gi, '_');
+  XLSX.writeFile(workbook, `${safeClassName}_Attendance_Report_${monthString}.xlsx`);
 }
 
 export function generateTemplate() {
@@ -183,7 +185,8 @@ export function generateTemplate() {
 export function exportTimetableToExcel(
   timetable: TimetableSlot[],
   startDateStr: string, // 'YYYY-MM'
-  duration: 'weekly' | 'month' | 'semester'
+  duration: 'weekly' | 'month' | 'semester',
+  className: string = 'Class'
 ) {
   const workbook = XLSX.utils.book_new();
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -299,11 +302,12 @@ export function exportTimetableToExcel(
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Empty');
   }
 
-  const fileName = duration === 'weekly' ? 'Weekly_Timetable_Template.xlsx' : `Lesson_Plan_${duration}_${startDateStr}.xlsx`;
+  const safeClassName = className.replace(/[^a-z0-9]/gi, '_');
+  const fileName = duration === 'weekly' ? `${safeClassName}_Weekly_Timetable_Template.xlsx` : `${safeClassName}_Lesson_Plan_${duration}_${startDateStr}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
 
-export function exportScheduleToExcel(events: CalendarEvent[]) {
+export function exportScheduleToExcel(events: CalendarEvent[], className: string = 'Class') {
   const workbook = XLSX.utils.book_new();
 
   // Group events by month (YYYY-MM)
@@ -350,7 +354,8 @@ export function exportScheduleToExcel(events: CalendarEvent[]) {
     });
   }
 
-  XLSX.writeFile(workbook, 'Class_Schedule.xlsx');
+  const safeClassName = className.replace(/[^a-z0-9]/gi, '_');
+  XLSX.writeFile(workbook, `${safeClassName}_Class_Schedule.xlsx`);
 }
 
 export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {

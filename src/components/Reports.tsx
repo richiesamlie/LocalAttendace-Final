@@ -20,9 +20,13 @@ export default function Reports() {
 
   const students = useStore((state) => state.students);
   const records = useStore((state) => state.records);
+  const classes = useStore((state) => state.classes);
+  const currentClassId = useStore((state) => state.currentClassId);
 
   const handleExport = () => {
-    exportMonthlyReportToExcel(month, students, records, exportOptions);
+    const currentClass = classes.find(c => c.id === currentClassId);
+    const className = currentClass ? currentClass.name : 'Class';
+    exportMonthlyReportToExcel(month, students, records, className, exportOptions);
     setShowExportOptions(false);
   };
 

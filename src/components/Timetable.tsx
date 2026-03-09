@@ -117,8 +117,13 @@ export default function Timetable() {
     setFormData({ startTime: '08:00', endTime: '09:00', subject: '', lesson: '' });
   };
 
+  const classes = useStore((state) => state.classes);
+  const currentClassId = useStore((state) => state.currentClassId);
+
   const handleExport = (duration: 'weekly' | 'month' | 'semester') => {
-    exportTimetableToExcel(timetable, exportMonth, duration);
+    const currentClass = classes.find(c => c.id === currentClassId);
+    const className = currentClass ? currentClass.name : 'Class';
+    exportTimetableToExcel(timetable, exportMonth, duration, className);
     setShowExportMenu(false);
   };
 

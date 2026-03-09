@@ -72,8 +72,13 @@ export default function Schedule() {
     setSelectedEvent(null);
   };
 
+  const classes = useStore((state) => state.classes);
+  const currentClassId = useStore((state) => state.currentClassId);
+
   const handleExport = () => {
-    exportScheduleToExcel(events);
+    const currentClass = classes.find(c => c.id === currentClassId);
+    const className = currentClass ? currentClass.name : 'Class';
+    exportScheduleToExcel(events, className);
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
