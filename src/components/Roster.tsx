@@ -257,8 +257,11 @@ export default function Roster() {
                 </tr>
               )}
               
-              {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+              {filteredStudents.map((student, index) => (
+                <tr key={student.id} className={cn(
+                  "hover:bg-slate-100/50 dark:hover:bg-slate-800/80 transition-colors",
+                  index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-800/30"
+                )}>
                   {editingId === student.id ? (
                     <>
                       <td className="px-6 py-4">

@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../store';
-import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
 
 export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const clearAllData = useStore((state) => state.clearAllData);
 
   // We need to access the raw state to export it
   const handleExportBackup = async () => {
@@ -67,6 +68,25 @@ export default function Settings() {
       setErrorMessage(error.message || 'Failed to import backup file.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleResetData = () => {
+    const isConfirmed = window.confirm(
+      "WARNING: This will permanently delete ALL classes, students, attendance records, and settings.\n\n" +
+      "This action cannot be undone. Are you sure you want to reset the app for a new academic year?"
+    );
+    
+    if (isConfirmed) {
+      const doubleCheck = window.confirm(
+        "Are you absolutely sure? We recommend downloading a backup first."
+      );
+      
+      if (doubleCheck) {
+        clearAllData();
+        alert("All data has been cleared. The app is ready for a new academic year.");
+        window.location.reload();
+      }
     }
   };
 
@@ -164,6 +184,31 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Danger Zone Section */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-rose-100 dark:border-rose-900/30 p-6 sm:p-8">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center shrink-0">
+            <Trash2 className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-rose-700 dark:text-rose-400">Danger Zone</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-sm mt-2 leading-relaxed">
+              Reset the application for a new academic year. This will permanently delete all classes, students, attendance records, seating charts, and events.
+            </p>
+
+            <div className="mt-6">
+              <button
+                onClick={handleResetData}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors"
+              >
+                <Trash2 className="w-5 h-5" />
+                Reset Academic Year
+              </button>
+            </div>
           </div>
         </div>
       </div>

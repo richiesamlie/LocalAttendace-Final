@@ -125,6 +125,7 @@ interface AppState {
   clearSeatingLayout: () => void;
   toggleTheme: () => void;
   clearData: () => void;
+  clearAllData: () => void;
 }
 
 const updateCurrentClass = (state: AppState, updates: Partial<AppState>) => {
@@ -308,6 +309,29 @@ export const useStore = create<AppState>()(
       toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
       
       clearData: () => set((state) => updateCurrentClass(state, { students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} })),
+
+      clearAllData: () => set(() => {
+        const defaultClass: ClassData = {
+          id: 'class_default',
+          name: 'Default Class',
+          students: [],
+          records: [],
+          dailyNotes: {},
+          events: [],
+          timetable: [],
+          seatingLayout: {},
+        };
+        return {
+          classes: [defaultClass],
+          currentClassId: defaultClass.id,
+          students: [],
+          records: [],
+          dailyNotes: {},
+          events: [],
+          timetable: [],
+          seatingLayout: {},
+        };
+      }),
     }),
     {
       name: 'teacher-assistant-storage',
