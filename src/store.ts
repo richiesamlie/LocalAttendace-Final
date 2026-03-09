@@ -79,7 +79,21 @@ export interface TimetableSlot {
   lesson: string;
 }
 
+export interface ClassData {
+  id: string;
+  name: string;
+  students: Student[];
+  records: AttendanceRecord[];
+  dailyNotes: Record<string, string>;
+  events: CalendarEvent[];
+  timetable: TimetableSlot[];
+  seatingLayout: Record<string, string>;
+}
+
 interface AppState {
+  classes: ClassData[];
+  currentClassId: string | null;
+
   students: Student[];
   records: AttendanceRecord[];
   dailyNotes: Record<string, string>;
@@ -87,6 +101,12 @@ interface AppState {
   timetable: TimetableSlot[];
   seatingLayout: Record<string, string>; // key: "row-col", value: studentId
   theme: 'light' | 'dark';
+
+  addClass: (name: string) => void;
+  removeClass: (id: string) => void;
+  setCurrentClass: (id: string) => void;
+  updateClassName: (id: string, name: string) => void;
+
   setStudents: (students: Student[]) => void;
   addStudent: (student: Student) => void;
   removeStudent: (id: string) => void;
@@ -107,9 +127,20 @@ interface AppState {
   clearData: () => void;
 }
 
+const updateCurrentClass = (state: AppState, updates: Partial<AppState>) => {
+  if (!state.currentClassId) return updates;
+  return {
+    ...updates,
+    classes: state.classes.map(c => c.id === state.currentClassId ? { ...c, ...updates } : c)
+  };
+};
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
+      classes: [],
+      currentClassId: null,
+
       students: [],
       records: [],
       dailyNotes: {},
@@ -117,62 +148,146 @@ export const useStore = create<AppState>()(
       timetable: [],
       seatingLayout: {},
       theme: 'light',
-      setStudents: (students) => set({ students }),
+
+      addClass: (name) => set((state) => {
+        const newClass: ClassData = {
+          id: `class_${Date.now()}`,
+          name,
+          students: [],
+          records: [],
+          dailyNotes: {},
+          events: [],
+          timetable: [],
+          seatingLayout: {},
+        };
+        const newClasses = [...state.classes, newClass];
+        
+        return {
+          classes: newClasses,
+          currentClassId: newClass.id,
+          students: newClass.students,
+          records: newClass.records,
+          dailyNotes: newClass.dailyNotes,
+          events: newClass.events,
+          timetable: newClass.timetable,
+          seatingLayout: newClass.seatingLayout,
+        };
+      }),
+
+      removeClass: (id) => set((state) => {
+        const newClasses = state.classes.filter(c => c.id !== id);
+        if (state.currentClassId === id) {
+          const nextClass = newClasses[0];
+          if (nextClass) {
+            return {
+              classes: newClasses,
+              currentClassId: nextClass.id,
+              students: nextClass.students,
+              records: nextClass.records,
+              dailyNotes: nextClass.dailyNotes,
+              events: nextClass.events,
+              timetable: nextClass.timetable,
+              seatingLayout: nextClass.seatingLayout,
+            };
+          } else {
+            return {
+              classes: newClasses,
+              currentClassId: null,
+              students: [],
+              records: [],
+              dailyNotes: {},
+              events: [],
+              timetable: [],
+              seatingLayout: {},
+            };
+          }
+        }
+        return { classes: newClasses };
+      }),
+
+      setCurrentClass: (id) => set((state) => {
+        if (state.currentClassId === id) return state;
+        
+        const targetClass = state.classes.find(c => c.id === id);
+        if (!targetClass) return state;
+        
+        return {
+          currentClassId: id,
+          students: targetClass.students,
+          records: targetClass.records,
+          dailyNotes: targetClass.dailyNotes,
+          events: targetClass.events,
+          timetable: targetClass.timetable,
+          seatingLayout: targetClass.seatingLayout,
+        };
+      }),
+
+      updateClassName: (id, name) => set((state) => ({
+        classes: state.classes.map(c => c.id === id ? { ...c, name } : c)
+      })),
+
+      setStudents: (students) => set((state) => updateCurrentClass(state, { students })),
+      
       addStudent: (student) => set((state) => {
-        // Prevent duplicate roll numbers or rapid double-clicks
         if (state.students.some(s => s.rollNumber === student.rollNumber && s.name === student.name)) {
           return state;
         }
-        return { students: [...state.students, student] };
+        return updateCurrentClass(state, { students: [...state.students, student] });
       }),
+      
       removeStudent: (id) => set((state) => {
-        // Also remove from seating layout
         const newSeating = { ...state.seatingLayout };
         Object.keys(newSeating).forEach(key => {
           if (newSeating[key] === id) {
             delete newSeating[key];
           }
         });
-        return { 
+        return updateCurrentClass(state, { 
           students: state.students.filter((s) => s.id !== id),
           seatingLayout: newSeating
-        };
+        });
       }),
-      updateStudent: (id, data) =>
-        set((state) => ({
-          students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
-        })),
-      setRecord: (record) =>
-        set((state) => {
-          const existingIndex = state.records.findIndex(
-            (r) => r.studentId === record.studentId && r.date === record.date
-          );
-          if (existingIndex >= 0) {
-            const newRecords = [...state.records];
-            newRecords[existingIndex] = record;
-            return { records: newRecords };
-          }
-          return { records: [...state.records, record] };
-        }),
-      setDailyNote: (date, note) =>
-        set((state) => ({
-          dailyNotes: { ...state.dailyNotes, [date]: note },
-        })),
-      addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
-      addEvents: (newEvents) => set((state) => ({ events: [...state.events, ...newEvents] })),
-      updateEvent: (id, data) => set((state) => ({
+      
+      updateStudent: (id, data) => set((state) => updateCurrentClass(state, {
+        students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
+      })),
+      
+      setRecord: (record) => set((state) => {
+        const existingIndex = state.records.findIndex(
+          (r) => r.studentId === record.studentId && r.date === record.date
+        );
+        if (existingIndex >= 0) {
+          const newRecords = [...state.records];
+          newRecords[existingIndex] = record;
+          return updateCurrentClass(state, { records: newRecords });
+        }
+        return updateCurrentClass(state, { records: [...state.records, record] });
+      }),
+      
+      setDailyNote: (date, note) => set((state) => updateCurrentClass(state, {
+        dailyNotes: { ...state.dailyNotes, [date]: note },
+      })),
+      
+      addEvent: (event) => set((state) => updateCurrentClass(state, { events: [...state.events, event] })),
+      
+      addEvents: (newEvents) => set((state) => updateCurrentClass(state, { events: [...state.events, ...newEvents] })),
+      
+      updateEvent: (id, data) => set((state) => updateCurrentClass(state, {
         events: state.events.map((e) => (e.id === id ? { ...e, ...data } : e)),
       })),
-      removeEvent: (id) => set((state) => ({ events: state.events.filter((e) => e.id !== id) })),
-      addTimetableSlot: (slot) => set((state) => ({ timetable: [...state.timetable, slot] })),
-      updateTimetableSlot: (id, data) => set((state) => ({
+      
+      removeEvent: (id) => set((state) => updateCurrentClass(state, { events: state.events.filter((e) => e.id !== id) })),
+      
+      addTimetableSlot: (slot) => set((state) => updateCurrentClass(state, { timetable: [...state.timetable, slot] })),
+      
+      updateTimetableSlot: (id, data) => set((state) => updateCurrentClass(state, {
         timetable: state.timetable.map((s) => (s.id === id ? { ...s, ...data } : s)),
       })),
-      removeTimetableSlot: (id) => set((state) => ({ timetable: state.timetable.filter((s) => s.id !== id) })),
+      
+      removeTimetableSlot: (id) => set((state) => updateCurrentClass(state, { timetable: state.timetable.filter((s) => s.id !== id) })),
+      
       updateSeat: (seatId, studentId) => set((state) => {
         const newSeating = { ...state.seatingLayout };
-        
-        // If placing a student, remove them from any other seat first
         if (studentId) {
           Object.keys(newSeating).forEach(key => {
             if (newSeating[key] === studentId) {
@@ -181,23 +296,40 @@ export const useStore = create<AppState>()(
           });
           newSeating[seatId] = studentId;
         } else {
-          // Removing student from seat
           delete newSeating[seatId];
         }
-        
-        return { seatingLayout: newSeating };
+        return updateCurrentClass(state, { seatingLayout: newSeating });
       }),
-      setSeatingLayout: (layout) => set({ seatingLayout: layout }),
-      clearSeatingLayout: () => set({ seatingLayout: {} }),
-      toggleTheme: () =>
-        set((state) => ({
-          theme: state.theme === 'light' ? 'dark' : 'light',
-        })),
-      clearData: () => set({ students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
+      
+      setSeatingLayout: (layout) => set((state) => updateCurrentClass(state, { seatingLayout: layout })),
+      
+      clearSeatingLayout: () => set((state) => updateCurrentClass(state, { seatingLayout: {} })),
+      
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+      
+      clearData: () => set((state) => updateCurrentClass(state, { students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} })),
     }),
     {
       name: 'teacher-assistant-storage',
       storage: createJSONStorage(() => apiStorage),
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0) {
+          const defaultClass = {
+            id: 'class_default',
+            name: 'Default Class',
+            students: persistedState.students || [],
+            records: persistedState.records || [],
+            dailyNotes: persistedState.dailyNotes || {},
+            events: persistedState.events || [],
+            timetable: persistedState.timetable || [],
+            seatingLayout: persistedState.seatingLayout || {},
+          };
+          persistedState.classes = [defaultClass];
+          persistedState.currentClassId = defaultClass.id;
+        }
+        return persistedState;
+      },
     }
   )
 );
