@@ -1,23 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { CheckSquare, Menu, X } from 'lucide-react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { CheckSquare, Menu, X, Loader2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { cn } from './utils/cn';
 import { useStore } from './store';
 import { useAuth, useLogin, useLogout } from './hooks/useData';
-import Dashboard from './components/Dashboard';
-import TakeAttendance from './components/TakeAttendance';
-import Roster from './components/Roster';
-import Reports from './components/Reports';
-import Schedule from './components/Schedule';
-import Timetable from './components/Timetable';
-import SeatingChart from './components/SeatingChart';
-import RandomPicker from './components/RandomPicker';
-import GroupGenerator from './components/GroupGenerator';
-import ExamTimer from './components/ExamTimer';
-import Settings from './components/Settings';
-import AdminDashboard from './components/AdminDashboard';
-import Gatekeeper from './components/Gatekeeper';
 import Sidebar from './components/Sidebar';
+
+// Lazy load all major routes to enable code-splitting and drastically reduce initial JS payload
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const TakeAttendance = React.lazy(() => import('./components/TakeAttendance'));
+const Roster = React.lazy(() => import('./components/Roster'));
+const Reports = React.lazy(() => import('./components/Reports'));
+const Schedule = React.lazy(() => import('./components/Schedule'));
+const Timetable = React.lazy(() => import('./components/Timetable'));
+const SeatingChart = React.lazy(() => import('./components/SeatingChart'));
+const RandomPicker = React.lazy(() => import('./components/RandomPicker'));
+const GroupGenerator = React.lazy(() => import('./components/GroupGenerator'));
+const ExamTimer = React.lazy(() => import('./components/ExamTimer'));
+const Settings = React.lazy(() => import('./components/Settings'));
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const Gatekeeper = React.lazy(() => import('./components/Gatekeeper'));
 
 function LoginScreen() {
   const [password, setPassword] = useState('');
@@ -166,7 +168,14 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 w-full overflow-x-hidden">
         <div className="max-w-6xl mx-auto">
-          {renderPage()}
+          <Suspense fallback={
+            <div className="flex flex-col items-center justify-center p-20 animate-pulse text-indigo-500">
+              <Loader2 className="w-10 h-10 animate-spin mb-4" />
+              <p className="text-slate-500 font-medium">Loading Module...</p>
+            </div>
+          }>
+            {renderPage()}
+          </Suspense>
         </div>
       </main>
     </div>

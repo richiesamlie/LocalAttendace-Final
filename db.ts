@@ -78,6 +78,14 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  -- Performance Optimization: Create Indexes for frequently queried foreign keys
+  CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id);
+  CREATE INDEX IF NOT EXISTS idx_records_class ON attendance_records(class_id);
+  CREATE INDEX IF NOT EXISTS idx_daily_notes_class ON daily_notes(class_id);
+  CREATE INDEX IF NOT EXISTS idx_events_class ON events(class_id);
+  CREATE INDEX IF NOT EXISTS idx_timetable_class ON timetable_slots(class_id);
+  CREATE INDEX IF NOT EXISTS idx_seating_class ON seating_layout(class_id);
 `);
 
 export default db;
