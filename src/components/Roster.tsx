@@ -119,6 +119,16 @@ export default function Roster() {
           </div>
           
           <div className="relative">
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={(e) => {
+                handleFileUpload(e);
+                setShowMoreMenu(false);
+              }}
+            />
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -141,16 +151,6 @@ export default function Roster() {
                     Download Template
                   </button>
                   
-                  <input
-                    type="file"
-                    accept=".xlsx, .xls"
-                    className="hidden"
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      handleFileUpload(e);
-                      setShowMoreMenu(false);
-                    }}
-                  />
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isImporting}

@@ -128,13 +128,34 @@ interface AppState {
   clearData: () => void;
   clearAllData: () => void;
   updateAdminPassword: (password: string) => void;
+  setRecordForClass: (classId: string, record: AttendanceRecord) => void;
 }
 
 const updateCurrentClass = (state: AppState, updates: Partial<AppState>) => {
-  if (!state.currentClassId) return updates;
+  let targetClassId = state.currentClassId;
+  let newClasses = [...state.classes];
+
+  if (!targetClassId) {
+    if (newClasses.length === 0) {
+      const defaultClass: ClassData = {
+        id: 'class_default',
+        name: 'Default Class',
+        students: updates.students || [],
+        records: updates.records || [],
+        dailyNotes: updates.dailyNotes || {},
+        events: updates.events || [],
+        timetable: updates.timetable || [],
+        seatingLayout: updates.seatingLayout || {},
+      };
+      newClasses.push(defaultClass);
+    }
+    targetClassId = newClasses[0].id;
+  }
+
   return {
     ...updates,
-    classes: state.classes.map(c => c.id === state.currentClassId ? { ...c, ...updates } : c)
+    currentClassId: targetClassId,
+    classes: newClasses.map(c => c.id === targetClassId ? { ...c, ...updates } : c)
   };
 };
 
@@ -337,6 +358,32 @@ export const useStore = create<AppState>()(
       }),
 
       updateAdminPassword: (password) => set(() => ({ adminPassword: password })),
+      
+      setRecordForClass: (classId, record) => set((state) => {
+        const newClasses = state.classes.map(c => {
+          if (c.id === classId) {
+            const existingIndex = c.records.findIndex(
+              (r) => r.studentId === record.studentId && r.date === record.date
+            );
+            let newRecords = [...c.records];
+            if (existingIndex >= 0) {
+              newRecords[existingIndex] = record;
+            } else {
+              newRecords.push(record);
+            }
+            return { ...c, records: newRecords };
+          }
+          return c;
+        });
+
+        // If the updated class is the current class, update the current class state too
+        if (state.currentClassId === classId) {
+          const targetClass = newClasses.find(c => c.id === classId);
+          return { classes: newClasses, records: targetClass?.records || [] };
+        }
+
+        return { classes: newClasses };
+      }),
     }),
     {
       name: 'teacher-assistant-storage',

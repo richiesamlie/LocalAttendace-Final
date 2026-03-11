@@ -14,6 +14,7 @@ import GroupGenerator from './components/GroupGenerator';
 import ExamTimer from './components/ExamTimer';
 import Settings from './components/Settings';
 import AdminDashboard from './components/AdminDashboard';
+import Gatekeeper from './components/Gatekeeper';
 
 function ClassSwitcher() {
   const classes = useStore((state) => state.classes);
@@ -165,6 +166,7 @@ export default function App() {
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
       case 'admin': return <AdminDashboard />;
+      case 'gatekeeper': return <Gatekeeper />;
       default: return <Dashboard navigate={setCurrentPage} />;
     }
   };
@@ -305,6 +307,13 @@ export default function App() {
             label="Admin Dashboard" 
             active={currentPage === 'admin'} 
             onClick={() => navigate('admin')} 
+          />
+
+          <NavItem 
+            icon={<Clock className="w-5 h-5" />} 
+            label="Gatekeeper" 
+            active={currentPage === 'gatekeeper'} 
+            onClick={() => navigate('gatekeeper')} 
           />
         </nav>
 
