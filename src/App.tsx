@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckSquare, Menu, X } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 import { cn } from './utils/cn';
 import { useStore } from './store';
 import { useAuth, useLogin, useLogout } from './hooks/useData';
@@ -142,6 +143,8 @@ export default function App() {
       >
         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
+
+      <Toaster position="top-right" toastOptions={{ className: 'dark:bg-slate-800 dark:text-white dark:border-slate-700 border' }} />
 
       <Sidebar 
         currentPage={currentPage}
