@@ -7,6 +7,7 @@ import { cn } from '../utils/cn';
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isMounted, setIsMounted] = useState(false);
+  const updateTimetableSlot = useStore((state) => state.updateTimetableSlot);
   
   useEffect(() => {
     setIsMounted(true);
@@ -244,14 +245,29 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
                           <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                             <BookOpen className="w-5 h-5" />
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-0.5">
                               {slot.startTime} - {slot.endTime}
                             </div>
-                            <div className={cn("font-semibold", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
+                            <div className={cn("font-semibold truncate", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
                               {slot.subject || 'Unassigned Subject'}
                             </div>
-                            {slot.lesson && <div className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{slot.lesson}</div>}
+                            <input 
+                              type="text"
+                              defaultValue={slot.lesson || ''}
+                              placeholder="Add lesson topic..."
+                              onBlur={(e) => {
+                                if (e.target.value !== slot.lesson) {
+                                  updateTimetableSlot(slot.id, { lesson: e.target.value });
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              className="w-full mt-1 bg-transparent border-0 p-0 text-sm text-slate-600 dark:text-slate-400 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-0 truncate"
+                            />
                           </div>
                         </div>
                       ))}

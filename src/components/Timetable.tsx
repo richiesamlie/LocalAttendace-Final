@@ -387,9 +387,18 @@ export default function Timetable() {
                             >
                               <div className="font-bold text-sm mb-1 leading-tight line-clamp-2">{slot.subject || 'Unassigned'}</div>
                               <div className="text-xs opacity-80 font-medium mb-2">{slot.startTime} - {slot.endTime}</div>
-                              {slot.lesson && (
-                                <div className="text-xs opacity-70 line-clamp-2 mt-auto border-t border-current pt-1.5">{slot.lesson}</div>
-                              )}
+                              <textarea 
+                                defaultValue={slot.lesson || ''}
+                                placeholder="Add topic..."
+                                rows={2}
+                                onBlur={(e) => {
+                                  if (e.target.value !== slot.lesson) {
+                                    updateTimetableSlot(slot.id, { lesson: e.target.value });
+                                  }
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full mt-auto pt-1.5 min-h-0 bg-transparent border-t border-current text-xs opacity-80 placeholder:text-current focus:opacity-100 focus:outline-none resize-none"
+                              />
                               
                               {/* Quick actions overlay */}
                               <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white/90 dark:bg-slate-800/90 rounded-lg shadow-sm p-1 backdrop-blur-sm">
@@ -495,17 +504,21 @@ export default function Timetable() {
                     </h3>
                   </div>
                   
-                  <div className="mt-auto pt-4">
-                    {slot.lesson ? (
-                      <div className="flex items-start gap-2 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
-                        <FileText className="w-4 h-4 mt-0.5 shrink-0 opacity-70" />
-                        <p className="text-sm leading-relaxed line-clamp-3">{slot.lesson}</p>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-slate-400 dark:text-slate-500 italic bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl">
-                        No lesson topic specified
-                      </div>
-                    )}
+                  <div className="mt-auto pt-4 relative group/lesson">
+                    <div className="absolute top-4 left-3 text-slate-400 dark:text-slate-500 z-10 pointer-events-none">
+                      <FileText className="w-4 h-4 mt-1 shrink-0" />
+                    </div>
+                    <textarea
+                      defaultValue={slot.lesson || ''}
+                      placeholder="Add lesson topic..."
+                      rows={2}
+                      onBlur={(e) => {
+                        if (e.target.value !== slot.lesson) {
+                          updateTimetableSlot(slot.id, { lesson: e.target.value });
+                        }
+                      }}
+                      className="w-full text-sm leading-relaxed text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 pl-9 rounded-xl border border-transparent focus:border-indigo-300 dark:focus:border-indigo-700 focus:bg-white dark:focus:bg-slate-900 focus:ring-0 transition-colors resize-none placeholder:italic"
+                    />
                   </div>
                 </div>
               );
@@ -549,15 +562,26 @@ export default function Timetable() {
                     </div>
                   </div>
                   
-                  {slot.lesson && (
-                    <div className="flex items-start gap-3">
-                      <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                      <div>
-                        <div className="text-slate-700 dark:text-slate-300">{slot.lesson}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Lesson / Topic</div>
-                      </div>
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <div className="w-full min-w-0">
+                      <input
+                        type="text"
+                        defaultValue={slot.lesson || ''}
+                        placeholder="Add lesson topic..."
+                        onBlur={(e) => {
+                          if (e.target.value !== slot.lesson) {
+                            updateTimetableSlot(slot.id, { lesson: e.target.value });
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.currentTarget.blur();
+                        }}
+                        className="w-full bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-indigo-300 dark:focus:border-indigo-700 rounded-md -ml-2 px-2 py-0.5 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-0 transition-colors truncate"
+                      />
+                      <div className="text-xs text-slate-500 dark:text-slate-400 ml-0.5">Lesson / Topic</div>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 sm:opacity-0 group-hover:opacity-100 transition-opacity">
