@@ -7,7 +7,6 @@ export default function Settings() {
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const clearAllData = useStore((state) => state.clearAllData);
-  const storedAdminPassword = useStore((state) => state.adminPassword || 'admin123');
   const updateAdminPassword = useStore((state) => state.updateAdminPassword);
 
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
@@ -308,41 +307,8 @@ export default function Settings() {
               Advanced administrative actions. These features are locked to prevent accidental data loss or misuse.
             </p>
 
-            {!isAdminUnlocked ? (
-              <div className="mt-6 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                  <Lock className="w-4 h-4" /> Admin Password Required
-                </h3>
-                <div className="flex gap-3">
-                  <input 
-                    type="password" 
-                    value={adminPasswordInput}
-                    onChange={(e) => setAdminPasswordInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        if (adminPasswordInput === storedAdminPassword) setIsAdminUnlocked(true);
-                        else alert('Incorrect password');
-                      }
-                    }}
-                    placeholder="Enter admin password..."
-                    className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-                  />
-                  <button 
-                    onClick={() => {
-                      if (adminPasswordInput === storedAdminPassword) setIsAdminUnlocked(true);
-                      else alert('Incorrect password');
-                    }}
-                    className="px-6 py-2.5 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-medium hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors flex items-center gap-2"
-                  >
-                    <Unlock className="w-4 h-4" />
-                    Unlock
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Default password is: admin123</p>
-              </div>
-            ) : (
-              <div className="mt-6 space-y-4">
-                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
+            <div className="mt-6 space-y-4">
+               <div className="p-5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
                   <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Change Admin Password</h3>
                   <div className="space-y-3">
                     <input 
@@ -399,7 +365,6 @@ export default function Settings() {
                   </button>
                 </div>
               </div>
-            )}
           </div>
         </div>
       </div>

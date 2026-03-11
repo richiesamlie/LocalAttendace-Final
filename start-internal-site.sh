@@ -35,4 +35,4 @@ echo ""
 
 # Set NODE_ENV to production and start the server
 export NODE_ENV=production
-npx tsx server.ts
+npx tsx server.ts --network

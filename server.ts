@@ -1,38 +1,22 @@
 import express from "express";
+import cookieParser from "cookie-parser";
 import { createServer as createViteServer } from "vite";
-import fs from "fs/promises";
 import path from "path";
-
-const DATA_FILE = path.join(process.cwd(), "database.json");
+import apiRoutes from "./routes";
 
 async function startServer() {
+  const args = process.argv.slice(2);
+  const isNetwork = args.includes('--network');
+  const HOST = isNetwork ? '0.0.0.0' : '127.0.0.1';
+  
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
+  app.use(cookieParser());
 
-  // API routes FIRST
-  app.get("/api/data", async (req, res) => {
-    try {
-      const data = await fs.readFile(DATA_FILE, "utf-8");
-      res.json(JSON.parse(data));
-    } catch (error: any) {
-      if (error.code === "ENOENT") {
-        res.json({}); // Return empty object if file doesn't exist
-      } else {
-        res.status(500).json({ error: "Failed to read data" });
-      }
-    }
-  });
-
-  app.post("/api/data", async (req, res) => {
-    try {
-      await fs.writeFile(DATA_FILE, JSON.stringify(req.body, null, 2));
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to save data" });
-    }
-  });
+  // Use separated API routes
+  app.use("/api", apiRoutes);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -46,8 +30,22 @@ async function startServer() {
     app.use(express.static("dist"));
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`\n========================================`);
+    console.log(` Teacher Assistant Server Started`);
+    console.log(`========================================`);
+    if (isNetwork) {
+      console.log(`\n 🌍 INTERNAL-SITE MODE ACTIVE`);
+      console.log(` -> Local:   http://localhost:${PORT}`);
+      console.log(` -> Network: http://<YOUR_IP_ADDRESS>:${PORT}`);
+      console.log(`\n (To find your IP, open cmd and type 'ipconfig')`);
+    } else {
+      console.log(`\n 🔒 LOCAL MODE ACTIVE`);
+      console.log(` -> Local:   http://127.0.0.1:${PORT}`);
+      console.log(`\n (Only this computer can access the app.)`);
+      console.log(` (Run with 'npm run dev:network' to share on Wi-Fi)`);
+    }
+    console.log(`========================================\n`);
   });
 }
 

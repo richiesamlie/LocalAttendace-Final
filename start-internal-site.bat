@@ -30,4 +30,4 @@ echo.
 
 :: Set NODE_ENV to production and start the server
 set NODE_ENV=production
-call npx tsx server.ts
+call npx tsx server.ts --network

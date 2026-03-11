@@ -26,22 +26,26 @@ Run the following command to install all the required packages and dependencies:
 npm install
 ```
 
-### 3. Start the Development Server
-Once the installation is complete, you can start the local development server:
+### 3. Start the Server (Two Modes Available)
 
+The app now has two distinct modes to maximize your security and privacy:
+
+#### 🔒 Local Mode (Isolated & Secure)
+By default, the app runs completely isolated. **Only the computer running the app can access it.**
+To start in Local Mode, run:
 ```bash
 npm run dev
 ```
+Open your browser to `http://127.0.0.1:3000`.
 
-### 4. Open the App
-After running the start command, your terminal will display a local URL (usually `http://localhost:5173` or `http://localhost:3000`). Open this URL in your web browser to use the app.
-
-### 5. Accessing on your Internal Network (Internal Site)
-Because the server runs on `0.0.0.0`, you can access this application from any other device (like your phone, tablet, or another computer) connected to the same Wi-Fi or internal network:
-1. Find your computer's local IP address (e.g., `192.168.1.50`).
-   - On Windows: Open Command Prompt and type `ipconfig`, look for "IPv4 Address".
-   - On Mac: Open Terminal and type `ipconfig getifaddr en0`.
-2. Open a web browser on your other device and navigate to `http://YOUR_IP_ADDRESS:3000` (e.g., `http://192.168.1.50:3000`).
+#### 🌍 Internal-Site Mode (Shared across Wi-Fi)
+If you want to use the app on your iPad, phone, or another computer on the same Wi-Fi network:
+```bash
+npm run dev:network
+```
+1. It will output your Local IP address in the terminal (e.g., `http://192.168.1.50:3000`).
+2. Open that exact address on your phone/tablet's browser.
+*(To find your IP manually: open Command Prompt on Windows and type `ipconfig`, looking for "IPv4 Address").*
 
 ## Windows Automation (Run on Startup)
 

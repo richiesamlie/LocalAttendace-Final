@@ -6,6 +6,7 @@ import { cn } from '../utils/cn';
 
 export default function Roster() {
   const students = useStore((state) => state.students);
+  const currentClassId = useStore((state) => state.currentClassId);
   const setStudents = useStore((state) => state.setStudents);
   const addStudent = useStore((state) => state.addStudent);
   const removeStudent = useStore((state) => state.removeStudent);
@@ -29,11 +30,17 @@ export default function Roster() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!currentClassId) {
+      alert('Please create or select a class from the sidebar first before importing students.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setIsImporting(true);
     try {
       const importedStudents = await importStudentsFromExcel(file);
       // Replace the roster automatically to avoid confirm prompt issues in iframe
-      setStudents(importedStudents);
+      await setStudents(importedStudents);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Error importing students. Please ensure it is a valid Excel file.');
       console.error(error);
@@ -44,6 +51,10 @@ export default function Roster() {
   };
 
   const startAddStudent = () => {
+    if (!currentClassId) {
+      alert('Please create or select a class from the sidebar first before adding students.');
+      return;
+    }
     setIsAdding(true);
     setEditName('');
     setEditRoll('');
