@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { cn } from '../utils/cn';
 import { LayoutGrid, User, X, Flag } from 'lucide-react';
 
 export default function SeatingChart() {
-  const students = useStore((state) => state.students.filter(s => !s.isArchived));
+  const allStudents = useStore((state) => state.students);
+  const students = useMemo(() => allStudents.filter(s => !s.isArchived), [allStudents]);
   const seatingLayout = useStore((state) => state.seatingLayout);
   const updateSeat = useStore((state) => state.updateSeat);
   const setSeatingLayout = useStore((state) => state.setSeatingLayout);

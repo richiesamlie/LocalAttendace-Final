@@ -80,15 +80,17 @@ This will generate optimized static files in the `dist` directory, which can be 
 
 ## Screenshots
 
-*(Replace these placeholder images with actual screenshots of your app for GitHub)*
-
 | Dashboard | Student Roster |
 | :---: | :---: |
-| <img src="https://placehold.co/600x400/1e293b/ffffff?text=Dashboard" alt="Dashboard" width="100%"/> | <img src="https://placehold.co/600x400/1e293b/ffffff?text=Student+Roster" alt="Student Roster" width="100%"/> |
+| <img src="screenshots/dashboard.png" alt="Dashboard" width="100%"/> | <img src="screenshots/roster.png" alt="Student Roster" width="100%"/> |
 
-| Visual Seating | Smart Groups |
+| Monthly Reports | Visual Seating Chart |
 | :---: | :---: |
-| <img src="https://placehold.co/600x400/1e293b/ffffff?text=Visual+Seating" alt="Visual Seating" width="100%"/> | <img src="https://placehold.co/600x400/1e293b/ffffff?text=Smart+Groups" alt="Smart Groups" width="100%"/> |
+| <img src="screenshots/reports.png" alt="Monthly Reports" width="100%"/> | <img src="screenshots/seating.png" alt="Visual Seating" width="100%"/> |
+
+| Smart Group Generator | Random Student Picker |
+| :---: | :---: |
+| <img src="screenshots/groups.png" alt="Smart Groups" width="100%"/> | <img src="screenshots/random_picker.png" alt="Random Picker" width="100%"/> |
 
 ## Tech Stack
 - React 18
