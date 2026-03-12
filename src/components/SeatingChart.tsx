@@ -4,7 +4,7 @@ import { cn } from '../utils/cn';
 import { LayoutGrid, User, X, Flag } from 'lucide-react';
 
 export default function SeatingChart() {
-  const students = useStore((state) => state.students);
+  const students = useStore((state) => state.students.filter(s => !s.isArchived));
   const seatingLayout = useStore((state) => state.seatingLayout);
   const updateSeat = useStore((state) => state.updateSeat);
   const setSeatingLayout = useStore((state) => state.setSeatingLayout);

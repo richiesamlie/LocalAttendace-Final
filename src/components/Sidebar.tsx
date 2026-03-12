@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
 import { useLogout } from '../hooks/useData';
@@ -184,6 +184,39 @@ export default function Sidebar({
   toggleTheme,
   logoutMutation
 }: SidebarProps) {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const pingInterval = setInterval(async () => {
+      if (!navigator.onLine) {
+         setIsOnline(false);
+         return;
+      }
+      try {
+        const res = await fetch('/api/health', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+          setIsOnline(true);
+        } else {
+          setIsOnline(false);
+        }
+      } catch (err) {
+        setIsOnline(false);
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(pingInterval);
+    };
+  }, []);
+
   return (
     <aside className={cn(
       "w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col fixed inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out lg:translate-x-0",
@@ -197,12 +230,18 @@ export default function Sidebar({
             </div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">Teacher<br/>Assistant</h1>
           </div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold w-fit border border-emerald-200 dark:border-emerald-800/30 shadow-sm">
+          <div className={cn(
+            "inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold w-fit border shadow-sm transition-colors",
+            isOnline 
+              ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/30"
+              : "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/30"
+          )}>
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              {isOnline && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+              <span className={cn("relative inline-flex rounded-full h-2 w-2", isOnline ? "bg-emerald-500" : "bg-rose-500")}></span>
             </span>
-            Server Online
+            {isOnline ? 'Server Online' : 'Server Offline'}
+            {!isOnline && <WifiOff className="w-3.5 h-3.5 ml-1 opacity-70" />}
           </div>
         </div>
       </div>

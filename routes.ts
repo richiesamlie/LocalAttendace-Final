@@ -2,6 +2,8 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import db from './db';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -64,6 +66,11 @@ router.get('/auth/verify', (req, res) => {
   }
 });
 
+// Lightweight Health Ping for Wi-Fi Indicator
+router.get('/health', (req, res) => {
+  res.json({ ok: true, timestamp: Date.now() });
+});
+
 // Auth Middleware for protecting routes
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = req.cookies?.auth_token;
@@ -80,6 +87,43 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
 
 // Apply auth middleware to all routes below this point
 router.use(requireAuth);
+
+// --- DATABASE BACKUP & RESTORE ---
+router.get('/database/backup', (req, res) => {
+  const DB_FILE = path.join(process.cwd(), 'database.sqlite');
+  const dateStr = new Date().toISOString().split('T')[0];
+  res.download(DB_FILE, `LocalAttendance_Backup_${dateStr}.sqlite`);
+});
+
+router.post('/database/restore', express.raw({ type: '*/*', limit: '100mb' }), (req, res) => {
+  try {
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      return res.status(400).json({ error: 'No database file provided' });
+    }
+
+    // Write to a temporary file first to validate it's a valid SQLite DB
+    const tempFile = path.join(process.cwd(), `temp_restore_${Date.now()}.sqlite`);
+    fs.writeFileSync(tempFile, req.body);
+
+    const Database = require('better-sqlite3');
+    try {
+      const testDb = new Database(tempFile, { fileMustExist: true });
+      testDb.prepare('SELECT 1 FROM admin_settings').get();
+      testDb.close();
+      fs.unlinkSync(tempFile);
+    } catch (e) {
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+      return res.status(400).json({ error: 'Uploaded file is not a valid Attendance Database' });
+    }
+
+    // Apply the real restore via the db.ts proxy
+    (db as any).restore(req.body);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to restore database:', error);
+    res.status(500).json({ error: 'Internal server error during database restore' });
+  }
+});
 
 // --- CLASSES ---
 router.get('/classes', (req, res) => {
@@ -123,7 +167,11 @@ router.delete('/classes/:id', (req, res) => {
 // --- STUDENTS ---
 router.get('/classes/:classId/students', (req, res) => {
   try {
-    const students = db.prepare('SELECT * FROM students WHERE class_id = ?').all(req.params.classId);
+    const includeArchived = req.query.includeArchived === 'true';
+    const query = includeArchived 
+      ? 'SELECT * FROM students WHERE class_id = ?' 
+      : 'SELECT * FROM students WHERE class_id = ? AND is_archived = 0';
+    const students = db.prepare(query).all(req.params.classId);
     // map snake_case to camelCase
     const mapped = students.map((s: any) => ({
       id: s.id,
@@ -131,7 +179,8 @@ router.get('/classes/:classId/students', (req, res) => {
       rollNumber: s.roll_number,
       parentName: s.parent_name,
       parentPhone: s.parent_phone,
-      isFlagged: s.is_flagged === 1
+      isFlagged: s.is_flagged === 1,
+      isArchived: s.is_archived === 1
     }));
     res.json(mapped);
   } catch (error) {
@@ -153,7 +202,7 @@ router.post('/classes/:classId/students', (req, res) => {
 
 router.put('/students/:id', (req, res) => {
   try {
-    const { name, rollNumber, parentName, parentPhone, isFlagged } = req.body;
+    const { name, rollNumber, parentName, parentPhone, isFlagged, isArchived } = req.body;
     // Build dynamic update query
     const updates: string[] = [];
     const values: any[] = [];
@@ -163,6 +212,7 @@ router.put('/students/:id', (req, res) => {
     if (parentName !== undefined) { updates.push('parent_name = ?'); values.push(parentName); }
     if (parentPhone !== undefined) { updates.push('parent_phone = ?'); values.push(parentPhone); }
     if (isFlagged !== undefined) { updates.push('is_flagged = ?'); values.push(isFlagged ? 1 : 0); }
+    if (isArchived !== undefined) { updates.push('is_archived = ?'); values.push(isArchived ? 1 : 0); }
     
     if (updates.length > 0) {
       values.push(req.params.id);
@@ -176,7 +226,7 @@ router.put('/students/:id', (req, res) => {
 
 router.delete('/students/:id', (req, res) => {
   try {
-    db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
+    db.prepare('UPDATE students SET is_archived = 1 WHERE id = ?').run(req.params.id);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete student' });
@@ -193,8 +243,8 @@ router.post('/classes/:classId/students/sync', (req, res) => {
       const existingMap = new Map(existingRows.map(r => [r.roll_number, r.id]));
       
       const insert = db.prepare('INSERT INTO students (id, class_id, name, roll_number, parent_name, parent_phone, is_flagged) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      const update = db.prepare('UPDATE students SET name = ?, parent_name = ?, parent_phone = ?, is_flagged = ? WHERE id = ?');
-      const deleteStmt = db.prepare('DELETE FROM students WHERE id = ?');
+      const update = db.prepare('UPDATE students SET name = ?, parent_name = ?, parent_phone = ?, is_flagged = ?, is_archived = 0 WHERE id = ?');
+      const deleteStmt = db.prepare('UPDATE students SET is_archived = 1 WHERE id = ?');
 
       const importedRolls = new Set();
 

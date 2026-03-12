@@ -12,12 +12,15 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isMassiveBackingUp, setIsMassiveBackingUp] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const adminPassword = useStore((state) => state.adminPassword);
   const classes = useStore((state) => state.classes) || [];
-  const removeClass = useStore((state) => state.removeClass);
+  const clearAllData = useStore((state) => state.clearAllData);
+  const updateAdminPassword = useStore((state) => state.updateAdminPassword);
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +104,21 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdatePassword = () => {
+    if (!newPassword || !confirmNewPassword) {
+      alert('Please fill in both password fields.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      alert('New passwords do not match.');
+      return;
+    }
+    updateAdminPassword(newPassword);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    alert('Admin password updated successfully.');
+  };
+
   const handleImportMassiveBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -164,11 +182,11 @@ export default function AdminDashboard() {
   };
 
   const handleResetData = () => {
-    if (window.confirm('WARNING: This will permanently delete ALL classes, students, attendance records, seating charts, and events. This action cannot be undone. Are you absolutely sure?')) {
+    if (window.confirm('WARNING: This will permanently delete ALL classes, students, attendance records, seating charts, and events.\n\nThis action cannot be undone. Are you absolutely sure?')) {
       if (window.confirm('FINAL WARNING: Type "YES" to confirm deletion of all data.')) {
-        const state = useStore.getState();
-        state.classes.forEach(c => removeClass(c.id));
+        clearAllData();
         alert('All academic data has been reset.');
+        window.location.reload();
       }
     }
   };
@@ -352,37 +370,71 @@ export default function AdminDashboard() {
       </div>
 
       {/* Admin Quick Actions */}
-      <div className="flex flex-wrap gap-3">
-        <button
-          onClick={handleMassiveBackup}
-          disabled={isMassiveBackingUp}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        >
-          <Archive className={`w-4 h-4 ${isMassiveBackingUp ? 'animate-pulse' : ''}`} />
-          {isMassiveBackingUp ? 'Generating...' : 'Massive Backup'}
-        </button>
-        
-        <input
-          type="file"
-          accept=".json"
-          ref={fileInputRef}
-          onChange={handleImportMassiveBackup}
-          className="hidden"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm"
-        >
-          <Upload className="w-4 h-4" />
-          Import Backup
-        </button>
-        <button
-          onClick={handleResetData}
-          className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors text-sm"
-        >
-          <Trash2 className="w-4 h-4" />
-          Reset Academic Year
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Database className="w-4 h-4 text-indigo-500" /> Database Management
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleMassiveBackup}
+              disabled={isMassiveBackingUp}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+            >
+              <Archive className={`w-4 h-4 ${isMassiveBackingUp ? 'animate-pulse' : ''}`} />
+              {isMassiveBackingUp ? 'Generating...' : 'Massive Backup'}
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              onChange={handleImportMassiveBackup}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm"
+            >
+              <Upload className="w-4 h-4" />
+              Import Backup
+            </button>
+            <button
+              onClick={handleResetData}
+              className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors text-sm"
+            >
+              <Trash2 className="w-4 h-4" />
+              Reset Academic Year
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <Lock className="w-4 h-4 text-slate-500" /> Change Admin Password
+          </h3>
+          <div className="flex gap-2">
+            <input 
+              type="password" 
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="New password"
+              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <input 
+              type="password" 
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              placeholder="Confirm"
+              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              onClick={handleUpdatePassword}
+              className="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-xs font-medium hover:bg-slate-700 transition-colors"
+            >
+              Update
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats Grid */}

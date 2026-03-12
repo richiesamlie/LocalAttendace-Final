@@ -12,6 +12,7 @@ export interface Student {
   parentName?: string;
   parentPhone?: string;
   isFlagged?: boolean;
+  isArchived?: boolean;
 }
 
 export interface AttendanceRecord {
@@ -138,7 +139,7 @@ export const useStore = create<AppState>()((set, get) => ({
       
       // Populate full nested structure for the client
       for (const cls of classesData) {
-        cls.students = await api.getStudents(cls.id);
+        cls.students = await api.getStudents(cls.id, true);
         cls.records = await api.getRecords(cls.id);
         cls.events = await api.getEvents(cls.id);
         cls.timetable = await api.getTimetable(cls.id);
@@ -312,13 +313,13 @@ export const useStore = create<AppState>()((set, get) => ({
           }
         });
         return updateCurrentClass(state, { 
-          students: state.students.filter((s) => s.id !== id),
+          students: state.students.map((s) => s.id === id ? { ...s, isArchived: true } : s),
           seatingLayout: newSeating
         });
       });
-      toast.success('Student removed');
+      toast.success('Student archived');
     } catch (error) {
-      toast.error('Failed to remove student');
+      toast.error('Failed to archive student');
     }
   },
   
@@ -592,7 +593,9 @@ export const useStore = create<AppState>()((set, get) => ({
         return { classes: newClasses };
       });
     } catch (error) {
-      toast.error('Failed to update record for class');
+      toast.error('Failed to save attendance record');
     }
   },
 }));
+
+export const useActiveStudents = () => useStore((state) => state.students.filter(s => !s.isArchived));

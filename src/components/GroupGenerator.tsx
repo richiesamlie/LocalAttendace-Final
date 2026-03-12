@@ -4,7 +4,7 @@ import { Users, Shuffle, Download, UserPlus, AlertTriangle, Settings2 } from 'lu
 import { cn } from '../utils/cn';
 
 export default function GroupGenerator() {
-  const students = useStore((state) => state.students);
+  const students = useStore((state) => state.students.filter(s => !s.isArchived));
   const [groups, setGroups] = useState<Student[][]>([]);
   const [generationMode, setGenerationMode] = useState<'groupCount' | 'groupSize'>('groupCount');
   const [groupCount, setGroupCount] = useState(4);

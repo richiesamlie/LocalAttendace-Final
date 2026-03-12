@@ -167,7 +167,12 @@ export default function Reports() {
               {summary.map((student) => (
                 <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
-                  <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{student.name}</td>
+                  <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
+                    <div className="flex items-center gap-2">
+                      <span className={student.isArchived ? "text-slate-500" : ""}>{student.name}</span>
+                      {student.isArchived && <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">Archived</span>}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-center font-medium text-emerald-600 dark:text-emerald-400">{student.present}</td>
                   <td className="px-6 py-4 text-center font-medium text-rose-600 dark:text-rose-400">{student.absent}</td>
                   <td className="px-6 py-4 text-center font-medium text-amber-600 dark:text-amber-400">{student.sick}</td>

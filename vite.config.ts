@@ -14,15 +14,33 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'Local Attendance',
+          name: 'Teacher Assistant Pro',
           short_name: 'Attendance',
-          description: 'Local Attendance App',
-          theme_color: '#ffffff',
+          description: 'Offline-First Attendance & Classroom Management',
+          theme_color: '#4f46e5',
+          background_color: '#f8fafc',
+          display: 'standalone',
+          orientation: 'portrait',
           icons: [
             {
               src: 'icon.svg',
               sizes: '192x192 512x512',
-              type: 'image/svg+xml'
+              type: 'image/svg+xml',
+              purpose: 'any maskable'
+            }
+          ]
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'google-fonts-cache',
+                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] }
+              }
             }
           ]
         }

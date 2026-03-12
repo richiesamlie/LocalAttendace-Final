@@ -4,7 +4,7 @@ import { Shuffle, User, Trophy } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function RandomPicker() {
-  const students = useStore((state) => state.students);
+  const students = useStore((state) => state.students.filter(s => !s.isArchived));
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
 

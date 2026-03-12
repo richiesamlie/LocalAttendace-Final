@@ -28,7 +28,7 @@ export const api = {
   updateClass: (id: string, name: string) => fetchApi<{success: boolean}>(`/classes/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
   deleteClass: (id: string) => fetchApi<{success: boolean}>(`/classes/${id}`, { method: 'DELETE' }),
 
-  getStudents: (classId: string) => fetchApi<Student[]>(`/classes/${classId}/students`),
+  getStudents: (classId: string, includeArchived?: boolean) => fetchApi<Student[]>(`/classes/${classId}/students${includeArchived ? '?includeArchived=true' : ''}`),
   createStudent: (classId: string, student: Student) => fetchApi<{success: boolean}>(`/classes/${classId}/students`, { method: 'POST', body: JSON.stringify(student) }),
   updateStudent: (studentId: string, data: Partial<Student>) => fetchApi<{success: boolean}>(`/students/${studentId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteStudent: (studentId: string) => fetchApi<{success: boolean}>(`/students/${studentId}`, { method: 'DELETE' }),

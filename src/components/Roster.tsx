@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
 import { importStudentsFromExcel, generateTemplate } from '../utils/excel';
-import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function Roster() {
@@ -14,6 +14,7 @@ export default function Roster() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   // States for adding/editing
   const [isAdding, setIsAdding] = useState(false);
@@ -104,10 +105,11 @@ export default function Roster() {
   };
 
   const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (showArchived ? true : !student.isArchived) &&
+    (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (student.parentName && student.parentName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (student.parentPhone && student.parentPhone.toLowerCase().includes(searchQuery.toLowerCase()))
+    (student.parentPhone && student.parentPhone.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   return (
@@ -128,6 +130,18 @@ export default function Roster() {
               className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
             />
           </div>
+
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={cn(
+              "px-4 py-2 rounded-xl text-sm font-medium border transition-colors",
+              showArchived 
+                ? "bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" 
+                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700"
+            )}
+          >
+            {showArchived ? "Hide Archived" : "Show Archived"}
+          </button>
           
           <div className="relative">
             <input
@@ -271,7 +285,8 @@ export default function Roster() {
               {filteredStudents.map((student, index) => (
                 <tr key={student.id} className={cn(
                   "hover:bg-slate-100/50 dark:hover:bg-slate-800/80 transition-colors",
-                  index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-800/30"
+                  student.isArchived ? "opacity-60 bg-slate-50 dark:bg-slate-800/40" : 
+                  (index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-800/30")
                 )}>
                   {editingId === student.id ? (
                     <>
@@ -341,38 +356,51 @@ export default function Roster() {
                       <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
                       <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
                         <div className="flex items-center gap-2">
-                          {student.name}
+                          <span className={student.isArchived ? "line-through text-slate-500" : ""}>{student.name}</span>
                           {student.isFlagged && <Flag className="w-3 h-3 text-rose-500 fill-rose-500" />}
+                          {student.isArchived && <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">Archived</span>}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{student.parentName || '-'}</td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{student.parentPhone || '-'}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => toggleFlag(student)}
-                            className={cn(
-                              "p-2 rounded-lg transition-colors",
-                              student.isFlagged 
-                                ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50" 
-                                : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-                            )}
-                            title={student.isFlagged ? "Remove Flag" : "Flag Student"}
-                          >
-                            <Flag className={cn("w-4 h-4", student.isFlagged && "fill-current")} />
-                          </button>
-                          <button
-                            onClick={() => startEditStudent(student)}
-                            className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => removeStudent(student.id)}
-                            className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {student.isArchived ? (
+                            <button
+                              onClick={() => updateStudent(student.id, { isArchived: false })}
+                              className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors flex items-center gap-1"
+                              title="Restore Student"
+                            >
+                              <RefreshCcw className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => toggleFlag(student)}
+                                className={cn(
+                                  "p-2 rounded-lg transition-colors",
+                                  student.isFlagged 
+                                    ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50" 
+                                    : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                                )}
+                                title={student.isFlagged ? "Remove Flag" : "Flag Student"}
+                              >
+                                <Flag className={cn("w-4 h-4", student.isFlagged && "fill-current")} />
+                              </button>
+                              <button
+                                onClick={() => startEditStudent(student)}
+                                className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => removeStudent(student.id)}
+                                className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </>

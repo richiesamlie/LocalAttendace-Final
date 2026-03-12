@@ -25,29 +25,10 @@ export default function Settings() {
     setIsInternalSite(isIP || isPreview);
   }, []);
 
-  // We need to access the raw state to export it
-  const handleExportBackup = async () => {
-    try {
-      const response = await fetch('/api/data');
-      if (!response.ok) throw new Error('Failed to fetch database');
-      
-      const data = await response.json();
-      const jsonString = JSON.stringify(data, null, 2);
-      
-      // Create a blob and download it
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `LocalAttendance_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export database backup.');
-    }
+  // Export the SQLite database via our new backup API
+  const handleExportBackup = () => {
+    // Navigating directly triggers the express res.download() disposition
+    window.location.href = '/api/database/backup';
   };
 
   const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,22 +36,19 @@ export default function Settings() {
     if (!file) return;
 
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-
-      // Validate that it looks like our state
-      if (!data['teacher-assistant-storage']) {
-        throw new Error('Invalid backup file format.');
-      }
-
-      // Send to server
-      const response = await fetch('/api/data', {
+      // Send binary raw payload to server
+      const response = await fetch('/api/database/restore', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: text,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+        body: file,
       });
 
-      if (!response.ok) throw new Error('Failed to save to server');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Invalid SQLite Database or Server Error');
+      }
 
       setImportStatus('success');
       
@@ -251,13 +229,13 @@ export default function Settings() {
                 className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
               >
                 <Download className="w-5 h-5" />
-                Download Backup (.json)
+                Download Backup (.sqlite)
               </button>
 
               <div className="relative">
                 <input
                   type="file"
-                  accept=".json"
+                  accept=".sqlite"
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleImportBackup}
@@ -291,80 +269,6 @@ export default function Settings() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-
-      {/* Danger Zone Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-rose-100 dark:border-rose-900/30 p-6 sm:p-8">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold text-rose-700 dark:text-rose-400">Admin Danger Zone</h2>
-            <p className="text-slate-600 dark:text-slate-400 text-sm mt-2 leading-relaxed">
-              Advanced administrative actions. These features are locked to prevent accidental data loss or misuse.
-            </p>
-
-            <div className="mt-6 space-y-4">
-               <div className="p-5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Change Admin Password</h3>
-                  <div className="space-y-3">
-                    <input 
-                      type="password" 
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="New password"
-                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all"
-                    />
-                    <input 
-                      type="password" 
-                      value={confirmNewPassword}
-                      onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-slate-500 focus:border-slate-500 outline-none transition-all"
-                    />
-                    <button
-                      onClick={handleUpdatePassword}
-                      className="px-6 py-2.5 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-medium hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
-                    >
-                      Update Password
-                    </button>
-                  </div>
-                </div>
-
-                {isInternalSite && (
-                  <div className="p-5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-2xl">
-                    <h3 className="text-sm font-medium text-amber-900 dark:text-amber-400 mb-1">Massive Semester Backup</h3>
-                    <p className="text-sm text-amber-700 dark:text-amber-500 mb-4">
-                      Export all class data, timetables, and student monthly records organized by semester.
-                    </p>
-                    <button
-                      onClick={handleMassiveBackup}
-                      disabled={isMassiveBackingUp}
-                      className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Archive className={`w-5 h-5 ${isMassiveBackingUp ? 'animate-pulse' : ''}`} />
-                      {isMassiveBackingUp ? 'Generating Backup...' : 'Download Massive Backup'}
-                    </button>
-                  </div>
-                )}
-
-                <div className="p-5 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 rounded-2xl">
-                  <h3 className="text-sm font-medium text-rose-900 dark:text-rose-400 mb-1">Reset Academic Year</h3>
-                  <p className="text-sm text-rose-700 dark:text-rose-500 mb-4">
-                    Permanently delete all classes, students, attendance records, seating charts, and events.
-                  </p>
-                  <button
-                    onClick={handleResetData}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors w-full sm:w-auto"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Reset Academic Year
-                  </button>
-                </div>
-              </div>
           </div>
         </div>
       </div>
