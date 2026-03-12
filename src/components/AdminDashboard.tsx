@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Shield, Lock, Database, Users, Calendar, BookOpen, Clock, FileText, Archive, Trash2, Search, ChevronRight, Upload } from 'lucide-react';
 import { useStore } from '../store';
+import { api } from '../lib/api';
 
 type TabType = 'classes' | 'students' | 'attendance' | 'events' | 'timetables' | 'notes';
 
@@ -22,12 +23,17 @@ export default function AdminDashboard() {
   const clearAllData = useStore((state) => state.clearAllData);
   const updateAdminPassword = useStore((state) => state.updateAdminPassword);
 
-  const handleUnlock = (e: React.FormEvent) => {
+  const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === adminPassword) {
-      setIsUnlocked(true);
-      setError('');
-    } else {
+    try {
+      const res = await api.login(passwordInput);
+      if (res.success) {
+        setIsUnlocked(true);
+        setError('');
+      } else {
+        setError('Incorrect admin password');
+      }
+    } catch (err) {
       setError('Incorrect admin password');
     }
   };
