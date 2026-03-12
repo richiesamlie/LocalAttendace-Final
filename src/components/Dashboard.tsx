@@ -20,6 +20,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   const allRecords = useStore((state) => state.records);
   const records = allRecords.filter((r) => r.date === todayStr);
   const students = useStore((state) => state.students);
+  const activeStudents = students.filter(s => !s.isArchived);
   const dailyNotes = useStore((state) => state.dailyNotes);
   const events = useStore((state) => state.events);
   const timetable = useStore((state) => state.timetable || []);
@@ -44,7 +45,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
 
   const targetTime = setMinutes(setHours(new Date(), 8), 15);
   const isBeforeTarget = isBefore(currentTime, targetTime);
-  const isAttendanceDone = records.length === students.length && students.length > 0;
+  const isAttendanceDone = records.length === activeStudents.length && activeStudents.length > 0;
 
   const getEventIcon = (type: EventType) => {
     switch (type) {
@@ -137,7 +138,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             
             <div className="flex items-center justify-between mt-8">
               <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                <span className="text-2xl font-bold text-slate-900 dark:text-white mr-2">{records.length} / {students.length}</span>
+                <span className="text-2xl font-bold text-slate-900 dark:text-white mr-2">{records.length} / {activeStudents.length}</span>
                 Students recorded
               </div>
               <button

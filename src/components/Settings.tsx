@@ -1,33 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { useStore } from '../store';
-import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2, Trash2, Lock, Unlock, ShieldAlert, Archive } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const clearAllData = useStore((state) => state.clearAllData);
-  const updateAdminPassword = useStore((state) => state.updateAdminPassword);
-
-  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [isInternalSite, setIsInternalSite] = useState(false);
-
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [isMassiveBackingUp, setIsMassiveBackingUp] = useState(false);
-
-  useEffect(() => {
-    const hostname = window.location.hostname;
-    // Check if it's an IP address (internal network) or the AI Studio preview environment
-    const isIP = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(hostname);
-    const isPreview = hostname.includes('run.app');
-    setIsInternalSite(isIP || isPreview);
-  }, []);
 
   // Export the SQLite database via our new backup API
   const handleExportBackup = () => {
-    // Navigating directly triggers the express res.download() disposition
     window.location.href = '/api/database/backup';
   };
 
@@ -36,12 +16,9 @@ export default function Settings() {
     if (!file) return;
 
     try {
-      // Send binary raw payload to server
       const response = await fetch('/api/database/restore', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
+        headers: { 'Content-Type': 'application/octet-stream' },
         body: file,
       });
 
@@ -51,11 +28,7 @@ export default function Settings() {
       }
 
       setImportStatus('success');
-      
-      // Force reload to apply new state
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      setTimeout(() => window.location.reload(), 1500);
 
     } catch (error: any) {
       console.error('Import failed:', error);
@@ -66,114 +39,6 @@ export default function Settings() {
     }
   };
 
-  const handleResetData = () => {
-    const isConfirmed = window.confirm(
-      "WARNING: This will permanently delete ALL classes, students, attendance records, and settings.\n\n" +
-      "This action cannot be undone. Are you sure you want to reset the app for a new academic year?"
-    );
-    
-    if (isConfirmed) {
-      const doubleCheck = window.confirm(
-        "Are you absolutely sure? We recommend downloading a backup first."
-      );
-      
-      if (doubleCheck) {
-        clearAllData();
-        alert("All data has been cleared. The app is ready for a new academic year.");
-        window.location.reload();
-      }
-    }
-  };
-
-  const handleUpdatePassword = () => {
-    if (!newPassword || !confirmNewPassword) {
-      alert('Please fill in both password fields.');
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      alert('New passwords do not match.');
-      return;
-    }
-    updateAdminPassword(newPassword);
-    setNewPassword('');
-    setConfirmNewPassword('');
-    alert('Admin password updated successfully.');
-  };
-
-  const handleMassiveBackup = async () => {
-    setIsMassiveBackingUp(true);
-    try {
-      // Fetch latest from server to avoid internet lag/sync issues
-      const response = await fetch('/api/data');
-      if (!response.ok) throw new Error('Failed to fetch database');
-      const data = await response.json();
-      
-      let state = useStore.getState();
-      
-      // Try to use the server state if available and valid
-      if (data['teacher-assistant-storage']) {
-        try {
-          const parsedStorage = JSON.parse(data['teacher-assistant-storage']);
-          if (parsedStorage && parsedStorage.state) {
-            state = parsedStorage.state;
-          }
-        } catch (e) {
-          console.warn('Could not parse server state, falling back to local state', e);
-        }
-      }
-      
-      // Helper to determine semester
-      const isSem1 = (dateStr: string) => {
-        const month = new Date(dateStr).getMonth();
-        return month >= 6 && month <= 11; // Jul (6) to Dec (11)
-      };
-      const isSem2 = (dateStr: string) => {
-        const month = new Date(dateStr).getMonth();
-        return month >= 0 && month <= 5; // Jan (0) to Jun (5)
-      };
-
-      const processClasses = (filterFn: (date: string) => boolean) => {
-        return (state.classes || []).map((c: any) => ({
-          ...c,
-          records: (c.records || []).filter((r: any) => filterFn(r.date)),
-          dailyNotes: Object.fromEntries(Object.entries(c.dailyNotes || {}).filter(([date]) => filterFn(date))),
-          events: (c.events || []).filter((e: any) => filterFn(e.date))
-        }));
-      };
-
-      const massiveBackup = {
-        metadata: {
-          exportDate: new Date().toISOString(),
-          type: "Massive Semester Backup",
-          version: "1.1"
-        },
-        data: {
-          "Semester 1 (Jul-Dec)": {
-            classes: processClasses(isSem1)
-          },
-          "Semester 2 (Jan-Jun)": {
-            classes: processClasses(isSem2)
-          }
-        }
-      };
-
-      const jsonString = JSON.stringify(massiveBackup, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Massive backup failed:', error);
-      alert('Failed to generate massive backup. Please check your connection.');
-    } finally {
-      setIsMassiveBackingUp(false);
-    }
-  };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
