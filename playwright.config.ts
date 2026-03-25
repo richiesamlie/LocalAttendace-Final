@@ -6,12 +6,12 @@ export default defineConfig({
   retries: 1,
   workers: 1, // To avoid SQLite concurrent lock issues on same DB in simple tests
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
   },
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: true,
   },
 });

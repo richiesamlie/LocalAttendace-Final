@@ -69,7 +69,7 @@ export default function Settings() {
                 <li>Run the <code>start-app.bat</code> file from its new location inside Google Drive.</li>
               </ol>
               <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 italic">
-                That's it! Every time you take attendance, the <code>database.json</code> file will automatically sync to your Google Drive in the background.
+              That's it! Every time you take attendance, the <code>database.sqlite</code> file will automatically sync to your Google Drive in the background.
               </p>
             </div>
           </div>

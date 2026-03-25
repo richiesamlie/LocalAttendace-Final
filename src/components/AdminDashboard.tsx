@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Shield, Lock, Database, Users, Calendar, BookOpen, Clock, FileText, Archive, Trash2, Search, ChevronRight, Upload } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../lib/api';
@@ -18,7 +18,7 @@ export default function AdminDashboard() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const adminPassword = useStore((state) => state.adminPassword);
+
   const classes = useStore((state) => state.classes) || [];
   const clearAllData = useStore((state) => state.clearAllData);
   const updateAdminPassword = useStore((state) => state.updateAdminPassword);
@@ -38,26 +38,11 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleMassiveBackup = async () => {
+  const handleMassiveBackup = useCallback(() => {
     setIsMassiveBackingUp(true);
     try {
-      const response = await fetch('/api/data');
-      if (!response.ok) throw new Error('Failed to fetch database');
-      const data = await response.json();
-      
-      let state = useStore.getState();
-      
-      if (data['teacher-assistant-storage']) {
-        try {
-          const parsedStorage = JSON.parse(data['teacher-assistant-storage']);
-          if (parsedStorage && parsedStorage.state) {
-            state = parsedStorage.state;
-          }
-        } catch (e) {
-          console.warn('Could not parse server state, falling back to local state', e);
-        }
-      }
-      
+      const state = useStore.getState();
+
       const isSem1 = (dateStr: string) => {
         const month = new Date(dateStr).getMonth();
         return month >= 6 && month <= 11; // Jul (6) to Dec (11)
@@ -67,33 +52,29 @@ export default function AdminDashboard() {
         return month >= 0 && month <= 5; // Jan (0) to Jun (5)
       };
 
-      const processClasses = (filterFn: (date: string) => boolean) => {
-        return (state.classes || []).map((c: any) => ({
+      const processClasses = (filterFn: (date: string) => boolean) =>
+        (state.classes || []).map((c: any) => ({
           ...c,
           records: (c.records || []).filter((r: any) => filterFn(r.date)),
-          dailyNotes: Object.fromEntries(Object.entries(c.dailyNotes || {}).filter(([date]) => filterFn(date))),
-          events: (c.events || []).filter((e: any) => filterFn(e.date))
+          dailyNotes: Object.fromEntries(
+            Object.entries(c.dailyNotes || {}).filter(([date]) => filterFn(date))
+          ),
+          events: (c.events || []).filter((e: any) => filterFn(e.date)),
         }));
-      };
 
       const massiveBackup = {
         metadata: {
           exportDate: new Date().toISOString(),
-          type: "Massive Semester Backup",
-          version: "1.1"
+          type: 'Massive Semester Backup',
+          version: '1.1',
         },
         data: {
-          "Semester 1 (Jul-Dec)": {
-            classes: processClasses(isSem1)
-          },
-          "Semester 2 (Jan-Jun)": {
-            classes: processClasses(isSem2)
-          }
-        }
+          'Semester 1 (Jul-Dec)': { classes: processClasses(isSem1) },
+          'Semester 2 (Jan-Jun)': { classes: processClasses(isSem2) },
+        },
       };
 
-      const jsonString = JSON.stringify(massiveBackup, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(massiveBackup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -104,11 +85,11 @@ export default function AdminDashboard() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Massive backup failed:', error);
-      alert('Failed to generate massive backup. Please check your connection.');
+      alert('Failed to generate massive backup.');
     } finally {
       setIsMassiveBackingUp(false);
     }
-  };
+  }, []);
 
   const handleUpdatePassword = () => {
     if (!newPassword || !confirmNewPassword) {

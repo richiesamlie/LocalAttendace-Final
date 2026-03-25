@@ -27,7 +27,11 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     // Serve static files in production
-    app.use(express.static("dist"));
+    app.use(express.static('dist'));
+    // SPA fallback: serve index.html for all non-API routes so client-side routing works
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+    });
   }
 
   app.listen(PORT, HOST, () => {

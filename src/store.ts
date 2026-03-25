@@ -62,7 +62,6 @@ interface AppState {
   timetable: TimetableSlot[];
   seatingLayout: Record<string, string>; 
   theme: 'light' | 'dark';
-  adminPassword?: string;
 
   initializeStore: () => Promise<void>;
 
@@ -124,7 +123,6 @@ export const useStore = create<AppState>()((set, get) => ({
   timetable: [],
   seatingLayout: {},
   theme: 'light',
-  adminPassword: '',
 
   initializeStore: async () => {
     try {
@@ -161,7 +159,6 @@ export const useStore = create<AppState>()((set, get) => ({
         timetable: initialClass?.timetable || [],
         seatingLayout: initialClass?.seatingLayout || {},
         theme: (settings.theme as 'light'|'dark') || 'light',
-        adminPassword: settings.adminPassword || 'admin123',
       });
     } catch (error) {
       console.error('Failed to initialize store from API', error);
@@ -557,7 +554,6 @@ export const useStore = create<AppState>()((set, get) => ({
   updateAdminPassword: async (password) => {
     try {
       await api.saveSetting('adminPassword', password);
-      set(() => ({ adminPassword: password }));
       toast.success('Admin password updated');
     } catch (error) {
       toast.error('Failed to update admin password');

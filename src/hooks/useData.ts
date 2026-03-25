@@ -1,33 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import { ClassData, Student, AttendanceRecord, CalendarEvent, TimetableSlot } from '../store';
-import { useStore } from '../store';
-
-export function useClasses() {
-  return useQuery({
-    queryKey: ['classes'],
-    queryFn: api.getClasses,
-  });
-}
-
-export function useCurrentClassData() {
-  const currentClassId = useStore(state => state.currentClassId);
-  const classesQuery = useClasses();
-  return {
-    isLoading: classesQuery.isLoading,
-    classData: classesQuery.data?.find(c => c.id === currentClassId)
-  };
-}
-
-export function useStudents(classId: string | null) {
-  return useQuery({
-    queryKey: ['students', classId],
-    queryFn: () => classId ? api.getStudents(classId) : Promise.resolve([]),
-    enabled: !!classId,
-  });
-}
-
-// ... I will add other hooks dynamically as needed ...
 
 export function useAuth() {
   return useQuery({
