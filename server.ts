@@ -21,7 +21,12 @@ async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // In network mode, allow Vite to accept requests from LAN IPs
+        host: isNetwork ? '0.0.0.0' : '127.0.0.1',
+        allowedHosts: isNetwork ? true : undefined,
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);

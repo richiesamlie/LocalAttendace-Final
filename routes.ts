@@ -40,13 +40,13 @@ router.post('/auth/login', (req, res) => {
   }
 
   const token = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '7d' });
-  const isProduction = process.env.NODE_ENV === 'production';
+  // This app always runs over plain HTTP (local or LAN), never HTTPS.
+  // Using secure:true would cause browsers to silently drop the cookie on HTTP.
+  // sameSite:'lax' is safe and works for both local and network (internal site) access.
   res.cookie('auth_token', token, {
     httpOnly: true,
-    // Use secure + sameSite:none only in production (HTTPS).
-    // In dev (plain HTTP) the browser silently drops secure cookies.
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: false,
+    sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
   res.json({ success: true });
