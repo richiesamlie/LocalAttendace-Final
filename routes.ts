@@ -8,7 +8,10 @@ import fs from 'fs';
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_in_production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Set it in your .env file before starting the server.');
+}
 
 // Rate limiter: 5 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
