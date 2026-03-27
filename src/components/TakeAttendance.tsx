@@ -16,6 +16,7 @@ export default function TakeAttendance() {
   const allRecords = useStore((state) => state.records);
   const records = allRecords.filter((r) => r.date === date);
   const setRecord = useStore((state) => state.setRecord);
+  const markAllPresent = useStore((state) => state.markAllPresent);
   const dailyNotes = useStore((state) => state.dailyNotes);
   const setDailyNote = useStore((state) => state.setDailyNote);
   const todayNote = dailyNotes[date] || '';
@@ -40,17 +41,8 @@ export default function TakeAttendance() {
     }
   };
 
-  const markAllPresent = () => {
-    students.forEach(student => {
-      const existing = records.find(r => r.studentId === student.id);
-      if (!existing) {
-        setRecord({
-          studentId: student.id,
-          date,
-          status: 'Present',
-        });
-      }
-    });
+  const markAllPresentHandler = () => {
+    markAllPresent(date);
   };
 
   const filteredStudents = students.filter(student => 
@@ -87,7 +79,7 @@ export default function TakeAttendance() {
             />
           )}
           <button
-            onClick={markAllPresent}
+            onClick={markAllPresentHandler}
             className="px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors"
           >
             Mark All Present

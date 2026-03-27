@@ -75,6 +75,7 @@ interface AppState {
   removeStudent: (id: string) => Promise<void>;
   updateStudent: (id: string, data: Partial<Student>) => Promise<void>;
   setRecord: (record: AttendanceRecord) => Promise<void>;
+  markAllPresent: (date: string) => Promise<void>;
   setDailyNote: (date: string, note: string) => Promise<void>;
   addEvent: (event: CalendarEvent) => Promise<void>;
   addEvents: (events: CalendarEvent[]) => Promise<void>;
@@ -350,6 +351,30 @@ export const useStore = create<AppState>()((set, get) => ({
       });
     } catch (error) {
       toast.error('Failed to save attendance record');
+    }
+  },
+  
+  markAllPresent: async (date) => {
+    const classId = get().currentClassId;
+    if (!classId) return;
+    const students = get().students.filter(s => !s.isArchived);
+    const existingRecords = get().records;
+    
+    // Only create records for students without an existing record for this date
+    const newRecords: AttendanceRecord[] = students
+      .filter(s => !existingRecords.some(r => r.studentId === s.id && r.date === date))
+      .map(s => ({ studentId: s.id, date, status: 'Present' as AttendanceStatus }));
+    
+    if (newRecords.length === 0) return;
+    
+    try {
+      await api.saveRecords(newRecords.map(r => ({ ...r, classId })));
+      set((state) => updateCurrentClass(state, {
+        records: [...state.records, ...newRecords]
+      }));
+      toast.success(`${newRecords.length} students marked present`);
+    } catch (error) {
+      toast.error('Failed to mark all present');
     }
   },
   
