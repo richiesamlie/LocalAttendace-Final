@@ -129,7 +129,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   initializeStore: async () => {
     try {
-      const [classesData, settings] = await Promise.all([
+      let [classesData, settings] = await Promise.all([
         api.getClasses(),
         api.getSettings(),
       ]);
