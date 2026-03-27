@@ -2,7 +2,12 @@ import * as XLSX from 'xlsx';
 import { Student, AttendanceRecord, TimetableSlot, CalendarEvent } from '../store';
 import { format, getDaysInMonth, parseISO, startOfMonth, addDays, addMonths, isWeekend } from 'date-fns';
 
-export function importStudentsFromExcel(file: File): Promise<Student[]> {
+/** Derive a stable student ID from classId + rollNumber so re-imports don't create duplicates */
+function deriveStudentId(classId: string, rollNumber: string): string {
+  return `std_${btoa(`${classId}:${rollNumber}`).replace(/[/+=]/g, '_')}`;
+}
+
+export function importStudentsFromExcel(file: File, classId: string): Promise<Student[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -48,7 +53,7 @@ export function importStudentsFromExcel(file: File): Promise<Student[]> {
           rollNumbers.add(rollNumber);
 
           students.push({
-            id: `std_${Date.now()}_${index}`,
+            id: deriveStudentId(classId, rollNumber),
             name: String(name).trim(),
             rollNumber: rollNumber,
           });

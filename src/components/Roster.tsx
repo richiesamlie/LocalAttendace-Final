@@ -39,7 +39,7 @@ export default function Roster() {
 
     setIsImporting(true);
     try {
-      const importedStudents = await importStudentsFromExcel(file);
+      const importedStudents = await importStudentsFromExcel(file, currentClassId);
       // Replace the roster automatically to avoid confirm prompt issues in iframe
       await setStudents(importedStudents);
     } catch (error) {
