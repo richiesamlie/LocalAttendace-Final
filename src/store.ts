@@ -48,6 +48,7 @@ export interface ClassData {
   events: CalendarEvent[];
   timetable: TimetableSlot[];
   seatingLayout: Record<string, string>;
+  loaded?: boolean; // true once all data for this class has been fetched
 }
 
 interface AppState {
@@ -64,6 +65,7 @@ interface AppState {
   theme: 'light' | 'dark';
 
   initializeStore: () => Promise<void>;
+  loadClassData: (classId: string) => Promise<void>;
 
   addClass: (name: string) => Promise<void>;
   removeClass: (id: string) => Promise<void>;
@@ -136,14 +138,19 @@ export const useStore = create<AppState>()((set, get) => ({
         classesData = await api.getClasses();
       }
       
-      // Populate full nested structure for the client
-      for (const cls of classesData) {
-        cls.students = await api.getStudents(cls.id, true);
-        cls.records = await api.getRecords(cls.id);
-        cls.events = await api.getEvents(cls.id);
-        cls.timetable = await api.getTimetable(cls.id);
-        cls.dailyNotes = await api.getDailyNotes(cls.id);
-        cls.seatingLayout = await api.getSeating(cls.id);
+      // Eagerly load only the first/default class; other classes are lazy-loaded on switch
+      if (classesData.length > 0) {
+        const [first] = classesData;
+        [first.students, first.records, first.events, first.timetable, first.dailyNotes, first.seatingLayout] =
+          await Promise.all([
+            api.getStudents(first.id, true),
+            api.getRecords(first.id),
+            api.getEvents(first.id),
+            api.getTimetable(first.id),
+            api.getDailyNotes(first.id),
+            api.getSeating(first.id),
+          ]);
+        first.loaded = true;
       }
 
       const defaultClassId = classesData.length > 0 ? classesData[0].id : null;
@@ -167,6 +174,27 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
+  loadClassData: async (classId: string) => {
+    const state = get();
+    const cls = state.classes.find(c => c.id === classId);
+    if (!cls || cls.loaded) return;
+
+    const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+      api.getStudents(classId, true),
+      api.getRecords(classId),
+      api.getEvents(classId),
+      api.getTimetable(classId),
+      api.getDailyNotes(classId),
+      api.getSeating(classId),
+    ]);
+
+    set((state) => ({
+      classes: state.classes.map(c =>
+        c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
+      ),
+    }));
+  },
+
   addClass: async (name) => {
     try {
       const newClassId = `class_${Date.now()}`;
@@ -182,6 +210,7 @@ export const useStore = create<AppState>()((set, get) => ({
           events: [],
           timetable: [],
           seatingLayout: {},
+          loaded: true, // new class has no data to fetch
         };
         const newClasses = [...state.classes, newClass];
         
@@ -241,21 +270,28 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
-  setCurrentClass: (id) => set((state) => {
-    if (state.currentClassId === id) return state;
+  setCurrentClass: async (id) => {
+    const state = get();
+    if (state.currentClassId === id) return;
     const targetClass = state.classes.find(c => c.id === id);
-    if (!targetClass) return state;
-    
-    return {
+    if (!targetClass) return;
+
+    // Lazy-load if this class hasn't been loaded yet
+    if (!targetClass.loaded) {
+      await get().loadClassData(id);
+    }
+
+    const updated = get().classes.find(c => c.id === id)!;
+    set({
       currentClassId: id,
-      students: targetClass.students,
-      records: targetClass.records,
-      dailyNotes: targetClass.dailyNotes,
-      events: targetClass.events,
-      timetable: targetClass.timetable,
-      seatingLayout: targetClass.seatingLayout,
-    };
-  }),
+      students: updated.students,
+      records: updated.records,
+      dailyNotes: updated.dailyNotes,
+      events: updated.events,
+      timetable: updated.timetable,
+      seatingLayout: updated.seatingLayout,
+    });
+  },
 
   updateClassName: async (id, name) => {
     try {
