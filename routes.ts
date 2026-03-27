@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import rateLimit from 'express-rate-limit';
 import db from './db';
 import path from 'path';
 import fs from 'fs';
@@ -8,6 +9,15 @@ import fs from 'fs';
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_change_in_production';
+
+// Rate limiter: 5 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+});
 
 // Initialize default admin password if not exists
 const initAdmin = () => {
@@ -26,7 +36,7 @@ const initAdmin = () => {
 initAdmin();
 
 // --- AUTHENTICATION ---
-router.post('/auth/login', (req, res) => {
+router.post('/auth/login', authLimiter, (req, res) => {
   const { password } = req.body;
   const adminRow = db.prepare('SELECT value FROM admin_settings WHERE key = ?').get('adminPassword') as { value: string } | undefined;
   
