@@ -129,21 +129,23 @@ export const useStore = create<AppState>()((set, get) => ({
 
   initializeStore: async () => {
     try {
-      let classesData = await api.getClasses();
-      const settings = await api.getSettings();
-      
+      const [classesData, settings] = await Promise.all([
+        api.getClasses(),
+        api.getSettings(),
+      ]);
+
       if (classesData.length === 0) {
         const defaultClassId = `class_${Date.now()}`;
         await api.createClass({ id: defaultClassId, name: 'My First Class' });
         classesData = await api.getClasses();
       }
-      
+
       // Eagerly load only the first/default class; other classes are lazy-loaded on switch
       if (classesData.length > 0) {
         const [first] = classesData;
         [first.students, first.records, first.events, first.timetable, first.dailyNotes, first.seatingLayout] =
           await Promise.all([
-            api.getStudents(first.id, true),
+            api.getStudents(first.id, false),
             api.getRecords(first.id),
             api.getEvents(first.id),
             api.getTimetable(first.id),
@@ -180,7 +182,7 @@ export const useStore = create<AppState>()((set, get) => ({
     if (!cls || cls.loaded) return;
 
     const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-      api.getStudents(classId, true),
+      api.getStudents(classId, false),
       api.getRecords(classId),
       api.getEvents(classId),
       api.getTimetable(classId),
