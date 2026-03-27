@@ -1,8 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore, EventType } from '../store';
 import { format, isBefore, setHours, setMinutes, subDays, isAfter, parseISO } from 'date-fns';
 import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree } from 'lucide-react';
 import { cn } from '../utils/cn';
+
+/** Parse a time string like "8:15 AM" or "13:30" into minutes-since-midnight */
+function parseTime(timeStr: string): number {
+  if (!timeStr) return 0;
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+  if (!match) return 0;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const modifier = match[3]?.toLowerCase();
+  if (modifier === 'pm' && h < 12) h += 12;
+  if (modifier === 'am' && h === 12) h = 0;
+  return h * 60 + m;
+}
 
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -18,30 +31,36 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   const todayStr = format(currentTime, 'yyyy-MM-dd');
   const currentDayOfWeek = currentTime.getDay();
   const allRecords = useStore((state) => state.records);
-  const records = allRecords.filter((r) => r.date === todayStr);
   const students = useStore((state) => state.students);
-  const activeStudents = students.filter(s => !s.isArchived);
   const dailyNotes = useStore((state) => state.dailyNotes);
   const events = useStore((state) => state.events);
   const timetable = useStore((state) => state.timetable || []);
   const todayNote = dailyNotes[todayStr];
 
-  const todaysClasses = timetable
-    .filter(slot => slot.dayOfWeek === currentDayOfWeek)
-    .sort((a, b) => {
-      const parseTime = (timeStr: string) => {
-        if (!timeStr) return 0;
-        const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
-        if (!match) return 0;
-        let h = parseInt(match[1], 10);
-        const m = parseInt(match[2], 10);
-        const modifier = match[3]?.toLowerCase();
-        if (modifier === 'pm' && h < 12) h += 12;
-        if (modifier === 'am' && h === 12) h = 0;
-        return h * 60 + m;
-      };
-      return parseTime(a.startTime) - parseTime(b.startTime);
-    });
+  const todaysClasses = useMemo(() =>
+    timetable
+      .filter(slot => slot.dayOfWeek === currentDayOfWeek)
+      .sort((a, b) => parseTime(a.startTime) - parseTime(b.startTime)),
+    [timetable, currentDayOfWeek]
+  );
+
+  const upcomingEvents = useMemo(() =>
+    events
+      .filter(e => e.date === todayStr || isAfter(parseISO(e.date), new Date()))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 3),
+    [events, todayStr]
+  );
+
+  const activeStudents = useMemo(() =>
+    students.filter(s => !s.isArchived),
+    [students]
+  );
+
+  const records = useMemo(() =>
+    allRecords.filter(r => r.date === todayStr),
+    [allRecords, todayStr]
+  );
 
   const targetTime = setMinutes(setHours(new Date(), 8), 15);
   const isBeforeTarget = isBefore(currentTime, targetTime);
@@ -67,12 +86,10 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
     }
   };
 
-  const upcomingEvents = events
-    .filter(e => e.date === todayStr || isAfter(parseISO(e.date), new Date()))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
-
-  const todayHoliday = events.find(e => e.date === todayStr && e.type === 'Holiday');
+  const todayHoliday = useMemo(() =>
+    events.find(e => e.date === todayStr && e.type === 'Holiday'),
+    [events, todayStr]
+  );
 
   const [activeTab, setActiveTab] = useState<'schedule' | 'events' | 'notes'>('schedule');
 
