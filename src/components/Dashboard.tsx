@@ -62,7 +62,39 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
     [allRecords, todayStr]
   );
 
-  const targetTime = setMinutes(setHours(new Date(), 8), 15);
+  const targetTime = useMemo(() => {
+    if (todaysClasses.length === 0) return setMinutes(setHours(new Date(), 8), 15);
+    const earliest = todaysClasses.reduce((min, slot) => {
+      const t = parseTime(slot.startTime);
+      return t < min ? t : min;
+    }, parseTime(todaysClasses[0].startTime));
+    const h = Math.floor(earliest / 60);
+    const m = earliest % 60;
+    return setMinutes(setHours(new Date(), h), m);
+  }, [todaysClasses]);
+
+  const presentCount = useMemo(() => records.filter(r => r.status === 'Present').length, [records]);
+  const absentCount  = useMemo(() => records.filter(r => r.status === 'Absent').length,  [records]);
+  const sickCount    = useMemo(() => records.filter(r => r.status === 'Sick').length,    [records]);
+  const lateCount    = useMemo(() => records.filter(r => r.status === 'Late').length,    [records]);
+
+  const greeting = useMemo(() => {
+    const h = currentTime.getHours();
+    if (h < 12) return 'Good Morning';
+    if (h < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }, [currentTime]);
+
+  const firstClassTime = useMemo(() => {
+    if (todaysClasses.length === 0) return '8:15 AM';
+    const mins = parseTime(todaysClasses[0].startTime);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 || 12;
+    return `${displayH}:${m.toString().padStart(2, '0')} ${period}`;
+  }, [todaysClasses]);
+
   const isBeforeTarget = isBefore(currentTime, targetTime);
   const isAttendanceDone = records.length === activeStudents.length && activeStudents.length > 0;
 
@@ -96,7 +128,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Good Morning, Teacher!</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{greeting}, Teacher!</h1>
         <div className="text-right">
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{format(currentTime, 'EEEE, MMMM do')}</p>
           <p className="text-2xl font-mono text-slate-900 dark:text-white">{format(currentTime, 'HH:mm:ss')}</p>
@@ -145,10 +177,10 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
                   isAttendanceDone ? "text-emerald-700 dark:text-emerald-400/80" : isBeforeTarget ? "text-indigo-700 dark:text-indigo-400/80" : "text-rose-700 dark:text-rose-400/80"
                 )}>
                   {isAttendanceDone 
-                    ? "Great job! All students are accounted for today." 
-                    : isBeforeTarget 
-                      ? "It's before 8:15 AM. Perfect time to take attendance!" 
-                      : "It's past 8:15 AM. Please complete attendance soon."}
+                    ? "Great job! All students are accounted for today."
+                    : isBeforeTarget
+                      ? `It's before ${firstClassTime}. Perfect time to take attendance!`
+                      : `It's past ${firstClassTime}. Please complete attendance soon.`}
                 </p>
               </div>
             </div>
@@ -175,19 +207,19 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Present</p>
-                <p className="text-3xl font-light text-emerald-600 dark:text-emerald-400">{records.filter(r => r.status === 'Present').length}</p>
+                <p className="text-3xl font-light text-emerald-600 dark:text-emerald-400">{presentCount}</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Absent</p>
-                <p className="text-3xl font-light text-rose-600 dark:text-rose-400">{records.filter(r => r.status === 'Absent').length}</p>
+                <p className="text-3xl font-light text-rose-600 dark:text-rose-400">{absentCount}</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Sick</p>
-                <p className="text-3xl font-light text-amber-600 dark:text-amber-400">{records.filter(r => r.status === 'Sick').length}</p>
+                <p className="text-3xl font-light text-amber-600 dark:text-amber-400">{sickCount}</p>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Late</p>
-                <p className="text-3xl font-light text-orange-600 dark:text-orange-400">{records.filter(r => r.status === 'Late').length}</p>
+                <p className="text-3xl font-light text-orange-600 dark:text-orange-400">{lateCount}</p>
               </div>
             </div>
           </div>

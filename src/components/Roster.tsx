@@ -394,7 +394,12 @@ export default function Roster() {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => removeStudent(student.id)}
+                                onClick={() => {
+                                  if (confirm(`Archive "${student.name}"? They will be hidden from attendance and reports but their records will be preserved.`)) {
+                                    removeStudent(student.id);
+                                  }
+                                }}
+                                title="Archive Student"
                                 className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
                               >
                                 <Trash2 className="w-4 h-4" />

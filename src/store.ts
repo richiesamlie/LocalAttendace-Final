@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { shallow } from 'zustand/shallow';
 import { api } from './lib/api';
 import toast from 'react-hot-toast';
 
@@ -657,4 +658,7 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 }));
 
-export const useActiveStudents = () => useStore((state) => state.students.filter(s => !s.isArchived));
+export const useActiveStudents = () => useStore(
+  (state) => state.students.filter(s => !s.isArchived),
+  { equalityFn: shallow }
+);

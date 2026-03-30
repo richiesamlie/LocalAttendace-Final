@@ -185,6 +185,7 @@ export default function Sidebar({
   logoutMutation
 }: SidebarProps) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -365,16 +366,32 @@ export default function Sidebar({
             <><Sun className="w-4 h-4" /> Light Mode</>
           )}
         </button>
-        <button
-          onClick={() => {
-            if (confirm('Are you sure you want to log out?')) {
-              logoutMutation.mutate();
-            }
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-        >
-          Log Out
-        </button>
+        {showLogoutConfirm ? (
+          <div className="flex flex-col gap-2 p-3 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200 dark:border-rose-800/50">
+            <p className="text-xs font-medium text-rose-700 dark:text-rose-300 text-center">Log out?</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => logoutMutation.mutate()}
+                className="flex-1 px-3 py-1.5 bg-rose-600 text-white text-xs font-medium rounded-lg hover:bg-rose-700 transition-colors"
+              >
+                Yes, log out
+              </button>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+          >
+            Log Out
+          </button>
+        )}
       </div>
     </aside>
   );

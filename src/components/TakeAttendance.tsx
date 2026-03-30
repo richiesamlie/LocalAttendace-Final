@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore, AttendanceStatus } from '../store';
-import { format, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Check, X, Thermometer, Clock, Save, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
@@ -14,7 +15,10 @@ export default function TakeAttendance() {
   
   const students = useStore((state) => state.students);
   const allRecords = useStore((state) => state.records);
-  const records = allRecords.filter((r) => r.date === date);
+  const records = useMemo(
+    () => allRecords.filter((r) => r.date === date),
+    [allRecords, date]
+  );
   const setRecord = useStore((state) => state.setRecord);
   const markAllPresent = useStore((state) => state.markAllPresent);
   const dailyNotes = useStore((state) => state.dailyNotes);
@@ -42,13 +46,21 @@ export default function TakeAttendance() {
   };
 
   const markAllPresentHandler = () => {
+    const unmarked = filteredStudents.filter(s => !records.some(r => r.studentId === s.id));
+    if (unmarked.length === 0) {
+      toast('All students are already marked present.');
+      return;
+    }
     markAllPresent(date);
   };
 
-  const filteredStudents = students.filter(student => 
-    !student.isArchived &&
-    (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredStudents = useMemo(() =>
+    students.filter(student =>
+      !student.isArchived &&
+      (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+    ),
+    [students, searchQuery]
   );
 
   return (
