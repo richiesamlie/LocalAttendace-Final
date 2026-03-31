@@ -37,6 +37,17 @@ A comprehensive, local-first web application designed to help teachers manage th
 - **Input validation** with Zod schemas
 - **Helmet security headers** (XSS, clickjacking protection)
 
+## 📖 User Guide
+
+For a complete beginner's guide with step-by-step instructions, see the full **[User Guide](USER_GUIDE.md)**.
+
+It covers:
+- Installation (Docker & Node.js methods)
+- First login and setup
+- Adding students and taking attendance
+- Inviting teachers to classes
+- Backup, restore, and troubleshooting
+
 ## Prerequisites
 
 - **Node.js** (version 18 or higher)
