@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, UserPlus, X } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
 import { useLogout } from '../hooks/useData';
+import { api } from '../lib/api';
+import toast from 'react-hot-toast';
 
 function ClassSwitcher() {
   const classes = useStore((state) => state.classes);
@@ -16,6 +18,7 @@ function ClassSwitcher() {
   const [newClassName, setNewClassName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleAddClass = () => {
     if (newClassName.trim()) {
@@ -120,7 +123,19 @@ function ClassSwitcher() {
               <Plus className="w-4 h-4" />
             </button>
           </div>
+          <button
+            onClick={() => { if (currentClassId) setShowInviteModal(true); }}
+            disabled={!currentClassId}
+            className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Invite Teacher to Class
+          </button>
         </div>
+      )}
+
+      {showInviteModal && currentClassId && (
+        <InviteTeacherModal classId={currentClassId} onClose={() => setShowInviteModal(false)} />
       )}
     </div>
   );
@@ -404,5 +419,147 @@ export default function Sidebar({
         )}
       </div>
     </aside>
+  );
+}
+
+function InviteTeacherModal({ classId, onClose }: { classId: string; onClose: () => void }) {
+  const [teachers, setTeachers] = useState<Array<{ id: string; username: string; name: string }>>([]);
+  const [classTeachers, setClassTeachers] = useState<Array<{ teacher_id: string; role: string; username: string; name: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    Promise.all([
+      api.getAllTeachers(),
+      api.getClassTeachers(classId)
+    ]).then(([allTeachers, currentTeachers]) => {
+      setTeachers(allTeachers);
+      setClassTeachers(currentTeachers);
+      setLoading(false);
+    }).catch(() => {
+      setTeachers([]);
+      setClassTeachers([]);
+      setLoading(false);
+    });
+  }, [classId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const handleAdd = async (teacherId: string) => {
+    setAdding(teacherId);
+    try {
+      await api.addTeacherToClass(classId, teacherId);
+      toast.success('Teacher added to class');
+      const updated = await api.getClassTeachers(classId);
+      setClassTeachers(updated);
+    } catch {
+      toast.error('Failed to add teacher');
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  const handleRemove = async (teacherId: string) => {
+    try {
+      await api.removeTeacherFromClass(classId, teacherId);
+      toast.success('Teacher removed');
+      const updated = await api.getClassTeachers(classId);
+      setClassTeachers(updated);
+    } catch {
+      toast.error('Failed to remove teacher');
+    }
+  };
+
+  const classTeacherIds = new Set(classTeachers.map(t => t.teacher_id));
+  const availableTeachers = teachers.filter(t => !classTeacherIds.has(t.id));
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div ref={modalRef} className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+          <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+            <UserPlus className="w-4 h-4" />
+            Manage Class Teachers
+          </h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+        <div className="p-4 max-h-80 overflow-y-auto">
+          {loading ? (
+            <p className="text-sm text-slate-500 text-center py-4">Loading...</p>
+          ) : (
+            <>
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Current Teachers</p>
+              {classTeachers.length === 0 ? (
+                <p className="text-sm text-slate-400 py-2">No other teachers yet</p>
+              ) : (
+                <div className="space-y-1 mb-4">
+                  {classTeachers.map((t) => (
+                    <div key={t.teacher_id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+                          <UserCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">{t.name}</p>
+                          <p className="text-xs text-slate-500">{t.role === 'owner' ? 'Owner' : 'Teacher'}</p>
+                        </div>
+                      </div>
+                      {t.role !== 'owner' && (
+                        <button
+                          onClick={() => handleRemove(t.teacher_id)}
+                          className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {availableTeachers.length > 0 && (
+                <>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Add Teacher</p>
+                  <div className="space-y-1">
+                    {availableTeachers.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                            <UserCircle className="w-4 h-4 text-slate-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">{t.name}</p>
+                            <p className="text-xs text-slate-500">{t.username}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAdd(t.id)}
+                          disabled={adding === t.id}
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors disabled:opacity-50"
+                        >
+                          {adding === t.id ? 'Adding...' : 'Add'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
