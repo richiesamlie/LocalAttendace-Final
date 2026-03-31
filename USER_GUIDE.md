@@ -43,18 +43,75 @@
 
 ## 2. Installation
 
-### Step 1: Download the App
+You have two options to install the app. Choose the one that works best for you.
+
+---
+
+### Option A: Using Docker (Recommended for Easy Setup)
+
+> **Best for:** Users who want a quick, clean installation without installing Node.js.
+
+#### Prerequisites
+1. Install Docker Desktop: `https://www.docker.com/products/docker-desktop/`
+2. Run the installer and follow the prompts
+3. Restart your computer after installation
+4. Open Docker Desktop and wait for it to show "Docker is running"
+
+#### Step 1: Download the App
 1. Download the ZIP file from: `https://github.com/richiesamlie/LocalAttendace-Final`
 2. Click the green **Code** button → **Download ZIP**
 3. Extract the ZIP to a folder (e.g., `C:\TeacherAssistant`)
 
-### Step 2: Install Node.js
+#### Step 2: Configure the App
+1. Open the extracted folder
+2. Create a new file named `.env`
+3. Add this line to the file:
+   ```
+   JWT_SECRET=change_this_to_a_secure_random_string
+   ```
+4. Save the file
+
+#### Step 3: Start with Docker Compose
+1. Open Command Prompt as Administrator
+2. Navigate to the app folder:
+   ```
+   cd C:\TeacherAssistant
+   ```
+3. Run:
+   ```
+   docker-compose up -d
+   ```
+4. Wait for the download and setup (first time only)
+5. Open your browser to: `http://127.0.0.1:3000`
+
+> **Note:** Your data is stored in the `data` folder. Never delete this folder or you'll lose your data.
+
+#### Docker Commands Reference
+| Command | Description |
+|---------|-------------|
+| `docker-compose up -d` | Start the app |
+| `docker-compose down` | Stop the app |
+| `docker-compose logs -f` | View logs |
+| `docker-compose pull` | Update to latest version |
+
+---
+
+### Option B: Using Node.js (Traditional Method)
+
+> **Best for:** Users who prefer direct control and don't want to install Docker.
+
+#### Step 1: Download the App
+1. Download the ZIP file from: `https://github.com/richiesamlie/LocalAttendace-Final`
+2. Click the green **Code** button → **Download ZIP**
+3. Extract the ZIP to a folder (e.g., `C:\TeacherAssistant`)
+
+#### Step 2: Install Node.js
 1. Go to `https://nodejs.org`
 2. Download the **LTS version** (recommended)
 3. Run the installer and click **Next** through all steps
 4. Restart your computer after installation
 
-### Step 3: Install Dependencies
+#### Step 3: Install Dependencies
 1. Open the extracted folder
 2. Double-click `start-app.bat`
 3. A black window will appear and automatically install required files
@@ -283,13 +340,35 @@ Use these default credentials:
 
 ## 11. Troubleshooting
 
-### App Won't Start
+### App Won't Start (Node.js Method)
 **Problem:** Black window closes immediately
 **Solution:**
 1. Open Command Prompt
 2. Navigate to the app folder: `cd C:\TeacherAssistant`
 3. Run: `npm run dev`
 4. Read the error message
+
+### App Won't Start (Docker Method)
+**Problem:** `docker-compose up` fails
+**Solution:**
+1. Make sure Docker Desktop is running
+2. Check Docker is not showing any errors
+3. Run: `docker-compose logs` to see detailed errors
+4. If port 3000 is in use, change the port in `docker-compose.yml`:
+   ```yaml
+   ports:
+     - "3001:3000"  # Change 3000 to any free port
+   ```
+
+### Docker Container Keeps Restarting
+**Solution:**
+1. Run: `docker-compose logs teacher-assistant`
+2. Look for error messages
+3. Common fix: Delete and recreate:
+   ```
+   docker-compose down
+   docker-compose up -d
+   ```
 
 ### "Invalid username or password"
 **Solution:**
@@ -314,6 +393,16 @@ Use these default credentials:
 1. The database is created automatically on first run
 2. If deleted, all data is lost
 3. Restore from backup if available
+
+### Docker: Data Lost After Restart
+**Solution:**
+1. Make sure the `data` folder exists in your app directory
+2. Check `docker-compose.yml` has this volume mapping:
+   ```yaml
+   volumes:
+     - ./data:/app/data
+   ```
+3. Never delete the `data` folder — it contains your database
 
 ---
 
