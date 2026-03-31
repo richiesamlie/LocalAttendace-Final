@@ -3,25 +3,9 @@ import { api } from '../lib/api';
 import { useStore } from '../store';
 
 export function useAuth() {
-  const setAuth = useStore((state) => state.setAuth);
-  const clearAuth = useStore((state) => state.clearAuth);
-  
   return useQuery({
     queryKey: ['auth'],
-    queryFn: async () => {
-      const result = await api.verifyAuth();
-      if (result.authenticated && result.teacherId) {
-        try {
-          const teacher = await api.getMe();
-          setAuth(result.teacherId, teacher.name);
-        } catch (e) {
-          setAuth(result.teacherId, 'Teacher');
-        }
-      } else {
-        clearAuth();
-      }
-      return result;
-    },
+    queryFn: api.verifyAuth,
     retry: false,
   });
 }
