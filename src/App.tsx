@@ -33,10 +33,8 @@ function LoginScreen() {
       setError('Please enter username and password');
       return;
     }
-    console.log('Login attempt:', { username, password });
     loginMutation.mutate({ username, password }, {
-      onError: (err) => { 
-        console.log('Login error:', err);
+      onError: () => { 
         setError('Invalid username or password'); 
       },
     });
