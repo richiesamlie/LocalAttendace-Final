@@ -132,7 +132,35 @@ npm run build
 
 Generates optimized static files in `dist/` for deployment.
 
-## Data Storage
+## Docker Deployment
+
+### Quick Start
+
+```bash
+# Edit the JWT_SECRET in docker-compose.yml first
+docker-compose up -d
+```
+
+The app will be available at `http://localhost:3000`.
+
+### Manual Docker Build
+
+```bash
+docker build -t teacher-assistant .
+docker run -d -p 3000:3000 \
+  -v $(pwd)/data:/app/data \
+  -e JWT_SECRET=your_secret_key \
+  --name teacher-assistant \
+  teacher-assistant
+```
+
+### Docker Features
+- **Multi-stage build** for minimal image size
+- **Persistent volume** for database storage
+- **Health checks** for monitoring
+- **Auto-restart** on failure
+
+## Windows Automation
 
 Data is stored in a local SQLite database (`database.sqlite`) in the project root. This ensures:
 - Data persists across browser sessions
