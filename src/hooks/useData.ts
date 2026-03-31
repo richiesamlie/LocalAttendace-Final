@@ -1,11 +1,28 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useStore } from '../store';
 
 export function useAuth() {
+  const setAuth = useStore((state) => state.setAuth);
+  const clearAuth = useStore((state) => state.clearAuth);
+  
   return useQuery({
     queryKey: ['auth'],
-    queryFn: api.verifyAuth,
+    queryFn: async () => {
+      const result = await api.verifyAuth() as { authenticated: boolean; teacherId?: string; name?: string };
+      if (result.authenticated && result.teacherId) {
+        try {
+          const teacher = await api.getMe();
+          setAuth(result.teacherId!, teacher.name);
+        } catch {
+          setAuth(result.teacherId!, 'Teacher');
+        }
+      } else {
+        clearAuth();
+      }
+      return result;
+    },
     retry: false,
   });
 }
@@ -18,7 +35,7 @@ export function useLogin() {
     mutationFn: ({ username, password }: { username: string; password: string }) => api.login(username, password),
     onSuccess: (data) => {
       if (data.success) {
-        setAuth(data.teacherId, data.username);
+        setAuth(data.teacherId, data.name);
         queryClient.invalidateQueries({ queryKey: ['auth'] });
       }
     },

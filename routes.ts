@@ -65,7 +65,7 @@ router.post('/auth/login', authLimiter, validate(loginSchema), (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   
-  const teacher = db.stmt.getTeacherByUsername.get(username) as { id: string; username: string; password_hash: string } | undefined;
+  const teacher = db.stmt.getTeacherByUsername.get(username) as { id: string; username: string; password_hash: string; name: string } | undefined;
   
   if (!teacher) {
     return res.status(401).json({ error: 'Invalid credentials' });
@@ -83,7 +83,7 @@ router.post('/auth/login', authLimiter, validate(loginSchema), (req, res) => {
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
-  res.json({ success: true, teacherId: teacher.id, username: teacher.username });
+  res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name });
 });
 
 router.post('/auth/logout', (req, res) => {
@@ -94,7 +94,9 @@ router.post('/auth/logout', (req, res) => {
 router.get('/auth/verify', (req, res) => {
   const teacherId = getTeacherId(req);
   if (!teacherId) return res.status(401).json({ authenticated: false });
-  res.json({ authenticated: true, teacherId });
+  const teacher = db.stmt.getTeacherById.get(teacherId) as { id: string; username: string; name: string } | undefined;
+  if (!teacher) return res.status(401).json({ authenticated: false });
+  res.json({ authenticated: true, teacherId, name: teacher.name });
 });
 
 router.get('/auth/me', (req, res) => {
