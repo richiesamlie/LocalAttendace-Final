@@ -5,7 +5,41 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import fs from "fs";
 import apiRoutes from "./routes";
+
+// Simple request logger middleware
+function requestLogger() {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const start = Date.now();
+    const method = req.method;
+    const url = req.url;
+    
+    // Capture original end to log after response
+    const originalEnd = res.end;
+    res.end = function(...args: any[]) {
+      const duration = Date.now() - start;
+      const status = res.statusCode;
+      const timestamp = new Date().toISOString();
+      const logLine = `${timestamp} ${method} ${url} ${status} ${duration}ms`;
+      
+      // Color-coded console output
+      const statusColor = status >= 500 ? '\x1b[31m' : status >= 400 ? '\x1b[33m' : '\x1b[32m';
+      const reset = '\x1b[0m';
+      console.log(`  ${method.padEnd(6)} ${url.padEnd(45)} ${statusColor}${status}${reset} ${duration}ms`);
+      
+      // Log errors to file
+      if (status >= 500) {
+        const logEntry = `${timestamp} ERROR ${method} ${url} ${status} ${duration}ms\n`;
+        fs.appendFileSync('server-error.log', logEntry);
+      }
+      
+      originalEnd.apply(res, args);
+    } as any;
+    
+    next();
+  };
+}
 
 async function startServer() {
   const args = process.argv.slice(2);
@@ -23,6 +57,9 @@ async function startServer() {
 
   // Gzip compression for faster network transfer
   app.use(compression());
+
+  // Request logging
+  app.use(requestLogger());
 
   app.use(express.json({ limit: '50mb' }));
   app.use(cookieParser());
@@ -67,7 +104,22 @@ async function startServer() {
       console.log(` (Run with 'npm run dev:network' to share on Wi-Fi)`);
     }
     console.log(`========================================\n`);
+    console.log('  METHOD   URL                                           STATUS DURATION');
+    console.log('  ──────────────────────────────────────────────────────────────────────');
   });
 }
+
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+  const timestamp = new Date().toISOString();
+  console.error(`\n\x1b[31m[${timestamp}] UNCAUGHT EXCEPTION:\x1b[0m`, err.message);
+  fs.appendFileSync('server-error.log', `${timestamp} UNCAUGHT EXCEPTION: ${err.message}\n${err.stack}\n\n`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const timestamp = new Date().toISOString();
+  console.error(`\n\x1b[31m[${timestamp}] UNHANDLED REJECTION:\x1b[0m`, reason);
+  fs.appendFileSync('server-error.log', `${timestamp} UNHANDLED REJECTION: ${reason}\n\n`);
+});
 
 startServer();
