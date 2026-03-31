@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, UserPlus, X } from 'lucide-react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, UserPlus, X, Search, Loader2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
 import { useLogout } from '../hooks/useData';
@@ -427,6 +427,8 @@ function InviteTeacherModal({ classId, onClose }: { classId: string; onClose: ()
   const [classTeachers, setClassTeachers] = useState<Array<{ teacher_id: string; role: string; username: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'current' | 'add'>('current');
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -482,81 +484,158 @@ function InviteTeacherModal({ classId, onClose }: { classId: string; onClose: ()
   const classTeacherIds = new Set(classTeachers.map(t => t.teacher_id));
   const availableTeachers = teachers.filter(t => !classTeacherIds.has(t.id));
 
+  const query = searchQuery.toLowerCase();
+  const filteredCurrent = classTeachers.filter(t =>
+    t.name.toLowerCase().includes(query) || t.username.toLowerCase().includes(query)
+  );
+  const filteredAvailable = availableTeachers.filter(t =>
+    t.name.toLowerCase().includes(query) || t.username.toLowerCase().includes(query)
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div ref={modalRef} className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-          <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-            <UserPlus className="w-4 h-4" />
-            Manage Class Teachers
-          </h3>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-            <X className="w-4 h-4 text-slate-500" />
+      <div ref={modalRef} className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-indigo-500" />
+              Manage Class Teachers
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Search, add, or remove teachers from this class.</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+            <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
 
-        <div className="p-4 max-h-80 overflow-y-auto">
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800">
+          <button
+            onClick={() => { setActiveTab('current'); setSearchQuery(''); }}
+            className={cn(
+              "flex-1 px-6 py-3 text-sm font-medium transition-colors border-b-2",
+              activeTab === 'current'
+                ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            )}
+          >
+            Current Teachers ({classTeachers.length})
+          </button>
+          <button
+            onClick={() => { setActiveTab('add'); setSearchQuery(''); }}
+            className={cn(
+              "flex-1 px-6 py-3 text-sm font-medium transition-colors border-b-2",
+              activeTab === 'add'
+                ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10"
+                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            )}
+          >
+            Add Teacher ({availableTeachers.length})
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name or username..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 max-h-96 overflow-y-auto">
           {loading ? (
-            <p className="text-sm text-slate-500 text-center py-4">Loading...</p>
-          ) : (
-            <>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Current Teachers</p>
-              {classTeachers.length === 0 ? (
-                <p className="text-sm text-slate-400 py-2">No other teachers yet</p>
-              ) : (
-                <div className="space-y-1 mb-4">
-                  {classTeachers.map((t) => (
-                    <div key={t.teacher_id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
-                          <UserCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-900 dark:text-white">{t.name}</p>
-                          <p className="text-xs text-slate-500">{t.role === 'owner' ? 'Owner' : 'Teacher'}</p>
-                        </div>
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              <span className="ml-3 text-sm text-slate-500">Loading teachers...</span>
+            </div>
+          ) : activeTab === 'current' ? (
+            filteredCurrent.length === 0 ? (
+              <div className="text-center py-12">
+                <UserCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {searchQuery ? 'No teachers match your search' : 'No teachers in this class yet'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredCurrent.map((t) => (
+                  <div key={t.teacher_id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
+                        <UserCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                       </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">@{t.username}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium",
+                        t.role === 'owner'
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                      )}>
+                        {t.role === 'owner' ? 'Owner' : 'Teacher'}
+                      </span>
                       {t.role !== 'owner' && (
                         <button
                           onClick={() => handleRemove(t.teacher_id)}
-                          className="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
                         >
                           Remove
                         </button>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {availableTeachers.length > 0 && (
-                <>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Add Teacher</p>
-                  <div className="space-y-1">
-                    {availableTeachers.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                            <UserCircle className="w-4 h-4 text-slate-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-slate-900 dark:text-white">{t.name}</p>
-                            <p className="text-xs text-slate-500">{t.username}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleAdd(t.id)}
-                          disabled={adding === t.id}
-                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 px-2 py-1 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors disabled:opacity-50"
-                        >
-                          {adding === t.id ? 'Adding...' : 'Add'}
-                        </button>
-                      </div>
-                    ))}
                   </div>
-                </>
-              )}
-            </>
+                ))}
+              </div>
+            )
+          ) : (
+            filteredAvailable.length === 0 ? (
+              <div className="text-center py-12">
+                <UserCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {searchQuery ? 'No teachers match your search' : 'All teachers are already in this class'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredAvailable.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                        <UserCircle className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">@{t.username}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAdd(t.id)}
+                      disabled={adding === t.id}
+                      className="px-4 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {adding === t.id ? (
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Adding...
+                        </span>
+                      ) : 'Add to Class'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>
