@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore, EventType } from '../store';
 import { format, isBefore, setHours, setMinutes, subDays, isAfter, parseISO } from 'date-fns';
-import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree } from 'lucide-react';
+import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree, UserPlus } from 'lucide-react';
 import { cn } from '../utils/cn';
+import InviteTeacherModal from './InviteTeacherModal';
 
 /** Parse a time string like "8:15 AM" or "13:30" into minutes-since-midnight */
 function parseTime(timeStr: string): number {
@@ -20,7 +21,10 @@ function parseTime(timeStr: string): number {
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isMounted, setIsMounted] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const updateTimetableSlot = useStore((state) => state.updateTimetableSlot);
+  const currentClassId = useStore((state) => state.currentClassId);
+  const currentClass = useStore((state) => state.classes.find(c => c.id === state.currentClassId));
   
   useEffect(() => {
     setIsMounted(true);
@@ -129,9 +133,20 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{greeting}, Teacher!</h1>
-        <div className="text-right">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{format(currentTime, 'EEEE, MMMM do')}</p>
-          <p className="text-2xl font-mono text-slate-900 dark:text-white">{format(currentTime, 'HH:mm:ss')}</p>
+        <div className="flex items-center gap-4">
+          {currentClass && (
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              Manage Teachers
+            </button>
+          )}
+          <div className="text-right">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{format(currentTime, 'EEEE, MMMM do')}</p>
+            <p className="text-2xl font-mono text-slate-900 dark:text-white">{format(currentTime, 'HH:mm:ss')}</p>
+          </div>
         </div>
       </div>
 
@@ -392,6 +407,14 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             </div>
           </div>
         </div>
+      )}
+
+      {showInviteModal && currentClassId && (
+        <InviteTeacherModal
+          classId={currentClassId}
+          className={currentClass?.name || ''}
+          onClose={() => setShowInviteModal(false)}
+        />
       )}
     </div>
   );
