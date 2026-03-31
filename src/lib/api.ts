@@ -19,9 +19,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export const api = {
   // --- AUTH ---
-  login: (password: string) => fetchApi<{success: boolean}>('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
+  login: (username: string, password: string) => fetchApi<{success: boolean, teacherId: string, username: string}>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => fetchApi<{success: boolean}>('/auth/logout', { method: 'POST' }),
-  verifyAuth: () => fetchApi<{authenticated: boolean}>('/auth/verify'),
+  verifyAuth: () => fetchApi<{authenticated: boolean, teacherId?: string}>('/auth/verify'),
+  getMe: () => fetchApi<{id: string, username: string, name: string}>('/auth/me'),
+  registerTeacher: (username: string, password: string, name: string) => fetchApi<{success: boolean, id: string, username: string, name: string}>('/teachers/register', { method: 'POST', body: JSON.stringify({ username, password, name }) }),
 
   // --- CLASSES ---
   getClasses: () => fetchApi<ClassData[]>('/classes'),

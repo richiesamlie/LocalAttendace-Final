@@ -54,6 +54,9 @@ export interface ClassData {
 
 interface AppState {
   isInitialized: boolean;
+  isAuthenticated: boolean;
+  teacherId: string | null;
+  teacherName: string | null;
   classes: ClassData[];
   currentClassId: string | null;
 
@@ -64,6 +67,9 @@ interface AppState {
   timetable: TimetableSlot[];
   seatingLayout: Record<string, string>; 
   theme: 'light' | 'dark';
+
+  setAuth: (teacherId: string, teacherName: string) => void;
+  clearAuth: () => void;
 
   initializeStore: () => Promise<void>;
   loadClassData: (classId: string) => Promise<void>;
@@ -117,6 +123,9 @@ const updateCurrentClass = (state: AppState, updates: Partial<AppState>) => {
 
 export const useStore = create<AppState>()((set, get) => ({
   isInitialized: false,
+  isAuthenticated: false,
+  teacherId: null,
+  teacherName: null,
   classes: [],
   currentClassId: null,
 
@@ -127,6 +136,9 @@ export const useStore = create<AppState>()((set, get) => ({
   timetable: [],
   seatingLayout: {},
   theme: 'light',
+
+  setAuth: (teacherId, teacherName) => set({ isAuthenticated: true, teacherId, teacherName }),
+  clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
 
   initializeStore: async () => {
     try {
@@ -659,6 +671,5 @@ export const useStore = create<AppState>()((set, get) => ({
 }));
 
 export const useActiveStudents = () => useStore(
-  (state) => state.students.filter(s => !s.isArchived),
-  { equalityFn: shallow }
+  (state) => state.students.filter(s => !s.isArchived)
 );

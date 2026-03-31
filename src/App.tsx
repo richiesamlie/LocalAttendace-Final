@@ -22,14 +22,23 @@ const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 const Gatekeeper = React.lazy(() => import('./components/Gatekeeper'));
 
 function LoginScreen() {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const loginMutation = useLogin();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    loginMutation.mutate(password, {
-      onError: () => setError('Invalid password'),
+    if (!username || !password) {
+      setError('Please enter username and password');
+      return;
+    }
+    console.log('Login attempt:', { username, password });
+    loginMutation.mutate({ username, password }, {
+      onError: (err) => { 
+        console.log('Login error:', err);
+        setError('Invalid username or password'); 
+      },
     });
   };
 
@@ -46,7 +55,21 @@ function LoginScreen() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Admin Password</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setError(''); }}
+              className={cn(
+                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none",
+                error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
+              )}
+              placeholder="Enter username..."
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -56,18 +79,18 @@ function LoginScreen() {
                 error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
               )}
               placeholder="Enter password..."
-              autoFocus
             />
             {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
           </div>
           <button
             type="submit"
-            disabled={loginMutation.isPending || !password}
+            disabled={loginMutation.isPending || !username || !password}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loginMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Log In'}
           </button>
         </form>
+        <p className="text-xs text-slate-400 text-center mt-4">Default: username: admin, password: teacher123</p>
       </div>
     </div>
   );
