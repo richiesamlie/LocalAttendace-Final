@@ -12,8 +12,8 @@ A comprehensive, local-first web application designed to help teachers manage th
 
 ### 📊 Core Features
 - **Dashboard**: Overview of today's classes and quick stats
-- **Take Attendance**: Record daily attendance with support for past dates
-- **Student Roster**: Manage students, import from Excel, flag students
+- **Take Attendance**: Record daily attendance with support for past dates and bulk Excel import
+- **Student Roster**: Manage students, import from Excel, flag students, export full class data
 - **Monthly Reports**: Generate and export attendance summaries
 - **Daily Timetable**: Weekly schedule with time slots, subjects, lessons
 - **Calendar Events**: Manage classwork, tests, exams
@@ -22,6 +22,12 @@ A comprehensive, local-first web application designed to help teachers manage th
 - **Smart Groups**: Auto-generate student groups with flagged student separation
 - **Gatekeeper**: Quick search and late-tagging for students arriving after class starts
 - **Admin Dashboard**: Bulk data management, teacher management, and data export
+
+### 📥 Excel Import/Export
+- **Bulk Student Import**: Import entire class rosters from Excel templates
+- **Bulk Attendance Import**: Import attendance records from Excel (by roll number or name)
+- **Full Class Export**: Export all class data (students, attendance, events, timetable, notes) to a multi-sheet Excel file
+- **Monthly Reports**: Export attendance summaries with customizable columns
 
 ### 🔒 Security & Performance
 - **WAL mode** with auto-checkpointing for concurrent access

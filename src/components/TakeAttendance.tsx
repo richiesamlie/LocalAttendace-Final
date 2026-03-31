@@ -1,19 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { useStore, AttendanceStatus } from '../store';
+import React, { useState, useMemo, useRef } from 'react';
+import { useStore, AttendanceRecord, AttendanceStatus } from '../store';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '../lib/api';
+import { generateAttendanceTemplate, importAttendanceFromExcel } from '../utils/excel';
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const date = activeTab === 'today' ? format(new Date(), 'yyyy-MM-dd') : selectedDate;
   
   const students = useStore((state) => state.students);
+  const currentClassId = useStore((state) => state.currentClassId);
   const allRecords = useStore((state) => state.records);
   const records = useMemo(
     () => allRecords.filter((r) => r.date === date),
@@ -24,6 +29,34 @@ export default function TakeAttendance() {
   const dailyNotes = useStore((state) => state.dailyNotes);
   const setDailyNote = useStore((state) => state.setDailyNote);
   const todayNote = dailyNotes[date] || '';
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!currentClassId) {
+      toast.error('Please select a class first.');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const importedRecords = await importAttendanceFromExcel(file, currentClassId, students);
+      if (importedRecords.length === 0) {
+        toast.error('No valid attendance records found in file.');
+        return;
+      }
+      await api.saveRecords(importedRecords);
+      toast.success(`Imported ${importedRecords.length} attendance record(s)`);
+      const state = useStore.getState();
+      await state.initializeStore();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error importing attendance');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     const existing = records.find(r => r.studentId === studentId);
@@ -81,6 +114,30 @@ export default function TakeAttendance() {
               className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
             />
           </div>
+          <div className="relative">
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              {isImporting ? 'Importing...' : 'Import Excel'}
+            </button>
+          </div>
+          <button
+            onClick={generateAttendanceTemplate}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Template
+          </button>
           {activeTab === 'past' && (
             <input
               type="date"

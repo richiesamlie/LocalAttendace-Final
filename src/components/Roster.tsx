@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
-import { importStudentsFromExcel, generateTemplate } from '../utils/excel';
+import { importStudentsFromExcel, generateTemplate, exportClassData } from '../utils/excel';
 import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw } from 'lucide-react';
 import { cn } from '../utils/cn';
+import toast from 'react-hot-toast';
 
 export default function Roster() {
   const students = useStore((state) => state.students);
@@ -112,6 +113,24 @@ export default function Roster() {
     (student.parentPhone && student.parentPhone.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
+  const handleExportClass = () => {
+    const state = useStore.getState();
+    const currentClass = state.classes.find(c => c.id === state.currentClassId);
+    if (!currentClass) {
+      toast.error('No class selected');
+      return;
+    }
+    exportClassData(
+      currentClass.name,
+      state.students,
+      state.records,
+      state.events,
+      state.timetable,
+      state.dailyNotes,
+    );
+    toast.success('Class data exported');
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -188,6 +207,14 @@ export default function Roster() {
               </div>
             )}
           </div>
+
+          <button
+            onClick={handleExportClass}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export Class
+          </button>
 
           <button
             onClick={startAddStudent}

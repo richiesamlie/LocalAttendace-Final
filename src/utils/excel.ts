@@ -481,3 +481,177 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
     reader.readAsBinaryString(file);
   });
 }
+
+export function generateAttendanceTemplate(): void {
+  const headers = ['Roll Number', 'Student Name', 'Date', 'Status', 'Reason'];
+  const exampleRows = [
+    ['001', 'John Smith', '2024-03-15', 'Present', ''],
+    ['002', 'Jane Doe', '2024-03-15', 'Absent', 'Sick'],
+    ['003', 'Bob Wilson', '2024-03-15', 'Late', 'Traffic'],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
+  ws['!cols'] = [
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 30 },
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance Import');
+  XLSX.writeFile(wb, 'Attendance_Import_Template.xlsx');
+}
+
+export function importAttendanceFromExcel(file: File, classId: string, students: Student[]): Promise<AttendanceRecord[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        
+        if (!workbook.SheetNames.length) {
+          throw new Error("The Excel file contains no sheets.");
+        }
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        
+        if (!json || json.length === 0) {
+          throw new Error("The Excel sheet is empty.");
+        }
+
+        const studentMap = new Map<string, Student>();
+        students.forEach(s => {
+          studentMap.set(s.rollNumber.toLowerCase(), s);
+          studentMap.set(s.name.toLowerCase(), s);
+        });
+
+        const records: AttendanceRecord[] = [];
+        const errors: string[] = [];
+        const validStatuses = ['Present', 'Absent', 'Sick', 'Late'];
+
+        for (let index = 0; index < json.length; index++) {
+          const row: any = json[index];
+          const rowNum = index + 2;
+
+          const rollNumberRaw = row['Roll Number'] || row['rollNumber'] || row['Roll'] || row['ID'];
+          const nameRaw = row['Student Name'] || row['name'] || row['Name'];
+          const dateRaw = row['Date'] || row['date'];
+          const statusRaw = row['Status'] || row['status'];
+          const reason = row['Reason'] || row['reason'] || '';
+
+          if (!dateRaw) {
+            errors.push(`Row ${rowNum}: Missing date.`);
+            continue;
+          }
+
+          let dateStr: string;
+          if (dateRaw instanceof Date) {
+            dateStr = format(dateRaw, 'yyyy-MM-dd');
+          } else {
+            const parsed = new Date(dateRaw);
+            if (isNaN(parsed.getTime())) {
+              errors.push(`Row ${rowNum}: Invalid date '${dateRaw}'. Use YYYY-MM-DD format.`);
+              continue;
+            }
+            dateStr = format(parsed, 'yyyy-MM-dd');
+          }
+
+          if (!statusRaw || !validStatuses.includes(String(statusRaw))) {
+            errors.push(`Row ${rowNum}: Invalid status '${statusRaw}'. Valid: Present, Absent, Sick, Late.`);
+            continue;
+          }
+
+          let student: Student | undefined;
+          if (rollNumberRaw) {
+            student = studentMap.get(String(rollNumberRaw).trim().toLowerCase());
+          }
+          if (!student && nameRaw) {
+            student = studentMap.get(String(nameRaw).trim().toLowerCase());
+          }
+
+          if (!student) {
+            errors.push(`Row ${rowNum}: Student not found. Use roll number or exact name.`);
+            continue;
+          }
+
+          records.push({
+            studentId: student.id,
+            date: dateStr,
+            status: statusRaw as AttendanceRecord['status'],
+            reason: String(reason).trim() || undefined,
+          });
+        }
+        
+        if (errors.length > 0) {
+          const errorMsg = `Import failed with ${errors.length} error(s):\n\n` + 
+            errors.slice(0, 10).join('\n') + 
+            (errors.length > 10 ? `\n...and ${errors.length - 10} more.` : '');
+          reject(new Error(errorMsg));
+        } else {
+          resolve(records);
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read the file."));
+    reader.readAsBinaryString(file);
+  });
+}
+
+export function exportClassData(
+  className: string,
+  students: Student[],
+  records: AttendanceRecord[],
+  events: CalendarEvent[],
+  timetable: TimetableSlot[],
+  dailyNotes: Record<string, string>,
+): void {
+  const wb = XLSX.utils.book_new();
+
+  const studentsData = [
+    ['Roll Number', 'Name', 'Parent Name', 'Parent Phone', 'Flagged'],
+    ...students.map(s => [s.rollNumber, s.name, s.parentName || '', s.parentPhone || '', s.isFlagged ? 'Yes' : 'No']),
+  ];
+  const wsStudents = XLSX.utils.aoa_to_sheet(studentsData);
+  XLSX.utils.book_append_sheet(wb, wsStudents, 'Students');
+
+  const recordsData = [
+    ['Student Name', 'Roll Number', 'Date', 'Status', 'Reason'],
+    ...records.map(r => {
+      const student = students.find(s => s.id === r.studentId);
+      return [student?.name || 'Unknown', student?.rollNumber || '', r.date, r.status, r.reason || ''];
+    }),
+  ];
+  const wsRECORDS = XLSX.utils.aoa_to_sheet(recordsData);
+  XLSX.utils.book_append_sheet(wb, wsRECORDS, 'Attendance');
+
+  const eventsData = [
+    ['Date', 'Title', 'Type', 'Description'],
+    ...events.map(e => [e.date, e.title, e.type, e.description || '']),
+  ];
+  const wsEVENTS = XLSX.utils.aoa_to_sheet(eventsData);
+  XLSX.utils.book_append_sheet(wb, wsEVENTS, 'Events');
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const timetableData = [
+    ['Day', 'Start Time', 'End Time', 'Subject', 'Lesson'],
+    ...timetable.map(t => [dayNames[t.dayOfWeek] || t.dayOfWeek, t.startTime, t.endTime, t.subject, t.lesson]),
+  ];
+  const wsTIMETABLE = XLSX.utils.aoa_to_sheet(timetableData);
+  XLSX.utils.book_append_sheet(wb, wsTIMETABLE, 'Timetable');
+
+  const notesData = [
+    ['Date', 'Note'],
+    ...Object.entries(dailyNotes).map(([date, note]) => [date, note]),
+  ];
+  const wsNOTES = XLSX.utils.aoa_to_sheet(notesData);
+  XLSX.utils.book_append_sheet(wb, wsNOTES, 'Daily Notes');
+
+  XLSX.writeFile(wb, `${className.replace(/[^a-zA-Z0-9]/g, '_')}_Export.xlsx`);
+}
