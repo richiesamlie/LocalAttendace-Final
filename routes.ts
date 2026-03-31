@@ -129,6 +129,15 @@ router.post('/teachers/register', validate(teacherSchema), (req, res) => {
   }
 });
 
+router.get('/teachers', (req, res) => {
+  try {
+    const teachers = db.stmt.getAllTeachers.all();
+    res.json(teachers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch teachers' });
+  }
+});
+
 // All routes below require authentication
 router.use(requireAuth);
 
@@ -148,6 +157,8 @@ router.post('/classes', postLimiter, validate(classSchema), (req, res) => {
     const teacherId = (req as any).teacherId;
     const { id, name } = req.body;
     db.stmt.insertClass.run(id, teacherId, name);
+    // Auto-add creator as owner in class_teachers
+    db.stmt.insertClassTeacher.run(id, teacherId, 'owner');
     res.json({ id, teacher_id: teacherId, name });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create class' });
@@ -158,9 +169,13 @@ router.put('/classes/:id', (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const { name } = req.body;
+    const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access || access.role !== 'owner') {
+      return res.status(403).json({ error: 'Only class owner can update class' });
+    }
     const result = db.stmt.updateClass.run(name, req.params.id, teacherId);
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
+      return res.status(404).json({ error: 'Class not found' });
     }
     res.json({ success: true });
   } catch (error) {
@@ -171,13 +186,84 @@ router.put('/classes/:id', (req, res) => {
 router.delete('/classes/:id', (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
+    const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access || access.role !== 'owner') {
+      return res.status(403).json({ error: 'Only class owner can delete class' });
+    }
     const result = db.stmt.deleteClass.run(req.params.id, teacherId);
     if (result.changes === 0) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
+      return res.status(404).json({ error: 'Class not found' });
     }
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete class' });
+  }
+});
+
+// --- CLASS TEACHERS ---
+router.get('/classes/:classId/teachers', (req, res) => {
+  try {
+    const teacherId = (req as any).teacherId;
+    const classId = req.params.classId;
+    
+    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+
+    const teachers = db.stmt.getClassTeachers.all(classId);
+    res.json(teachers);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch class teachers' });
+  }
+});
+
+router.post('/classes/:classId/teachers', (req, res) => {
+  try {
+    const teacherId = (req as any).teacherId;
+    const classId = req.params.classId;
+    
+    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access || access.role !== 'owner') {
+      return res.status(403).json({ error: 'Only class owner can add teachers' });
+    }
+
+    const { teacherId: newTeacherId } = req.body;
+    if (!newTeacherId) {
+      return res.status(400).json({ error: 'teacherId is required' });
+    }
+
+    const existing = db.stmt.getTeacherById.get(newTeacherId);
+    if (!existing) {
+      return res.status(404).json({ error: 'Teacher not found' });
+    }
+
+    db.stmt.insertClassTeacher.run(classId, newTeacherId, 'teacher');
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add teacher to class' });
+  }
+});
+
+router.delete('/classes/:classId/teachers/:teacherId', (req, res) => {
+  try {
+    const teacherId = (req as any).teacherId;
+    const classId = req.params.classId;
+    const targetTeacherId = req.params.teacherId;
+    
+    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access || access.role !== 'owner') {
+      return res.status(403).json({ error: 'Only class owner can remove teachers' });
+    }
+
+    if (targetTeacherId === teacherId) {
+      return res.status(400).json({ error: 'Cannot remove yourself' });
+    }
+
+    db.stmt.removeClassTeacher.run(classId, targetTeacherId);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove teacher from class' });
   }
 });
 

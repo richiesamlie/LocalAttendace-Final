@@ -26,7 +26,7 @@ _db.pragma('mmap_size = 268435456'); // 256MB memory-mapped I/O
 const preparedStatements = {
   getTeacherByUsername: _db.prepare('SELECT id, username, password_hash, name FROM teachers WHERE username = ?'),
   getTeacherById: _db.prepare('SELECT id, username, name FROM teachers WHERE id = ?'),
-  getClassesByTeacher: _db.prepare('SELECT id, teacher_id, name FROM classes WHERE teacher_id = ?'),
+  getClassesByTeacher: _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)'),
   getStudentsByClass: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? AND is_archived = 0'),
   getStudentsByClassWithArchived: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ?'),
   getRecordsByClass: _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = ?'),
@@ -55,11 +55,15 @@ const preparedStatements = {
   getStudentById: _db.prepare('SELECT s.id FROM students s JOIN classes c ON s.class_id = c.id WHERE s.id = ? AND c.teacher_id = ?'),
   getEventById: _db.prepare('SELECT e.id FROM events e JOIN classes c ON e.class_id = c.id WHERE e.id = ? AND c.teacher_id = ?'),
   getTimetableSlotById: _db.prepare('SELECT t.id FROM timetable_slots t JOIN classes c ON t.class_id = c.id WHERE t.id = ? AND c.teacher_id = ?'),
-  getClassById: _db.prepare('SELECT id FROM classes WHERE id = ? AND teacher_id = ?'),
+  getClassById: _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id = ? AND c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)'),
   clearSeatingByClass: _db.prepare('DELETE FROM seating_layout WHERE class_id = ?'),
   getStudentByClassAndId: _db.prepare('SELECT id FROM students WHERE class_id = ? AND id = ?'),
   deleteSeatingBySeat: _db.prepare('DELETE FROM seating_layout WHERE class_id = ? AND seat_id = ?'),
   deleteSeatingByStudent: _db.prepare('DELETE FROM seating_layout WHERE class_id = ? AND student_id = ?'),
+  insertClassTeacher: _db.prepare('INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) VALUES (?, ?, ?)'),
+  removeClassTeacher: _db.prepare('DELETE FROM class_teachers WHERE class_id = ? AND teacher_id = ?'),
+  getClassTeachers: _db.prepare('SELECT ct.teacher_id, ct.role, t.username, t.name FROM class_teachers ct JOIN teachers t ON ct.teacher_id = t.id WHERE ct.class_id = ?'),
+  isClassTeacher: _db.prepare('SELECT class_id, role FROM class_teachers WHERE class_id = ? AND teacher_id = ?'),
   countTeachers: _db.prepare('SELECT COUNT(*) as count FROM teachers'),
   getFirstTeacher: _db.prepare('SELECT id FROM teachers LIMIT 1'),
   getStudentsCount: _db.prepare('SELECT COUNT(*) as count FROM students WHERE class_id = ?'),
@@ -155,8 +159,19 @@ const initSchema = () => {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS class_teachers (
+      class_id TEXT NOT NULL,
+      teacher_id TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'teacher',
+      PRIMARY KEY (class_id, teacher_id),
+      FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_teachers_username ON teachers(username);
     CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id);
+    CREATE INDEX IF NOT EXISTS idx_class_teachers_class ON class_teachers(class_id);
+    CREATE INDEX IF NOT EXISTS idx_class_teachers_teacher ON class_teachers(teacher_id);
     CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id);
     CREATE INDEX IF NOT EXISTS idx_records_class ON attendance_records(class_id);
     CREATE INDEX IF NOT EXISTS idx_records_date ON attendance_records(date);
@@ -167,6 +182,26 @@ const initSchema = () => {
     CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
     CREATE INDEX IF NOT EXISTS idx_seating_class ON seating_layout(class_id);
   `);
+
+  // Migration: Add class_teachers table if not exists
+  const tables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='class_teachers'").all();
+  if (tables.length === 0) {
+    _db.exec(`
+      CREATE TABLE class_teachers (
+        class_id TEXT NOT NULL,
+        teacher_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'teacher',
+        PRIMARY KEY (class_id, teacher_id),
+        FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+        FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
+      );
+      CREATE INDEX idx_class_teachers_class ON class_teachers(class_id);
+      CREATE INDEX idx_class_teachers_teacher ON class_teachers(teacher_id);
+    `);
+    
+    // Auto-add all existing class owners as 'owner' in class_teachers
+    _db.exec(`INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes`);
+  }
 
   // Migration: Add is_archived to students if not exists
   const studentsInfo = _db.pragma('table_info(students)') as Array<{ name: string }>;

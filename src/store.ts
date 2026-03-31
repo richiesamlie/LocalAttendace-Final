@@ -155,8 +155,8 @@ export const useStore = create<AppState>()((set, get) => ({
 
       // Eagerly load only the first/default class; other classes are lazy-loaded on switch
       if (classesData.length > 0) {
-        const [first] = classesData;
-        [first.students, first.records, first.events, first.timetable, first.dailyNotes, first.seatingLayout] =
+        const first = classesData[0] as unknown as ClassData;
+        const [students, records, events, timetable, dailyNotes, seatingLayout] =
           await Promise.all([
             api.getStudents(first.id, false),
             api.getRecords(first.id),
@@ -165,15 +165,21 @@ export const useStore = create<AppState>()((set, get) => ({
             api.getDailyNotes(first.id),
             api.getSeating(first.id),
           ]);
+        first.students = students;
+        first.records = records;
+        first.events = events;
+        first.timetable = timetable;
+        first.dailyNotes = dailyNotes;
+        first.seatingLayout = seatingLayout;
         first.loaded = true;
       }
 
       const defaultClassId = classesData.length > 0 ? classesData[0].id : null;
-      const initialClass = classesData.find(c => c.id === defaultClassId);
+      const initialClass = classesData.find(c => c.id === defaultClassId) as unknown as ClassData | undefined;
 
       set({
         isInitialized: true,
-        classes: classesData,
+        classes: classesData as unknown as ClassData[],
         currentClassId: defaultClassId,
         students: initialClass?.students || [],
         records: initialClass?.records || [],
