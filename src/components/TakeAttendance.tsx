@@ -6,6 +6,7 @@ import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, Chevron
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { generateAttendanceTemplate, importAttendanceFromExcel } from '../utils/excel';
+import { AttendanceGridSkeleton } from './Skeleton';
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
@@ -232,7 +233,15 @@ export default function TakeAttendance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredStudents.map((student) => {
+              {students.length === 0 && !searchQuery ? (
+                <tr><td colSpan={4} className="px-6 py-8"><AttendanceGridSkeleton /></td></tr>
+              ) : filteredStudents.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                    {searchQuery ? 'No students match your search' : 'No students in this class'}
+                  </td>
+                </tr>
+              ) : filteredStudents.map((student) => {
                 const record = records.find(r => r.studentId === student.id);
                 const status = record?.status;
 

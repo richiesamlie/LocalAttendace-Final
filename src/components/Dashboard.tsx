@@ -4,6 +4,7 @@ import { format, isBefore, setHours, setMinutes, subDays, isAfter, parseISO } fr
 import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree, UserPlus } from 'lucide-react';
 import { cn } from '../utils/cn';
 import InviteTeacherModal from './InviteTeacherModal';
+import { CardSkeleton } from './Skeleton';
 
 /** Parse a time string like "8:15 AM" or "13:30" into minutes-since-midnight */
 function parseTime(timeStr: string): number {
@@ -150,7 +151,14 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
         </div>
       </div>
 
-      {students.length === 0 ? (
+      {students.length === 0 && !isMounted ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : students.length === 0 ? (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 flex items-start gap-4">
           <AlertCircle className="w-6 h-6 text-amber-500 dark:text-amber-400 mt-1 flex-shrink-0" />
           <div>
