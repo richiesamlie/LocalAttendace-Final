@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useStore, AttendanceRecord, AttendanceStatus } from '../store';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
-import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download } from 'lucide-react';
+import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download, Undo2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { generateAttendanceTemplate, importAttendanceFromExcel } from '../utils/excel';
@@ -27,6 +27,8 @@ export default function TakeAttendance() {
   );
   const setRecord = useStore((state) => state.setRecord);
   const markAllPresent = useStore((state) => state.markAllPresent);
+  const undoLastAttendance = useStore((state) => state.undoLastAttendance);
+  const lastAttendanceChange = useStore((state) => state.lastAttendanceChange);
   const dailyNotes = useStore((state) => state.dailyNotes);
   const setDailyNote = useStore((state) => state.setDailyNote);
   const todayNote = dailyNotes[date] || '';
@@ -154,6 +156,15 @@ export default function TakeAttendance() {
           >
             Mark All Present
           </button>
+          {lastAttendanceChange && activeTab === 'today' && (
+            <button
+              onClick={undoLastAttendance}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+            >
+              <Undo2 className="w-4 h-4" />
+              Undo Last
+            </button>
+          )}
         </div>
       </div>
 

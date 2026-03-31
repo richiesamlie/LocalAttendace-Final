@@ -85,6 +85,8 @@ interface AppState {
   updateStudent: (id: string, data: Partial<Student>) => Promise<void>;
   setRecord: (record: AttendanceRecord) => Promise<void>;
   markAllPresent: (date: string) => Promise<void>;
+  undoLastAttendance: () => Promise<void>;
+  lastAttendanceChange: AttendanceRecord | null;
   setDailyNote: (date: string, note: string) => Promise<void>;
   addEvent: (event: CalendarEvent) => Promise<void>;
   addEvents: (events: CalendarEvent[]) => Promise<void>;
@@ -136,6 +138,7 @@ export const useStore = create<AppState>()((set, get) => ({
   timetable: [],
   seatingLayout: {},
   theme: 'light',
+  lastAttendanceChange: null,
 
   setAuth: (teacherId, teacherName) => set({ isAuthenticated: true, teacherId, teacherName }),
   clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
@@ -393,21 +396,68 @@ export const useStore = create<AppState>()((set, get) => ({
     const classId = get().currentClassId;
     if (!classId) return;
     try {
+      // Store the previous state for undo
+      const existingRecord = get().records.find(
+        (r) => r.studentId === record.studentId && r.date === record.date
+      );
+      
       await api.saveRecords([{ ...record, classId } as any]);
       
       set((state) => {
         const existingIndex = state.records.findIndex(
           (r) => r.studentId === record.studentId && r.date === record.date
         );
+        let newRecords: AttendanceRecord[];
         if (existingIndex >= 0) {
-          const newRecords = [...state.records];
+          newRecords = [...state.records];
           newRecords[existingIndex] = record;
-          return updateCurrentClass(state, { records: newRecords });
+        } else {
+          newRecords = [...state.records, record];
         }
-        return updateCurrentClass(state, { records: [...state.records, record] });
+        return {
+          ...updateCurrentClass(state, { records: newRecords }),
+          lastAttendanceChange: existingRecord || null,
+        };
       });
     } catch (error) {
       toast.error('Failed to save attendance record');
+    }
+  },
+  
+  undoLastAttendance: async () => {
+    const lastChange = get().lastAttendanceChange;
+    if (!lastChange) return;
+    
+    const classId = get().currentClassId;
+    if (!classId) return;
+    
+    try {
+      // Restore the previous state or remove the record
+      if (lastChange.status) {
+        await api.saveRecords([{ ...lastChange, classId } as any]);
+      } else {
+        // If there was no previous record, delete it
+        await api.saveRecords([{ ...lastChange, classId, status: 'Present' as AttendanceStatus, reason: null } as any]);
+      }
+      
+      set((state) => {
+        const existingIndex = state.records.findIndex(
+          (r) => r.studentId === lastChange.studentId && r.date === lastChange.date
+        );
+        let newRecords: AttendanceRecord[];
+        if (existingIndex >= 0 && lastChange.status) {
+          newRecords = [...state.records];
+          newRecords[existingIndex] = lastChange;
+        } else if (existingIndex >= 0 && !lastChange.status) {
+          newRecords = state.records.filter((_, i) => i !== existingIndex);
+        } else {
+          newRecords = state.records;
+        }
+        return updateCurrentClass(state, { records: newRecords, lastAttendanceChange: null });
+      });
+      toast.success('Attendance undone');
+    } catch (error) {
+      toast.error('Failed to undo attendance');
     }
   },
   
