@@ -13,6 +13,17 @@ IF NOT EXIST "node_modules\" (
     call npm install
 )
 
+:: Check if .env file exists
+IF NOT EXIST ".env" (
+    echo.
+    echo WARNING: .env file not found!
+    echo Creating .env with default settings...
+    echo JWT_SECRET=localattendance_secret_key_change_in_production > .env
+    echo.
+    echo IMPORTANT: Change the JWT_SECRET in .env for production use!
+    echo.
+)
+
 echo Building the application for production...
 call npm run build
 
