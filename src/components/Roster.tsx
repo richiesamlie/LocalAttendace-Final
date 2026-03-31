@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
 import { importStudentsFromExcel, generateTemplate, exportClassData } from '../utils/excel';
-import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 
@@ -16,6 +16,8 @@ export default function Roster() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   // States for adding/editing
   const [isAdding, setIsAdding] = useState(false);
@@ -113,6 +115,37 @@ export default function Roster() {
     (student.parentPhone && student.parentPhone.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredStudents.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredStudents.map(s => s.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      for (const id of selectedIds) {
+        await removeStudent(id);
+      }
+      toast.success(`Deleted ${selectedIds.size} student(s)`);
+      setSelectedIds(new Set());
+      setShowBulkDeleteConfirm(false);
+    } catch {
+      toast.error('Failed to delete students');
+    }
+  };
+
   const handleExportClass = () => {
     const state = useStore.getState();
     const currentClass = state.classes.find(c => c.id === state.currentClassId);
@@ -132,6 +165,7 @@ export default function Roster() {
   };
 
   return (
+    <>
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -216,6 +250,25 @@ export default function Roster() {
             Export Class
           </button>
 
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl">
+              <span className="text-sm font-medium text-rose-700 dark:text-rose-400">{selectedIds.size} selected</span>
+              <button
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 text-white text-xs font-medium rounded-lg hover:bg-rose-700 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
           <button
             onClick={startAddStudent}
             className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors"
@@ -231,6 +284,18 @@ export default function Roster() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                <th className="px-6 py-4 w-12">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
+                  >
+                    {selectedIds.size === filteredStudents.length && filteredStudents.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-slate-400" />
+                    )}
+                  </button>
+                </th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-32">Roll No</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Student Name</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Parent Name</th>
@@ -380,6 +445,19 @@ export default function Roster() {
                     </>
                   ) : (
                     <>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => !student.isArchived && toggleSelect(student.id)}
+                          disabled={student.isArchived}
+                          className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          {selectedIds.has(student.id) ? (
+                            <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-400" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
                       <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
                         <div className="flex items-center gap-2">
@@ -480,5 +558,40 @@ export default function Roster() {
         </div>
       </div>
     </div>
+
+    {/* Bulk Delete Confirmation Modal */}
+    {showBulkDeleteConfirm && (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center">
+              <Trash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Students</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">This action cannot be undone.</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            Are you sure you want to delete <strong>{selectedIds.size} student(s)</strong>? Their attendance records and data will be permanently removed.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setShowBulkDeleteConfirm(false)}
+              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 text-sm font-medium text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors"
+            >
+              Delete {selectedIds.size} Student(s)
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
