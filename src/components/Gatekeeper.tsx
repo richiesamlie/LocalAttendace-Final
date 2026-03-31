@@ -1,12 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { Search, Clock, CheckCircle2, UserCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useMemo(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function Gatekeeper() {
   const classes = useStore((state) => state.classes);
   const setRecordForClass = useStore((state) => state.setRecordForClass);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedQuery = useDebounce(searchQuery, 300);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -22,10 +44,10 @@ export default function Gatekeeper() {
 
   const safeString = (val: any) => (val ? String(val).toLowerCase() : '');
 
-  const filteredStudents = searchQuery.trim() === '' 
+  const filteredStudents = debouncedQuery.trim() === '' 
     ? [] 
     : allStudents.filter(student => {
-        const query = searchQuery.toLowerCase().trim();
+        const query = debouncedQuery.toLowerCase().trim();
         return safeString(student.name).includes(query) ||
                safeString(student.rollNumber).includes(query) ||
                safeString(student.className).includes(query);

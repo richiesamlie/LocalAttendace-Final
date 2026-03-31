@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from "express";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { createServer as createViteServer } from "vite";
@@ -19,6 +20,9 @@ async function startServer() {
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   }));
+
+  // Gzip compression for faster network transfer
+  app.use(compression());
 
   app.use(express.json({ limit: '50mb' }));
   app.use(cookieParser());

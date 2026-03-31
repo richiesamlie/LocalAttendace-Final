@@ -335,7 +335,31 @@ router.get('/classes/:classId/records', (req, res) => {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
 
-    const records = db.stmt.getRecordsByClass.all(classId);
+    const { date, startDate, endDate, limit, offset } = req.query;
+    
+    let query = 'SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = ?';
+    const params: any[] = [classId];
+    
+    if (date) {
+      query += ' AND date = ?';
+      params.push(date);
+    } else if (startDate && endDate) {
+      query += ' AND date >= ? AND date <= ?';
+      params.push(startDate, endDate);
+    }
+    
+    query += ' ORDER BY date DESC, student_id ASC';
+    
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(Number(limit));
+    }
+    if (offset) {
+      query += ' OFFSET ?';
+      params.push(Number(offset));
+    }
+    
+    const records = db.prepare(query).all(...params);
     const mapped = records.map((r: any) => ({
       studentId: r.student_id,
       date: r.date,
@@ -424,7 +448,32 @@ router.get('/classes/:classId/events', (req, res) => {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
 
-    const events = db.stmt.getEventsByClass.all(classId);
+    const { limit, offset, type, startDate, endDate } = req.query;
+    
+    let query = 'SELECT id, class_id, date, title, type, description FROM events WHERE class_id = ?';
+    const params: any[] = [classId];
+    
+    if (type) {
+      query += ' AND type = ?';
+      params.push(type);
+    }
+    if (startDate && endDate) {
+      query += ' AND date >= ? AND date <= ?';
+      params.push(startDate, endDate);
+    }
+    
+    query += ' ORDER BY date DESC';
+    
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(Number(limit));
+    }
+    if (offset) {
+      query += ' OFFSET ?';
+      params.push(Number(offset));
+    }
+    
+    const events = db.prepare(query).all(...params);
     res.json(events);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch events' });
