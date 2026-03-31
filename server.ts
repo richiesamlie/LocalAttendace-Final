@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from "express";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import apiRoutes from "./routes";
@@ -12,6 +13,12 @@ async function startServer() {
   
   const app = express();
   const PORT = 3000;
+
+  // Security headers
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
 
   app.use(express.json({ limit: '50mb' }));
   app.use(cookieParser());
