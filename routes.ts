@@ -46,9 +46,18 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
           res.clearCookie('auth_token');
           return res.status(401).json({ error: 'Session expired or revoked' });
         }
-        try { db.stmt.updateSessionActivity.run(decoded.sessionId); } catch (e) {}
+        try { db.stmt.updateSessionActivity.run(decoded.sessionId); } catch (e) {
+          // Session activity update is non-critical, but log it
+          console.warn('[auth] Failed to update session activity:', (e as Error).message);
+        }
       }
-    } catch {}
+    } catch (error) {
+      if (error instanceof Error && !error.message.includes('jwt')) {
+        return res.status(503).json({ error: 'Authentication service unavailable' });
+      }
+      res.clearCookie('auth_token');
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
   }
   
   (req as any).teacherId = teacherId;
