@@ -288,7 +288,7 @@ router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSche
 
 router.get('/teachers', (req, res) => {
   try {
-    const teachers = db.stmt.getAllTeachers.all();
+    const teachers = db.cache.cached('teachers:all', () => db.stmt.getAllTeachers.all(), 60000);
     res.json(teachers);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch teachers' });
@@ -302,7 +302,7 @@ router.use(requireAuth);
 router.get('/classes', (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
-    const classes = db.stmt.getClassesByTeacher.all(teacherId);
+    const classes = db.cache.cached(`classes:${teacherId}`, () => db.stmt.getClassesByTeacher.all(teacherId), 5000);
     res.json(classes);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch classes' });
@@ -355,7 +355,7 @@ router.get('/classes/:classId/teachers', (req, res) => {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
 
-    const teachers = db.stmt.getClassTeachers.all(classId);
+    const teachers = db.cache.cached(`teachers:class:${classId}`, () => db.stmt.getClassTeachers.all(classId), 5000);
     res.json(teachers);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch class teachers' });
@@ -914,7 +914,7 @@ router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLi
 // --- SETTINGS ---
 router.get('/settings', (req, res) => {
   try {
-    const settings = db.stmt.getSettings.all();
+    const settings = db.cache.cached('settings:all', () => db.stmt.getSettings.all(), 60000);
     const response: Record<string, string> = {};
     for (const row of settings as any) {
       if (row.key !== 'adminPassword') {

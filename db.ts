@@ -391,6 +391,7 @@ async function processWriteQueue(): Promise<void> {
     const task = writeQueue.shift()!;
     try {
       task.fn();
+      cacheInvalidate(); // Invalidate all caches after any write
       task.resolve();
     } catch (error) {
       task.reject(error as Error);
@@ -398,6 +399,51 @@ async function processWriteQueue(): Promise<void> {
   }
 
   isProcessingWriteQueue = false;
+}
+
+// In-memory cache for frequently accessed read-heavy data (Phase 4.2)
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry<any>>();
+
+const DEFAULT_TTL = 5000; // 5 seconds for most cached reads
+const LONG_TTL = 60000; // 1 minute for static data (settings, teacher list)
+
+export function cacheGet<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry || Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+export function cacheSet<T>(key: string, value: T, ttl: number = DEFAULT_TTL): void {
+  cache.set(key, { value, expiresAt: Date.now() + ttl });
+}
+
+export function cacheInvalidate(pattern?: string): void {
+  if (!pattern) {
+    cache.clear();
+    return;
+  }
+  for (const key of cache.keys()) {
+    if (key.startsWith(pattern)) {
+      cache.delete(key);
+    }
+  }
+}
+
+// Cache wrapper: executes fn if not cached, returns cached value otherwise
+export function cached<T>(key: string, fn: () => T, ttl: number = DEFAULT_TTL): T {
+  const cached = cacheGet<T>(key);
+  if (cached !== null) return cached;
+  const value = fn();
+  cacheSet(key, value, ttl);
+  return value;
 }
 
 export function enqueueWrite(fn: () => void): Promise<void> {
@@ -449,12 +495,15 @@ const dbProxy = new Proxy({}, {
     if (prop === 'enqueueWrite') {
       return enqueueWrite;
     }
+    if (prop === 'cache') {
+      return { get: cacheGet, set: cacheSet, invalidate: cacheInvalidate, cached };
+    }
     const val = (_db as any)[prop];
     if (typeof val === 'function') {
       return val.bind(_db);
     }
     return val;
   }
-}) as Database.Database & { restore: (buf: Buffer) => void; stmt: typeof preparedStatements; enqueueWrite: typeof enqueueWrite };
+}) as Database.Database & { restore: (buf: Buffer) => void; stmt: typeof preparedStatements; enqueueWrite: typeof enqueueWrite; cache: { get: typeof cacheGet; set: typeof cacheSet; invalidate: typeof cacheInvalidate; cached: typeof cached } };
 
 export default dbProxy;
