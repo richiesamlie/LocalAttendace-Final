@@ -147,9 +147,9 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | # | Task | Phase | Files | Status |
 |---|------|-------|-------|--------|
 | 1 | Teacher Isolation - ALL queries verify class access | 1.1 | routes.ts | ✅ |
-| 2 | Connection Pooling | 1.2 | db.ts | ⬜ |
-| 3 | Request Queueing for Writes | 1.3 | routes.ts | ⬜ |
-| 4 | Add updated_at columns | 1.4 | db.ts | ⬜ |
+| 2 | Connection Pooling | 1.2 | db.ts | ✅ |
+| 3 | Request Queueing for Writes | 1.3 | routes.ts | ✅ |
+| 4 | Add updated_at columns | 1.4 | db.ts | ✅ |
 | 5 | Role-Based Access Control | 2.1 | db.ts, routes.ts | ⬜ |
 | 6 | Invite System API | 2.2 | routes.ts | ⬜ |
 | 7 | Invite System UI | 2.2 | React components | ⬜ |

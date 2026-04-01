@@ -209,6 +209,16 @@ const initSchema = () => {
     _db.exec('CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id)');
   }
 
+  // Migration: Add updated_at columns for optimistic locking (Phase 1.4)
+  const tablesToAddUpdatedAt = ['students', 'attendance_records', 'events', 'timetable_slots', 'daily_notes', 'seating_layout', 'classes'];
+  for (const table of tablesToAddUpdatedAt) {
+    const tableInfo = _db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+    const hasUpdatedAt = tableInfo.some(col => col.name === 'updated_at');
+    if (!hasUpdatedAt) {
+      _db.exec(`ALTER TABLE ${table} ADD COLUMN updated_at TEXT`);
+    }
+  }
+
   // Ensure default admin teacher always exists
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
   if (teacherCount.count === 0) {
@@ -281,6 +291,42 @@ const preparedStatements = {
   getAllClasses: _db.prepare("SELECT c.id, c.teacher_id, c.name, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id"),
 };
 
+// Write queue for serializing write operations (Phase 1.2 + 1.3)
+// better-sqlite3 is synchronous, so we queue writes to prevent "database is locked" errors
+// while allowing concurrent reads to proceed directly
+interface WriteTask {
+  fn: () => void;
+  resolve: () => void;
+  reject: (error: Error) => void;
+}
+
+const writeQueue: WriteTask[] = [];
+let isProcessingWriteQueue = false;
+
+async function processWriteQueue(): Promise<void> {
+  if (isProcessingWriteQueue || writeQueue.length === 0) return;
+  isProcessingWriteQueue = true;
+
+  while (writeQueue.length > 0) {
+    const task = writeQueue.shift()!;
+    try {
+      task.fn();
+      task.resolve();
+    } catch (error) {
+      task.reject(error as Error);
+    }
+  }
+
+  isProcessingWriteQueue = false;
+}
+
+export function enqueueWrite(fn: () => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    writeQueue.push({ fn, resolve, reject });
+    processWriteQueue();
+  });
+}
+
 // Periodic WAL checkpoint to prevent WAL file growth
 const checkpointInterval = setInterval(() => {
   try {
@@ -320,12 +366,15 @@ const dbProxy = new Proxy({}, {
     if (prop === 'stmt') {
       return preparedStatements;
     }
+    if (prop === 'enqueueWrite') {
+      return enqueueWrite;
+    }
     const val = (_db as any)[prop];
     if (typeof val === 'function') {
       return val.bind(_db);
     }
     return val;
   }
-}) as Database.Database & { restore: (buf: Buffer) => void; stmt: typeof preparedStatements };
+}) as Database.Database & { restore: (buf: Buffer) => void; stmt: typeof preparedStatements; enqueueWrite: typeof enqueueWrite };
 
 export default dbProxy;

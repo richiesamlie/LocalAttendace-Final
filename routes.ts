@@ -39,8 +39,6 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
   next();
 };
 
-// Middleware to verify teacher has access to a specific class
-// Use this for endpoints that take classId as a path parameter
 const requireClassAccess = (paramName: string = 'classId') => {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const teacherId = (req as any).teacherId;
@@ -55,13 +53,11 @@ const requireClassAccess = (paramName: string = 'classId') => {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
     
-    // Store the role for later use (e.g., owner-only actions)
     (req as any).classRole = access.role;
     next();
   };
 };
 
-// Middleware to verify teacher owns the class (for admin operations)
 const requireClassOwner = (paramName: string = 'classId') => {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const teacherId = (req as any).teacherId;
@@ -80,7 +76,23 @@ const requireClassOwner = (paramName: string = 'classId') => {
   };
 };
 
-// Rate limiter: 5 attempts per 15 minutes per IP
+// Write queue wrapper: serializes write handlers through db.enqueueWrite (Phase 1.2 + 1.3)
+// Wraps an Express request handler so its DB writes execute sequentially, preventing "database is locked" errors.
+// Reads (GET) do not need this wrapper since WAL mode handles concurrent reads well.
+type WriteHandler = (req: express.Request, res: express.Response) => void;
+
+const withWriteQueue = (handler: WriteHandler) => {
+  return async (req: express.Request, res: express.Response) => {
+    try {
+      await db.enqueueWrite(() => handler(req, res));
+    } catch (error) {
+      if (!res.headersSent) {
+        res.status(503).json({ error: 'Database write queue error' });
+      }
+    }
+  };
+};
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -89,7 +101,6 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
 });
 
-// Rate limiter for general POST endpoints: 100 per 15 minutes
 const postLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -152,7 +163,6 @@ router.get('/auth/me', (req, res) => {
   res.json(teacher);
 });
 
-// Health check endpoint for Docker and monitoring
 router.get('/health', (_req, res) => {
   try {
     db.prepare('SELECT 1').get();
@@ -205,26 +215,22 @@ router.post('/database/restore', requireAuth, (req, res) => {
 });
 
 // --- TEACHER MANAGEMENT ---
-router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSchema), (req, res) => {
-  try {
-    const { username, password, name } = req.body;
-    if (!username || !password || !name) {
-      return res.status(400).json({ error: 'Username, password, and name are required' });
-    }
-    
-    const existing = db.stmt.getTeacherByUsername.get(username);
-    if (existing) {
-      return res.status(400).json({ error: 'Username already exists' });
-    }
-    
-    const id = `teacher_${Date.now()}`;
-    const hash = bcrypt.hashSync(password, 10);
-    db.stmt.insertTeacher.run(id, username, hash, name);
-    res.json({ success: true, id, username, name });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to register teacher' });
+router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSchema), withWriteQueue((req, res) => {
+  const { username, password, name } = req.body;
+  if (!username || !password || !name) {
+    return res.status(400).json({ error: 'Username, password, and name are required' });
   }
-});
+  
+  const existing = db.stmt.getTeacherByUsername.get(username);
+  if (existing) {
+    return res.status(400).json({ error: 'Username already exists' });
+  }
+  
+  const id = `teacher_${Date.now()}`;
+  const hash = bcrypt.hashSync(password, 10);
+  db.stmt.insertTeacher.run(id, username, hash, name);
+  res.json({ success: true, id, username, name });
+}));
 
 router.get('/teachers', (req, res) => {
   try {
@@ -249,53 +255,40 @@ router.get('/classes', (req, res) => {
   }
 });
 
-router.post('/classes', postLimiter, validate(classSchema), (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const { id, name } = req.body;
-    db.stmt.insertClass.run(id, teacherId, name);
-    // Auto-add creator as owner in class_teachers
-    db.stmt.insertClassTeacher.run(id, teacherId, 'owner');
-    res.json({ id, teacher_id: teacherId, name });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create class' });
-  }
-});
+router.post('/classes', postLimiter, validate(classSchema), withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const { id, name } = req.body;
+  db.stmt.insertClass.run(id, teacherId, name);
+  db.stmt.insertClassTeacher.run(id, teacherId, 'owner');
+  res.json({ id, teacher_id: teacherId, name });
+}));
 
-router.put('/classes/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const { name } = req.body;
-    const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
-    if (!access || access.role !== 'owner') {
-      return res.status(403).json({ error: 'Only class owner can update class' });
-    }
-    const result = db.stmt.updateClass.run(name, req.params.id, teacherId);
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Class not found' });
-    }
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update class' });
+router.put('/classes/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const { name } = req.body;
+  const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
+  if (!access || access.role !== 'owner') {
+    return res.status(403).json({ error: 'Only class owner can update class' });
   }
-});
+  const result = db.stmt.updateClass.run(name, req.params.id, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Class not found' });
+  }
+  res.json({ success: true });
+}));
 
-router.delete('/classes/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
-    if (!access || access.role !== 'owner') {
-      return res.status(403).json({ error: 'Only class owner can delete class' });
-    }
-    const result = db.stmt.deleteClass.run(req.params.id, teacherId);
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Class not found' });
-    }
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete class' });
+router.delete('/classes/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
+  if (!access || access.role !== 'owner') {
+    return res.status(403).json({ error: 'Only class owner can delete class' });
   }
-});
+  const result = db.stmt.deleteClass.run(req.params.id, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Class not found' });
+  }
+  res.json({ success: true });
+}));
 
 // --- CLASS TEACHERS ---
 router.get('/classes/:classId/teachers', (req, res) => {
@@ -315,54 +308,46 @@ router.get('/classes/:classId/teachers', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/teachers', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const classId = req.params.classId;
-    
-    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
-    if (!access || access.role !== 'owner') {
-      return res.status(403).json({ error: 'Only class owner can add teachers' });
-    }
-
-    const { teacherId: newTeacherId } = req.body;
-    if (!newTeacherId) {
-      return res.status(400).json({ error: 'teacherId is required' });
-    }
-
-    const existing = db.stmt.getTeacherById.get(newTeacherId);
-    if (!existing) {
-      return res.status(404).json({ error: 'Teacher not found' });
-    }
-
-    db.stmt.insertClassTeacher.run(classId, newTeacherId, 'teacher');
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to add teacher to class' });
+router.post('/classes/:classId/teachers', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const classId = req.params.classId;
+  
+  const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+  if (!access || access.role !== 'owner') {
+    return res.status(403).json({ error: 'Only class owner can add teachers' });
   }
-});
 
-router.delete('/classes/:classId/teachers/:teacherId', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const classId = req.params.classId;
-    const targetTeacherId = req.params.teacherId;
-    
-    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
-    if (!access || access.role !== 'owner') {
-      return res.status(403).json({ error: 'Only class owner can remove teachers' });
-    }
-
-    if (targetTeacherId === teacherId) {
-      return res.status(400).json({ error: 'Cannot remove yourself' });
-    }
-
-    db.stmt.removeClassTeacher.run(classId, targetTeacherId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to remove teacher from class' });
+  const { teacherId: newTeacherId } = req.body;
+  if (!newTeacherId) {
+    return res.status(400).json({ error: 'teacherId is required' });
   }
-});
+
+  const existing = db.stmt.getTeacherById.get(newTeacherId);
+  if (!existing) {
+    return res.status(404).json({ error: 'Teacher not found' });
+  }
+
+  db.stmt.insertClassTeacher.run(classId, newTeacherId, 'teacher');
+  res.json({ success: true });
+}));
+
+router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const classId = req.params.classId;
+  const targetTeacherId = req.params.teacherId;
+  
+  const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+  if (!access || access.role !== 'owner') {
+    return res.status(403).json({ error: 'Only class owner can remove teachers' });
+  }
+
+  if (targetTeacherId === teacherId) {
+    return res.status(400).json({ error: 'Cannot remove yourself' });
+  }
+
+  db.stmt.removeClassTeacher.run(classId, targetTeacherId);
+  res.json({ success: true });
+}));
 
 // --- STUDENTS ---
 router.get('/classes/:classId/students', requireClassAccess('classId'), (req, res) => {
@@ -388,106 +373,90 @@ router.get('/classes/:classId/students', requireClassAccess('classId'), (req, re
   }
 });
 
-router.post('/classes/:classId/students', requireClassAccess('classId'), postLimiter, validate(studentSchema), (req, res) => {
-  try {
-    const classId = req.params.classId;
+router.post('/classes/:classId/students', requireClassAccess('classId'), postLimiter, validate(studentSchema), withWriteQueue((req, res) => {
+  const classId = req.params.classId;
 
-    const { id, name, rollNumber, parentName, parentPhone, isFlagged } = req.body;
-    db.stmt.insertStudent.run(id, classId, name, rollNumber, parentName || null, parentPhone || null, isFlagged ? 1 : 0);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create student' });
+  const { id, name, rollNumber, parentName, parentPhone, isFlagged } = req.body;
+  db.stmt.insertStudent.run(id, classId, name, rollNumber, parentName || null, parentPhone || null, isFlagged ? 1 : 0);
+  res.json({ success: true });
+}));
+
+router.put('/students/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const studentId = req.params.id;
+  
+  const student = db.stmt.getStudentById.get(studentId, teacherId) as { id: string; name: string; roll_number: string; parent_name: string; parent_phone: string; is_flagged: number; is_archived: number } | undefined;
+  if (!student) {
+    return res.status(404).json({ error: 'Student not found or access denied' });
   }
-});
 
-router.put('/students/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const studentId = req.params.id;
-    
-    const student = db.stmt.getStudentById.get(studentId, teacherId) as { id: string; name: string; roll_number: string; parent_name: string; parent_phone: string; is_flagged: number; is_archived: number } | undefined;
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found or access denied' });
-    }
+  const { name, rollNumber, parentName, parentPhone, isFlagged, isArchived } = req.body;
+  db.stmt.updateStudent.run(
+    name ?? student.name, 
+    rollNumber ?? student.roll_number, 
+    parentName ?? student.parent_name, 
+    parentPhone ?? student.parent_phone, 
+    isFlagged !== undefined ? (isFlagged ? 1 : 0) : student.is_flagged, 
+    isArchived !== undefined ? (isArchived ? 1 : 0) : student.is_archived,
+    studentId
+  );
+  res.json({ success: true });
+}));
 
-    const { name, rollNumber, parentName, parentPhone, isFlagged, isArchived } = req.body;
-    db.stmt.updateStudent.run(
-      name ?? student.name, 
-      rollNumber ?? student.roll_number, 
-      parentName ?? student.parent_name, 
-      parentPhone ?? student.parent_phone, 
-      isFlagged !== undefined ? (isFlagged ? 1 : 0) : student.is_flagged, 
-      isArchived !== undefined ? (isArchived ? 1 : 0) : student.is_archived,
-      studentId
-    );
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update student' });
+router.delete('/students/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const studentId = req.params.id;
+  
+  const student = db.stmt.getStudentById.get(studentId, teacherId);
+  if (!student) {
+    return res.status(404).json({ error: 'Student not found or access denied' });
   }
-});
 
-router.delete('/students/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const studentId = req.params.id;
-    
-    const student = db.stmt.getStudentById.get(studentId, teacherId);
-    if (!student) {
-      return res.status(404).json({ error: 'Student not found or access denied' });
-    }
+  db.stmt.archiveStudent.run(studentId);
+  res.json({ success: true });
+}));
 
-    db.stmt.archiveStudent.run(studentId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete student' });
-  }
-});
+router.post('/classes/:classId/students/sync', requireClassAccess('classId'), postLimiter, withWriteQueue((req, res) => {
+  const classId = req.params.classId;
+  
+  const importedStudents = Array.isArray(req.body) ? req.body : [];
+  const syncedStudents: any[] = [];
+  
+  const transaction = db.transaction((stds) => {
+    const existingRows = db.stmt.getStudentsByClassWithArchived.all(classId) as any[];
+    const existingMap = new Map(existingRows.map(r => [r.roll_number, r.id]));
+    
+    const insert = db.stmt.insertStudent;
+    const update = db.prepare('UPDATE students SET name = ?, parent_name = ?, parent_phone = ?, is_flagged = ?, is_archived = 0 WHERE id = ?');
+    const deleteStmt = db.stmt.archiveStudent;
 
-router.post('/classes/:classId/students/sync', requireClassAccess('classId'), postLimiter, (req, res) => {
-  try {
-    const classId = req.params.classId;
-    
-    const importedStudents = Array.isArray(req.body) ? req.body : [];
-    const syncedStudents: any[] = [];
-    
-    const transaction = db.transaction((stds) => {
-      const existingRows = db.stmt.getStudentsByClassWithArchived.all(classId) as any[];
-      const existingMap = new Map(existingRows.map(r => [r.roll_number, r.id]));
+    const importedRolls = new Set();
+
+    for (const s of stds) {
+      importedRolls.add(s.rollNumber);
+      const existingId = existingMap.get(s.rollNumber);
       
-      const insert = db.stmt.insertStudent;
-      const update = db.prepare('UPDATE students SET name = ?, parent_name = ?, parent_phone = ?, is_flagged = ?, is_archived = 0 WHERE id = ?');
-      const deleteStmt = db.stmt.archiveStudent;
-
-      const importedRolls = new Set();
-
-      for (const s of stds) {
-        importedRolls.add(s.rollNumber);
-        const existingId = existingMap.get(s.rollNumber);
-        
-        let finalId = s.id;
-        if (existingId) {
-          finalId = existingId;
-          update.run(s.name, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0, existingId);
-        } else {
-          insert.run(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);
-        }
-        
-        syncedStudents.push({ ...s, id: finalId });
+      let finalId = s.id;
+      if (existingId) {
+        finalId = existingId;
+        update.run(s.name, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0, existingId);
+      } else {
+        insert.run(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);
       }
+      
+      syncedStudents.push({ ...s, id: finalId });
+    }
 
-      for (const [roll, id] of existingMap.entries()) {
-        if (!importedRolls.has(roll)) {
-           deleteStmt.run(id);
-        }
+    for (const [roll, id] of existingMap.entries()) {
+      if (!importedRolls.has(roll)) {
+         deleteStmt.run(id);
       }
-    });
+    }
+  });
 
-    transaction(importedStudents);
-    res.json({ success: true, students: syncedStudents });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to sync students' });
-  }
-});
+  transaction(importedStudents);
+  res.json({ success: true, students: syncedStudents });
+}));
 
 // --- ATTENDANCE RECORDS ---
 router.get('/classes/:classId/records', requireClassAccess('classId'), (req, res) => {
@@ -531,31 +500,26 @@ router.get('/classes/:classId/records', requireClassAccess('classId'), (req, res
   }
 });
 
-router.post('/records', requireAuth, postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const records = Array.isArray(req.body) ? req.body : [req.body];
-    
-    // Verify access to all classes in the request
-    for (const r of records) {
-      const access = db.stmt.isClassTeacher.get(r.classId, teacherId) as { class_id: string; role: string } | undefined;
-      if (!access) {
-        return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
-      }
+router.post('/records', requireAuth, postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const records = Array.isArray(req.body) ? req.body : [req.body];
+  
+  for (const r of records) {
+    const access = db.stmt.isClassTeacher.get(r.classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access) {
+      return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
     }
-
-    const insert = db.stmt.insertAttendance;
-    const transaction = db.transaction((recs) => {
-      for (const r of recs) {
-        insert.run(r.studentId, r.classId, r.date, r.status, r.reason || null);
-      }
-    });
-    transaction(records);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to save records' });
   }
-});
+
+  const insert = db.stmt.insertAttendance;
+  const transaction = db.transaction((recs) => {
+    for (const r of recs) {
+      insert.run(r.studentId, r.classId, r.date, r.status, r.reason || null);
+    }
+  });
+  transaction(records);
+  res.json({ success: true });
+}));
 
 // --- DAILY NOTES ---
 router.get('/classes/:classId/daily-notes', requireClassAccess('classId'), (req, res) => {
@@ -573,17 +537,13 @@ router.get('/classes/:classId/daily-notes', requireClassAccess('classId'), (req,
   }
 });
 
-router.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, (req, res) => {
-  try {
-    const classId = req.params.classId;
+router.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, withWriteQueue((req, res) => {
+  const classId = req.params.classId;
 
-    const { date, note } = req.body;
-    db.stmt.insertDailyNote.run(classId, date, note);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to save daily note' });
-  }
-});
+  const { date, note } = req.body;
+  db.stmt.insertDailyNote.run(classId, date, note);
+  res.json({ success: true });
+}));
 
 // --- EVENTS ---
 router.get('/classes/:classId/events', requireClassAccess('classId'), (req, res) => {
@@ -622,58 +582,46 @@ router.get('/classes/:classId/events', requireClassAccess('classId'), (req, res)
   }
 });
 
-router.post('/classes/:classId/events', requireClassAccess('classId'), postLimiter, validate(eventSchema), (req, res) => {
-  try {
-    const classId = req.params.classId;
+router.post('/classes/:classId/events', requireClassAccess('classId'), postLimiter, validate(eventSchema), withWriteQueue((req, res) => {
+  const classId = req.params.classId;
 
-    const events = Array.isArray(req.body) ? req.body : [req.body];
-    const insert = db.stmt.insertEvent;
-    const transaction = db.transaction((evts) => {
-      for (const e of evts) {
-        insert.run(e.id, classId, e.date, e.title, e.type, e.description || null);
-      }
-    });
-    transaction(events);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create event(s)' });
-  }
-});
-
-router.put('/events/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const eventId = req.params.id;
-    
-    const event = db.stmt.getEventById.get(eventId, teacherId);
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found or access denied' });
+  const events = Array.isArray(req.body) ? req.body : [req.body];
+  const insert = db.stmt.insertEvent;
+  const transaction = db.transaction((evts) => {
+    for (const e of evts) {
+      insert.run(e.id, classId, e.date, e.title, e.type, e.description || null);
     }
+  });
+  transaction(events);
+  res.json({ success: true });
+}));
 
-    const { date, title, type, description } = req.body;
-    db.stmt.updateEvent.run(date, title, type, description || null, eventId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update event' });
+router.put('/events/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const eventId = req.params.id;
+  
+  const event = db.stmt.getEventById.get(eventId, teacherId);
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found or access denied' });
   }
-});
 
-router.delete('/events/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const eventId = req.params.id;
-    
-    const event = db.stmt.getEventById.get(eventId, teacherId);
-    if (!event) {
-      return res.status(404).json({ error: 'Event not found or access denied' });
-    }
+  const { date, title, type, description } = req.body;
+  db.stmt.updateEvent.run(date, title, type, description || null, eventId);
+  res.json({ success: true });
+}));
 
-    db.stmt.deleteEvent.run(eventId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete event' });
+router.delete('/events/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const eventId = req.params.id;
+  
+  const event = db.stmt.getEventById.get(eventId, teacherId);
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found or access denied' });
   }
-});
+
+  db.stmt.deleteEvent.run(eventId);
+  res.json({ success: true });
+}));
 
 // --- TIMETABLE SLOTS ---
 router.get('/classes/:classId/timetable', requireClassAccess('classId'), (req, res) => {
@@ -695,52 +643,40 @@ router.get('/classes/:classId/timetable', requireClassAccess('classId'), (req, r
   }
 });
 
-router.post('/classes/:classId/timetable', requireClassAccess('classId'), postLimiter, validate(timetableSlotSchema), (req, res) => {
-  try {
-    const classId = req.params.classId;
+router.post('/classes/:classId/timetable', requireClassAccess('classId'), postLimiter, validate(timetableSlotSchema), withWriteQueue((req, res) => {
+  const classId = req.params.classId;
 
-    const { id, dayOfWeek, startTime, endTime, subject, lesson } = req.body;
-    db.stmt.insertTimetableSlot.run(id, classId, dayOfWeek, startTime, endTime, subject, lesson);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create timetable slot' });
+  const { id, dayOfWeek, startTime, endTime, subject, lesson } = req.body;
+  db.stmt.insertTimetableSlot.run(id, classId, dayOfWeek, startTime, endTime, subject, lesson);
+  res.json({ success: true });
+}));
+
+router.put('/timetable/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const timetableId = req.params.id;
+  
+  const slot = db.stmt.getTimetableSlotById.get(timetableId, teacherId);
+  if (!slot) {
+    return res.status(404).json({ error: 'Timetable slot not found or access denied' });
   }
-});
 
-router.put('/timetable/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const timetableId = req.params.id;
-    
-    const slot = db.stmt.getTimetableSlotById.get(timetableId, teacherId);
-    if (!slot) {
-      return res.status(404).json({ error: 'Timetable slot not found or access denied' });
-    }
+  const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;
+  db.stmt.updateTimetableSlot.run(dayOfWeek, startTime, endTime, subject, lesson, timetableId);
+  res.json({ success: true });
+}));
 
-    const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;
-    db.stmt.updateTimetableSlot.run(dayOfWeek, startTime, endTime, subject, lesson, timetableId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update timetable slot' });
+router.delete('/timetable/:id', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const timetableId = req.params.id;
+  
+  const slot = db.stmt.getTimetableSlotById.get(timetableId, teacherId);
+  if (!slot) {
+    return res.status(404).json({ error: 'Timetable slot not found or access denied' });
   }
-});
 
-router.delete('/timetable/:id', postLimiter, (req, res) => {
-  try {
-    const teacherId = (req as any).teacherId;
-    const timetableId = req.params.id;
-    
-    const slot = db.stmt.getTimetableSlotById.get(timetableId, teacherId);
-    if (!slot) {
-      return res.status(404).json({ error: 'Timetable slot not found or access denied' });
-    }
-
-    db.stmt.deleteTimetableSlot.run(timetableId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete timetable slot' });
-  }
-});
+  db.stmt.deleteTimetableSlot.run(timetableId);
+  res.json({ success: true });
+}));
 
 // --- SEATING LAYOUT ---
 router.get('/classes/:classId/seating', requireClassAccess('classId'), (req, res) => {
@@ -758,52 +694,40 @@ router.get('/classes/:classId/seating', requireClassAccess('classId'), (req, res
   }
 });
 
-router.post('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, (req, res) => {
-  try {
-    const classId = req.params.classId;
+router.post('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue((req, res) => {
+  const classId = req.params.classId;
 
-    const { seatId, studentId } = req.body;
-    if (studentId === null) {
-      db.stmt.deleteSeatingBySeat.run(classId, seatId);
-    } else {
-      db.stmt.deleteSeatingByStudent.run(classId, studentId);
-      db.stmt.insertSeating.run(classId, seatId, studentId);
+  const { seatId, studentId } = req.body;
+  if (studentId === null) {
+    db.stmt.deleteSeatingBySeat.run(classId, seatId);
+  } else {
+    db.stmt.deleteSeatingByStudent.run(classId, studentId);
+    db.stmt.insertSeating.run(classId, seatId, studentId);
+  }
+  res.json({ success: true });
+}));
+
+router.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue((req, res) => {
+  const classId = req.params.classId;
+
+  const layout = req.body;
+  db.stmt.clearSeatingByClass.run(classId);
+  const insert = db.stmt.insertSeating;
+  const transaction = db.transaction((lay) => {
+    for (const [seatId, studentId] of Object.entries(lay)) {
+      insert.run(classId, seatId, studentId as string);
     }
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update seat' });
-  }
-});
+  });
+  transaction(layout);
+  res.json({ success: true });
+}));
 
-router.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, (req, res) => {
-  try {
-    const classId = req.params.classId;
+router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue((req, res) => {
+  const classId = req.params.classId;
 
-    const layout = req.body;
-    db.stmt.clearSeatingByClass.run(classId);
-    const insert = db.stmt.insertSeating;
-    const transaction = db.transaction((lay) => {
-      for (const [seatId, studentId] of Object.entries(lay)) {
-        insert.run(classId, seatId, studentId as string);
-      }
-    });
-    transaction(layout);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to save seating layout' });
-  }
-});
-
-router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, (req, res) => {
-  try {
-    const classId = req.params.classId;
-
-    db.stmt.clearSeatingByClass.run(classId);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to clear seating layout' });
-  }
-});
+  db.stmt.clearSeatingByClass.run(classId);
+  res.json({ success: true });
+}));
 
 // --- SETTINGS ---
 router.get('/settings', (req, res) => {
@@ -821,19 +745,15 @@ router.get('/settings', (req, res) => {
   }
 });
 
-router.post('/settings', postLimiter, validate(settingSchema), (req, res) => {
-  try {
-    const { key, value } = req.body;
-    if (key === 'adminPassword') {
-      const hash = bcrypt.hashSync(value, 10);
-      db.stmt.upsertSetting.run(key, hash);
-    } else {
-      db.stmt.upsertSetting.run(key, value);
-    }
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update setting' });
+router.post('/settings', postLimiter, validate(settingSchema), withWriteQueue((req, res) => {
+  const { key, value } = req.body;
+  if (key === 'adminPassword') {
+    const hash = bcrypt.hashSync(value, 10);
+    db.stmt.upsertSetting.run(key, hash);
+  } else {
+    db.stmt.upsertSetting.run(key, value);
   }
-});
+  res.json({ success: true });
+}));
 
 export default router;
