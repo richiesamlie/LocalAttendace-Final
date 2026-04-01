@@ -1,23 +1,17 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { Search, Clock, CheckCircle2, UserCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useMemo(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    timerRef.current = setTimeout(() => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
+      clearTimeout(timer);
     };
   }, [value, delay]);
 

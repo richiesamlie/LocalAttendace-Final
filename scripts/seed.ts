@@ -92,7 +92,7 @@ async function seed() {
   db.prepare("DELETE FROM students WHERE id LIKE 'student_%'").run();
   db.prepare("DELETE FROM events WHERE class_id LIKE 'class_%'").run();
   db.prepare("DELETE FROM classes WHERE id LIKE 'class_%'").run();
-  db.prepare("DELETE FROM teachers WHERE id LIKE 'teacher_%'").run();
+  db.prepare("DELETE FROM teachers WHERE id LIKE 'teacher_%' AND username != 'admin'").run();
 
   // Insert teachers
   console.log('Creating teachers...');
@@ -161,7 +161,7 @@ async function seed() {
   console.log('\nGenerating attendance records...');
   const students = db.prepare("SELECT id FROM students WHERE class_id = 'class_1'").all() as { id: string }[];
   const dates = getRecentDates(5);
-  const statuses = ['present', 'present', 'present', 'absent', 'sick', 'late'];
+  const statuses = ['Present', 'Present', 'Present', 'Absent', 'Sick', 'Late'];
 
   for (const date of dates) {
     for (const student of students) {

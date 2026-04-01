@@ -4,7 +4,11 @@ import { format, getDaysInMonth, parseISO, startOfMonth, addDays, addMonths, isW
 
 /** Derive a stable student ID from classId + rollNumber so re-imports don't create duplicates */
 function deriveStudentId(classId: string, rollNumber: string): string {
-  return `std_${btoa(`${classId}:${rollNumber}`).replace(/[/+=]/g, '_')}`;
+  const raw = `${classId}:${rollNumber}`;
+  const encoded = typeof btoa === 'function'
+    ? btoa(unescape(encodeURIComponent(raw)))
+    : Buffer.from(raw).toString('base64');
+  return `std_${encoded.replace(/[/+=]/g, '_')}`;
 }
 
 export function importStudentsFromExcel(file: File, classId: string): Promise<Student[]> {

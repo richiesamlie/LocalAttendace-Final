@@ -191,36 +191,35 @@ const initSchema = () => {
   const classesInfo = _db.pragma('table_info(classes)') as Array<{ name: string }>;
   const hasTeacherId = classesInfo.some(col => col.name === 'teacher_id');
   if (!hasTeacherId) {
-    // Create default teacher for existing data
     const existingTeachers = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
     let defaultTeacherId = 'teacher_default';
     if (existingTeachers.count === 0) {
-      const hash = bcrypt.hashSync('teacher123', 10);
+      const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || process.env.JWT_SECRET?.slice(0, 16) || crypto.randomUUID().slice(0, 16);
+      const hash = bcrypt.hashSync(defaultPassword, 10);
       _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
         defaultTeacherId, 'admin', hash, 'Administrator'
       );
+      console.log(`[db] Default admin created. Password: ${defaultPassword} (change immediately!)`);
     } else {
       const teacher = _db.prepare('SELECT id FROM teachers LIMIT 1').get() as { id: string };
       defaultTeacherId = teacher?.id || defaultTeacherId;
     }
-    // Add teacher_id column
     _db.exec('ALTER TABLE classes ADD COLUMN teacher_id TEXT');
-    _db.exec(`UPDATE classes SET teacher_id = '${defaultTeacherId}'`);
+    _db.prepare('UPDATE classes SET teacher_id = ?').run(defaultTeacherId);
     _db.exec('CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id)');
   }
 
   // Ensure default admin teacher always exists
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
   if (teacherCount.count === 0) {
-    const hash = bcrypt.hashSync('teacher123', 10);
+    const defaultPassword = process.env.DEFAULT_ADMIN_PASSWORD || process.env.JWT_SECRET?.slice(0, 16) || crypto.randomUUID().slice(0, 16);
+    const hash = bcrypt.hashSync(defaultPassword, 10);
     _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
       'teacher_default', 'admin', hash, 'Administrator'
     );
+    console.log(`[db] Default admin created. Password: ${defaultPassword} (change immediately!)`);
     
-    // Update classes to use this teacher
     _db.exec("UPDATE classes SET teacher_id = 'teacher_default' WHERE teacher_id IS NULL");
-    
-    // Auto-add to class_teachers
     _db.exec("INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes");
   }
 };

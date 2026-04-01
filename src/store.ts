@@ -646,10 +646,21 @@ export const useStore = create<AppState>()((set, get) => ({
 
   clearAllData: async () => {
     try {
-      // Drop all classes from DB...
       const classes = get().classes;
-      for (const c of classes) {
-        await api.deleteClass(c.id);
+      const failed: string[] = [];
+      
+      await Promise.allSettled(
+        classes.map(async (c) => {
+          try {
+            await api.deleteClass(c.id);
+          } catch {
+            failed.push(c.name);
+          }
+        })
+      );
+      
+      if (failed.length > 0 && failed.length === classes.length) {
+        throw new Error('All deletions failed');
       }
       
       const defaultClassId = 'class_default';
@@ -677,7 +688,11 @@ export const useStore = create<AppState>()((set, get) => ({
           seatingLayout: {},
         };
       });
-      toast.success('All data cleared successfully');
+      
+      const msg = failed.length > 0
+        ? `All data cleared (${failed.length} classes failed to delete)`
+        : 'All data cleared successfully';
+      toast.success(msg);
     } catch (error) {
       toast.error('Failed to clear all data');
     }

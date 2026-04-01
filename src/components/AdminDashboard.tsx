@@ -29,14 +29,19 @@ export default function AdminDashboard() {
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.login('admin', passwordInput);
-      if (res.success) {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'admin', password: passwordInput }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
         setIsUnlocked(true);
         setError('');
       } else {
         setError('Incorrect admin password');
       }
-    } catch (err) {
+    } catch {
       setError('Incorrect admin password');
     }
   };

@@ -134,11 +134,15 @@ export default function Roster() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
+    const idsToDelete = [...selectedIds];
     try {
-      for (const id of selectedIds) {
-        await removeStudent(id);
+      const results = await Promise.allSettled(idsToDelete.map(id => removeStudent(id)));
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed === 0) {
+        toast.success(`Deleted ${idsToDelete.length} student(s)`);
+      } else {
+        toast.success(`Deleted ${idsToDelete.length - failed} student(s), ${failed} failed`);
       }
-      toast.success(`Deleted ${selectedIds.size} student(s)`);
       setSelectedIds(new Set());
       setShowBulkDeleteConfirm(false);
     } catch {

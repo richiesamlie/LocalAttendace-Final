@@ -30,6 +30,8 @@ export function errorHandler(
   // Log error for debugging
   if (process.env.NODE_ENV !== 'production') {
     console.error('Error:', err);
+  } else {
+    console.error(`[ERROR] ${err.name}: ${err.message}`);
   }
 
   // Handle APIError

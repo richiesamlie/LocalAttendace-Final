@@ -81,7 +81,8 @@ router.post('/auth/login', authLimiter, validate(loginSchema), (req, res) => {
   res.cookie('auth_token', token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: 'strict',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
   res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name });
@@ -113,7 +114,6 @@ router.get('/auth/me', (req, res) => {
 // Health check endpoint for Docker and monitoring
 router.get('/health', (_req, res) => {
   try {
-    // Quick DB ping to verify connectivity
     db.prepare('SELECT 1').get();
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
   } catch (error) {
@@ -121,8 +121,50 @@ router.get('/health', (_req, res) => {
   }
 });
 
+// --- DATABASE BACKUP & RESTORE ---
+router.get('/database/backup', requireAuth, (req, res) => {
+  try {
+    const dbPath = path.join(process.cwd(), 'database.sqlite');
+    if (!fs.existsSync(dbPath)) {
+      return res.status(404).json({ error: 'Database file not found' });
+    }
+    res.setHeader('Content-Disposition', 'attachment; filename="database.sqlite"');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.sendFile(dbPath);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create backup' });
+  }
+});
+
+router.post('/database/restore', requireAuth, (req, res) => {
+  try {
+    const dbPath = path.join(process.cwd(), 'database.sqlite');
+    const backupDir = path.join(process.cwd(), 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const preRestorePath = path.join(backupDir, `pre-restore-${timestamp}.sqlite`);
+    if (fs.existsSync(dbPath)) {
+      fs.copyFileSync(dbPath, preRestorePath);
+    }
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      const fileBuffer = Buffer.concat(chunks);
+      if (fileBuffer.length < 100 || fileBuffer.toString('utf8', 0, 15) !== 'SQLite format 3') {
+        return res.status(400).json({ error: 'Invalid SQLite database file' });
+      }
+      fs.writeFileSync(dbPath, fileBuffer);
+      res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to restore database' });
+  }
+});
+
 // --- TEACHER MANAGEMENT ---
-router.post('/teachers/register', postLimiter, validate(teacherSchema), (req, res) => {
+router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSchema), (req, res) => {
   try {
     const { username, password, name } = req.body;
     if (!username || !password || !name) {

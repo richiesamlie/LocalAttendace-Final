@@ -62,7 +62,7 @@ async function startServer() {
   // Request logging
   app.use(requestLogger());
 
-  app.use(express.json({ limit: '50mb' }));
+  app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
 
   // Use separated API routes

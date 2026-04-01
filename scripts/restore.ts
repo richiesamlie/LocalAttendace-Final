@@ -3,6 +3,7 @@ import path from 'path';
 
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
+const MAX_PRE_RESTORE_BACKUPS = 5;
 
 function listBackups(): string[] {
   if (!fs.existsSync(BACKUP_DIR)) return [];
@@ -10,6 +11,18 @@ function listBackups(): string[] {
     .filter(f => f.startsWith('database-backup-') && f.endsWith('.sqlite'))
     .sort()
     .reverse();
+}
+
+function cleanupPreRestoreBackups(): void {
+  if (!fs.existsSync(BACKUP_DIR)) return;
+  const preRestores = fs.readdirSync(BACKUP_DIR)
+    .filter(f => f.startsWith('pre-restore-') && f.endsWith('.sqlite'))
+    .map(f => ({ name: f, path: path.join(BACKUP_DIR, f) }))
+    .sort((a, b) => fs.statSync(b.path).mtime.getTime() - fs.statSync(a.path).mtime.getTime());
+
+  for (let i = MAX_PRE_RESTORE_BACKUPS; i < preRestores.length; i++) {
+    fs.unlinkSync(preRestores[i].path);
+  }
 }
 
 function restore(backupFile: string): void {
@@ -22,20 +35,28 @@ function restore(backupFile: string): void {
     process.exit(1);
   }
 
+  // Validate it's a SQLite file
+  const header = fs.readFileSync(backupPath, { encoding: null }).slice(0, 15).toString();
+  if (!header.startsWith('SQLite format 3')) {
+    console.error('[RESTORE] File is not a valid SQLite database.');
+    process.exit(1);
+  }
+
   // Create a backup of current DB before restoring
   if (fs.existsSync(DB_FILE)) {
-    const preRestoreDir = path.join(process.cwd(), 'backups');
-    if (!fs.existsSync(preRestoreDir)) {
-      fs.mkdirSync(preRestoreDir, { recursive: true });
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
     }
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const preRestorePath = path.join(preRestoreDir, `pre-restore-${timestamp}.sqlite`);
+    const preRestorePath = path.join(BACKUP_DIR, `pre-restore-${timestamp}.sqlite`);
     fs.copyFileSync(DB_FILE, preRestorePath);
     console.log(`[RESTORE] Current database backed up to: ${preRestorePath}`);
+    cleanupPreRestoreBackups();
   }
 
   fs.copyFileSync(backupPath, DB_FILE);
   console.log(`[RESTORE] Database restored from: ${backupPath}`);
+  console.log('[RESTORE] Restart the app to apply changes.');
 }
 
 // Main
