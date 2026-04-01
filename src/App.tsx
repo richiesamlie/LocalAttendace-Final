@@ -3,7 +3,7 @@ import { CheckSquare, Menu, X, Loader2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { cn } from './utils/cn';
 import { useStore } from './store';
-import { useAuth, useLogin, useLogout } from './hooks/useData';
+import { useAuth, useLogin, useLogout, useClassSync } from './hooks/useData';
 import Sidebar from './components/Sidebar';
 
 // Lazy load all major routes to enable code-splitting and drastically reduce initial JS payload
@@ -104,6 +104,7 @@ export default function App() {
   
   const authQuery = useAuth();
   const logoutMutation = useLogout();
+  useClassSync(30000);
 
   useEffect(() => {
     // Only fetch full data if authenticated

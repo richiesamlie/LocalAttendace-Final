@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useStore } from '../store';
@@ -54,4 +54,43 @@ export function useLogout() {
       queryClient.clear();
     },
   });
+}
+
+// Poll-based sync: periodically reloads class data to detect changes made by other teachers (Phase 3.1)
+// Uses a lightweight fingerprint (record count + last event date) to detect changes before full reload
+export function useClassSync(intervalMs: number = 30000) {
+  const currentClassId = useStore((state) => state.currentClassId);
+  const loadClassData = useStore((state) => state.loadClassData);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!currentClassId) return;
+
+    let lastFingerprint = '';
+
+    const checkForUpdates = async () => {
+      try {
+        const [records, events] = await Promise.all([
+          api.getRecords(currentClassId),
+          api.getEvents(currentClassId),
+        ]);
+
+        const fingerprint = `${records.length}:${events.length}:${events.length > 0 ? events[0].date : ''}`;
+        if (fingerprint !== lastFingerprint && lastFingerprint !== '') {
+          await loadClassData(currentClassId);
+        }
+        lastFingerprint = fingerprint;
+      } catch {
+        // Silently ignore sync errors (network issues, etc.)
+      }
+    };
+
+    // Initial fingerprint
+    checkForUpdates();
+
+    intervalRef.current = setInterval(checkForUpdates, intervalMs);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [currentClassId, loadClassData, intervalMs]);
 }
