@@ -112,6 +112,15 @@ export function exportMonthlyReportToExcel(
 
   const days = Array.from({ length: daysInMonth }, (_, i) => addDays(start, i));
   
+  // Pre-index records by studentId for O(1) lookup
+  const recordsByStudent = new Map<string, Map<string, { status: string; reason?: string | null }>>();
+  for (const r of records) {
+    if (!recordsByStudent.has(r.studentId)) {
+      recordsByStudent.set(r.studentId, new Map());
+    }
+    recordsByStudent.get(r.studentId)!.set(r.date, { status: r.status, reason: r.reason });
+  }
+  
   const data = students.map(student => {
     const row: any = {};
     
@@ -125,9 +134,11 @@ export function exportMonthlyReportToExcel(
     let sick = 0;
     let late = 0;
 
+    const studentRecords = recordsByStudent.get(student.id);
+
     days.forEach(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
-      const record = records.find(r => r.studentId === student.id && r.date === dateStr);
+      const record = studentRecords?.get(dateStr);
       
       let statusStr = '-';
       if (record) {

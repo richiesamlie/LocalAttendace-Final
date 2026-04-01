@@ -40,12 +40,22 @@ export default function Reports() {
     student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Pre-index records by studentId for O(1) lookup
+  const recordsByStudent = new Map<string, Map<string, { status: string }>>();
+  for (const r of records) {
+    if (!recordsByStudent.has(r.studentId)) {
+      recordsByStudent.set(r.studentId, new Map());
+    }
+    recordsByStudent.get(r.studentId)!.set(r.date, { status: r.status });
+  };
+
   const summary = filteredStudents.map(student => {
     let present = 0, absent = 0, sick = 0, late = 0;
+    const studentRecords = recordsByStudent.get(student.id);
     
     daysInMonth.forEach(day => {
       const dateStr = format(day, 'yyyy-MM-dd');
-      const record = records.find(r => r.studentId === student.id && r.date === dateStr);
+      const record = studentRecords?.get(dateStr);
       if (record) {
         switch (record.status) {
           case 'Present': present++; break;
