@@ -416,7 +416,6 @@ async function processWriteQueue(): Promise<void> {
     const task = writeQueue.shift()!;
     try {
       task.fn();
-      cacheInvalidate(); // Invalidate all caches after any write
       task.resolve();
     } catch (error) {
       task.reject(error as Error);
@@ -455,8 +454,9 @@ export function cacheInvalidate(pattern?: string): void {
     cache.clear();
     return;
   }
+  const prefix = pattern.endsWith(':') ? pattern : `${pattern}:`;
   for (const key of cache.keys()) {
-    if (key.startsWith(pattern)) {
+    if (key === prefix || key.startsWith(prefix)) {
       cache.delete(key);
     }
   }

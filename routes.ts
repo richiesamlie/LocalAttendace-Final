@@ -292,6 +292,7 @@ router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSche
   const id = `teacher_${Date.now()}`;
   const hash = bcrypt.hashSync(password, 10);
   db.stmt.insertTeacher.run(id, username, hash, name);
+  db.cache.invalidate('teachers:all');
   res.json({ success: true, id, username, name });
 }));
 
@@ -323,6 +324,7 @@ router.post('/classes', postLimiter, validate(classSchema), withWriteQueue((req,
   const { id, name } = req.body;
   db.stmt.insertClass.run(id, teacherId, name);
   db.stmt.insertClassTeacher.run(id, teacherId, 'owner');
+  db.cache.invalidate(`classes:${teacherId}`);
   res.json({ id, teacher_id: teacherId, name });
 }));
 
@@ -337,6 +339,7 @@ router.put('/classes/:id', postLimiter, withWriteQueue((req, res) => {
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Class not found' });
   }
+  db.cache.invalidate(`classes:${teacherId}`);
   res.json({ success: true });
 }));
 
@@ -350,6 +353,7 @@ router.delete('/classes/:id', postLimiter, withWriteQueue((req, res) => {
   if (result.changes === 0) {
     return res.status(404).json({ error: 'Class not found' });
   }
+  db.cache.invalidate(`classes:${teacherId}`);
   res.json({ success: true });
 }));
 
@@ -391,6 +395,7 @@ router.post('/classes/:classId/teachers', postLimiter, withWriteQueue((req, res)
   }
 
   db.stmt.insertClassTeacher.run(classId, newTeacherId, 'teacher');
+  db.cache.invalidate(`teachers:class:${classId}`);
   res.json({ success: true });
 }));
 
@@ -409,6 +414,7 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQue
   }
 
   db.stmt.removeClassTeacher.run(classId, targetTeacherId);
+  db.cache.invalidate(`teachers:class:${classId}`);
   res.json({ success: true });
 }));
 
@@ -963,6 +969,7 @@ router.post('/settings', postLimiter, validate(settingSchema), withWriteQueue((r
   } else {
     db.stmt.upsertSetting.run(key, value);
   }
+  db.cache.invalidate('settings:all');
   res.json({ success: true });
 }));
 
