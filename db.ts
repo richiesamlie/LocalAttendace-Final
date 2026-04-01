@@ -219,6 +219,31 @@ const initSchema = () => {
     }
   }
 
+  // Migration: Add triggers to auto-populate updated_at on INSERT and UPDATE
+  const triggerTables = [
+    { table: 'students', pk: 'id' },
+    { table: 'attendance_records', pk: 'student_id' },
+    { table: 'events', pk: 'id' },
+    { table: 'timetable_slots', pk: 'id' },
+    { table: 'daily_notes', pk: 'class_id' },
+    { table: 'seating_layout', pk: 'class_id' },
+    { table: 'classes', pk: 'id' },
+  ];
+  for (const { table, pk } of triggerTables) {
+    const triggerName = `trg_${table}_updated_at`;
+    const existing = _db.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name=?").get(triggerName);
+    if (!existing) {
+      _db.exec(`
+        CREATE TRIGGER ${triggerName}
+        AFTER UPDATE ON ${table}
+        FOR EACH ROW
+        BEGIN
+          UPDATE ${table} SET updated_at = CURRENT_TIMESTAMP WHERE ${pk} = NEW.${pk};
+        END;
+      `);
+    }
+  }
+
   // Migration: Phase 4.1 - Additional compound indexes for common query patterns
   const compoundIndexes = [
     ['idx_students_class_archived', 'students', '(class_id, is_archived)'],
