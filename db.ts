@@ -219,6 +219,23 @@ const initSchema = () => {
     }
   }
 
+  // Migration: Phase 4.1 - Additional compound indexes for common query patterns
+  const compoundIndexes = [
+    ['idx_students_class_archived', 'students', '(class_id, is_archived)'],
+    ['idx_records_class_date_status', 'attendance_records', '(class_id, date, status)'],
+    ['idx_events_class_date_type', 'events', '(class_id, date, type)'],
+    ['idx_timetable_class_day', 'timetable_slots', '(class_id, day_of_week)'],
+    ['idx_invite_codes_class_active', 'invite_codes', '(class_id, expires_at, used_by)'],
+    ['idx_user_sessions_teacher_active', 'user_sessions', '(teacher_id, is_revoked, expires_at)'],
+  ];
+  for (const [idxName, table, columns] of compoundIndexes) {
+    try {
+      _db.exec(`CREATE INDEX IF NOT EXISTS ${idxName} ON ${table} ${columns}`);
+    } catch {
+      // Index may already exist or table may not exist yet
+    }
+  }
+
   // Migration: Add invite_codes table (Phase 2.2)
   const inviteTables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'").all();
   if (inviteTables.length === 0) {
@@ -289,14 +306,14 @@ const preparedStatements = {
   getTeacherByUsername: _db.prepare('SELECT id, username, password_hash, name FROM teachers WHERE username = ?'),
   getTeacherById: _db.prepare('SELECT id, username, name FROM teachers WHERE id = ?'),
   getClassesByTeacher: _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)'),
-  getStudentsByClass: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? AND is_archived = 0'),
-  getStudentsByClassWithArchived: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ?'),
+  getStudentsByClass: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? AND is_archived = 0 ORDER BY name'),
+  getStudentsByClassWithArchived: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? ORDER BY name'),
   getRecordsByClass: _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = ?'),
   getRecordsByDate: _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE date = ?'),
   getRecordsByClassAndDate: _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = ? AND date = ?'),
-  getEventsByClass: _db.prepare('SELECT id, class_id, date, title, type, description FROM events WHERE class_id = ?'),
+  getEventsByClass: _db.prepare('SELECT id, class_id, date, title, type, description FROM events WHERE class_id = ? ORDER BY date DESC'),
   getDailyNotesByClass: _db.prepare('SELECT date, note FROM daily_notes WHERE class_id = ?'),
-  getTimetableByClass: _db.prepare('SELECT id, class_id, day_of_week, start_time, end_time, subject, lesson FROM timetable_slots WHERE class_id = ?'),
+  getTimetableByClass: _db.prepare('SELECT id, class_id, day_of_week, start_time, end_time, subject, lesson FROM timetable_slots WHERE class_id = ? ORDER BY day_of_week, start_time'),
   getSeatingByClass: _db.prepare('SELECT seat_id, student_id FROM seating_layout WHERE class_id = ?'),
   insertTeacher: _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)'),
   insertClass: _db.prepare('INSERT INTO classes (id, teacher_id, name) VALUES (?, ?, ?)'),
