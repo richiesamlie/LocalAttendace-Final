@@ -5,6 +5,36 @@ import fs from 'fs';
 
 const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 
+// Backup database before migrations
+function createBackup(): void {
+  try {
+    if (!fs.existsSync(DB_FILE)) return;
+
+    const backupDir = path.join(process.cwd(), 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const backupPath = path.join(backupDir, `database-backup-${timestamp}.sqlite`);
+    fs.copyFileSync(DB_FILE, backupPath);
+
+    // Keep only last 10 backups
+    const backups = fs.readdirSync(backupDir)
+      .filter(f => f.startsWith('database-backup-'))
+      .map(f => ({ name: f, path: path.join(backupDir, f) }))
+      .sort((a, b) => fs.statSync(b.path).mtime.getTime() - fs.statSync(a.path).mtime.getTime());
+
+    for (let i = 10; i < backups.length; i++) {
+      fs.unlinkSync(backups[i].path);
+    }
+
+    console.log(`[db] Backup created: ${backupPath}`);
+  } catch (err) {
+    console.warn('[db] Failed to create backup:', (err as Error).message);
+  }
+}
+
 let _db = new Database(DB_FILE, { timeout: 5000 });
 
 // Enable foreign keys
@@ -23,6 +53,9 @@ _db.pragma('temp_store = MEMORY');
 _db.pragma('mmap_size = 268435456'); // 256MB memory-mapped I/O
 
 const initSchema = () => {
+  // Create backup before any migrations
+  createBackup();
+
   _db.exec(`
     CREATE TABLE IF NOT EXISTS teachers (
       id TEXT PRIMARY KEY,

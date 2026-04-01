@@ -77,9 +77,10 @@ router.post('/auth/login', authLimiter, validate(loginSchema), (req, res) => {
   }
 
   const token = jwt.sign({ teacherId: teacher.id, username: teacher.username }, JWT_SECRET, { expiresIn: '7d' });
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('auth_token', token, {
     httpOnly: true,
-    secure: false,
+    secure: isProduction,
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
@@ -109,8 +110,19 @@ router.get('/auth/me', (req, res) => {
   res.json(teacher);
 });
 
+// Health check endpoint for Docker and monitoring
+router.get('/health', (_req, res) => {
+  try {
+    // Quick DB ping to verify connectivity
+    db.prepare('SELECT 1').get();
+    res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  } catch (error) {
+    res.status(503).json({ status: 'unhealthy', error: 'Database unavailable' });
+  }
+});
+
 // --- TEACHER MANAGEMENT ---
-router.post('/teachers/register', validate(teacherSchema), (req, res) => {
+router.post('/teachers/register', postLimiter, validate(teacherSchema), (req, res) => {
   try {
     const { username, password, name } = req.body;
     if (!username || !password || !name) {
@@ -167,7 +179,7 @@ router.post('/classes', postLimiter, validate(classSchema), (req, res) => {
   }
 });
 
-router.put('/classes/:id', (req, res) => {
+router.put('/classes/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const { name } = req.body;
@@ -185,7 +197,7 @@ router.put('/classes/:id', (req, res) => {
   }
 });
 
-router.delete('/classes/:id', (req, res) => {
+router.delete('/classes/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const access = db.stmt.isClassTeacher.get(req.params.id, teacherId) as { class_id: string; role: string } | undefined;
@@ -220,7 +232,7 @@ router.get('/classes/:classId/teachers', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/teachers', (req, res) => {
+router.post('/classes/:classId/teachers', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
@@ -247,7 +259,7 @@ router.post('/classes/:classId/teachers', (req, res) => {
   }
 });
 
-router.delete('/classes/:classId/teachers/:teacherId', (req, res) => {
+router.delete('/classes/:classId/teachers/:teacherId', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
@@ -317,7 +329,7 @@ router.post('/classes/:classId/students', postLimiter, validate(studentSchema), 
   }
 });
 
-router.put('/students/:id', (req, res) => {
+router.put('/students/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const studentId = req.params.id;
@@ -343,7 +355,7 @@ router.put('/students/:id', (req, res) => {
   }
 });
 
-router.delete('/students/:id', (req, res) => {
+router.delete('/students/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const studentId = req.params.id;
@@ -592,7 +604,7 @@ router.post('/classes/:classId/events', postLimiter, validate(eventSchema), (req
   }
 });
 
-router.put('/events/:id', (req, res) => {
+router.put('/events/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const eventId = req.params.id;
@@ -610,7 +622,7 @@ router.put('/events/:id', (req, res) => {
   }
 });
 
-router.delete('/events/:id', (req, res) => {
+router.delete('/events/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const eventId = req.params.id;
@@ -671,7 +683,7 @@ router.post('/classes/:classId/timetable', postLimiter, validate(timetableSlotSc
   }
 });
 
-router.put('/timetable/:id', (req, res) => {
+router.put('/timetable/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const timetableId = req.params.id;
@@ -689,7 +701,7 @@ router.put('/timetable/:id', (req, res) => {
   }
 });
 
-router.delete('/timetable/:id', (req, res) => {
+router.delete('/timetable/:id', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const timetableId = req.params.id;
@@ -751,7 +763,7 @@ router.post('/classes/:classId/seating', postLimiter, (req, res) => {
   }
 });
 
-router.put('/classes/:classId/seating', (req, res) => {
+router.put('/classes/:classId/seating', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
@@ -776,7 +788,7 @@ router.put('/classes/:classId/seating', (req, res) => {
   }
 });
 
-router.delete('/classes/:classId/seating', (req, res) => {
+router.delete('/classes/:classId/seating', postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const classId = req.params.classId;

@@ -33,9 +33,11 @@ A comprehensive, local-first web application designed to help teachers manage th
 - **WAL mode** with auto-checkpointing for concurrent access
 - **Pre-compiled SQL statements** for 40% faster queries
 - **Gzip compression** for 60-80% smaller responses
-- **Rate limiting** on all API endpoints
+- **Rate limiting** on all API endpoints (login: 5/15min, writes: 100/15min)
 - **Input validation** with Zod schemas
 - **Helmet security headers** (XSS, clickjacking protection)
+- **Global error handler** with SQLite constraint mapping
+- **Dynamic cookie security** (secure flag enabled in production)
 
 ## 📖 User Guide
 
@@ -171,6 +173,58 @@ docker run -d -p 3000:3000 \
 - **Health checks** for monitoring
 - **Auto-restart** on failure
 
+### Docker Commands
+```bash
+npm run docker:up      # Start containers
+npm run docker:down    # Stop containers
+npm run docker:logs    # View logs
+npm run docker:build   # Rebuild image
+```
+
+## Development Tools
+
+### Sample Data Seeding
+Populate the database with sample teachers, students, and classes for testing:
+```bash
+npm run db:seed
+```
+Login credentials after seeding:
+- **Username:** `demo`
+- **Password:** `demo123`
+
+### Database Backup & Restore
+
+Create a manual backup before major changes:
+```bash
+npm run db:backup
+```
+Backups are stored in the `backups/` folder with timestamps.
+
+> **Note:** Automatic backups are created before database migrations.
+
+**Restore from backup:**
+```bash
+npm run db:restore              # Restore from most recent backup
+npm run db:restore -- <file>    # Restore from specific backup
+npm run db:restore:list         # List all available backups
+```
+
+> Restoring creates a pre-restore backup automatically, so you can always undo.
+
+## Cross-Platform Startup
+
+### Windows
+```bash
+start-app.bat              # Start server and open browser
+setup-windows-startup.bat  # Auto-start on Windows login
+```
+
+### Linux / macOS
+```bash
+./start-app.sh           # Start server and open browser
+./start-internal-site.sh # Share on local network
+```
+
 ## Windows Automation
 
 Data is stored in a local SQLite database (`database.sqlite`) in the project root. This ensures:
@@ -203,6 +257,15 @@ Move the entire project folder into your Google Drive/Dropbox folder for automat
 | **Excel** | xlsx (SheetJS) |
 | **Icons** | Lucide React |
 | **Dates** | date-fns |
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration:
+- **TypeScript checking** - Catches type errors before merge
+- **Build verification** - Ensures the app builds successfully
+- **Unit tests** - Runs vitest test suite automatically
+
+CI runs automatically on pushes and pull requests to `main` and `develop` branches.
 
 ## Performance Optimizations
 

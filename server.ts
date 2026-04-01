@@ -7,6 +7,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import fs from "fs";
 import apiRoutes from "./routes";
+import { errorHandler } from "./src/lib/errorHandler";
 
 // Simple request logger middleware
 function requestLogger() {
@@ -66,6 +67,9 @@ async function startServer() {
 
   // Use separated API routes
   app.use("/api", apiRoutes);
+
+  // Global error handler (must be after routes)
+  app.use(errorHandler);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

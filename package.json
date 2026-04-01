@@ -11,7 +11,15 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "start": "node server.ts",
-    "start:network": "node server.ts --network"
+    "start:network": "node server.ts --network",
+    "db:backup": "node -e \"const d=new Date(); require('child_process').execSync('cp database.sqlite backups/db-'+d.getFullYear()+(d.getMonth()+1).toString().padStart(2,'0')+d.getDate().toString().padStart(2,'0')+'.sqlite', {stdio:'inherit'})\"",
+    "db:restore": "tsx scripts/restore.ts",
+    "db:restore:list": "tsx scripts/restore.ts --list",
+    "db:seed": "tsx scripts/seed.ts",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
