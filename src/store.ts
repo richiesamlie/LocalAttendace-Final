@@ -73,6 +73,7 @@ interface AppState {
 
   initializeStore: () => Promise<void>;
   loadClassData: (classId: string) => Promise<void>;
+  reloadClassData: (classId: string) => Promise<void>;
 
   addClass: (name: string) => Promise<void>;
   removeClass: (id: string) => Promise<void>;
@@ -217,6 +218,35 @@ export const useStore = create<AppState>()((set, get) => ({
         c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
       ),
     }));
+  },
+
+  reloadClassData: async (classId: string) => {
+    const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+      api.getStudents(classId, false),
+      api.getRecords(classId),
+      api.getEvents(classId),
+      api.getTimetable(classId),
+      api.getDailyNotes(classId),
+      api.getSeating(classId),
+    ]);
+
+    set((state) => {
+      const updatedClasses = state.classes.map(c =>
+        c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
+      );
+      const isCurrentClass = state.currentClassId === classId;
+      return {
+        classes: updatedClasses,
+        ...(isCurrentClass ? {
+          students,
+          records,
+          events,
+          timetable,
+          dailyNotes,
+          seatingLayout,
+        } : {}),
+      };
+    });
   },
 
   addClass: async (name) => {

@@ -60,7 +60,7 @@ export function useLogout() {
 // Uses a lightweight fingerprint (record count + last event date) to detect changes before full reload
 export function useClassSync(intervalMs: number = 30000) {
   const currentClassId = useStore((state) => state.currentClassId);
-  const loadClassData = useStore((state) => state.loadClassData);
+  const reloadClassData = useStore((state) => state.reloadClassData);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -70,14 +70,17 @@ export function useClassSync(intervalMs: number = 30000) {
 
     const checkForUpdates = async () => {
       try {
-        const [records, events] = await Promise.all([
+        const [students, records, events, timetable, seating] = await Promise.all([
+          api.getStudents(currentClassId),
           api.getRecords(currentClassId),
           api.getEvents(currentClassId),
+          api.getTimetable(currentClassId),
+          api.getSeating(currentClassId),
         ]);
 
-        const fingerprint = `${records.length}:${events.length}:${events.length > 0 ? events[0].date : ''}`;
+        const fingerprint = `${students.length}:${records.length}:${events.length}:${timetable.length}:${Object.keys(seating).length}`;
         if (fingerprint !== lastFingerprint && lastFingerprint !== '') {
-          await loadClassData(currentClassId);
+          await reloadClassData(currentClassId);
         }
         lastFingerprint = fingerprint;
       } catch {
@@ -92,5 +95,5 @@ export function useClassSync(intervalMs: number = 30000) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [currentClassId, loadClassData, intervalMs]);
+  }, [currentClassId, reloadClassData, intervalMs]);
 }
