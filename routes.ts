@@ -35,6 +35,22 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
   if (!teacherId) {
     return res.status(401).json({ error: 'Authentication required' });
   }
+  
+  const token = req.cookies?.auth_token;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { sessionId?: string };
+      if (decoded.sessionId) {
+        const session = db.stmt.getSession.get(decoded.sessionId) as { is_revoked: number; expires_at: string } | undefined;
+        if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
+          res.clearCookie('auth_token');
+          return res.status(401).json({ error: 'Session expired or revoked' });
+        }
+        try { db.stmt.updateSessionActivity.run(decoded.sessionId); } catch (e) {}
+      }
+    } catch {}
+  }
+  
   (req as any).teacherId = teacherId;
   next();
 };
@@ -72,6 +88,35 @@ const requireClassOwner = (paramName: string = 'classId') => {
       return res.status(403).json({ error: 'Only class owner can perform this action' });
     }
     
+    next();
+  };
+};
+
+// Role hierarchy: owner > admin > teacher > assistant
+const ROLE_HIERARCHY: Record<string, number> = { owner: 4, admin: 3, teacher: 2, assistant: 1 };
+
+const requireRole = (paramName: string = 'classId', minRole: string = 'teacher') => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const teacherId = (req as any).teacherId;
+    const classId = req.params[paramName];
+    
+    if (!classId) {
+      return res.status(400).json({ error: 'Class ID is required' });
+    }
+    
+    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+    
+    const userLevel = ROLE_HIERARCHY[access.role] || 0;
+    const requiredLevel = ROLE_HIERARCHY[minRole] || 0;
+    
+    if (userLevel < requiredLevel) {
+      return res.status(403).json({ error: `Role '${minRole}' or higher required` });
+    }
+    
+    (req as any).classRole = access.role;
     next();
   };
 };
@@ -128,7 +173,16 @@ router.post('/auth/login', authLimiter, validate(loginSchema), (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const token = jwt.sign({ teacherId: teacher.id, username: teacher.username }, JWT_SECRET, { expiresIn: '7d' });
+  const sessionId = `sess-${crypto.randomUUID()}`;
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    db.stmt.updateTeacherLastLogin.run(teacher.id);
+    db.stmt.insertSession.run(sessionId, teacher.id, req.headers['user-agent']?.slice(0, 100) || 'unknown', req.ip || 'unknown', expiresAt);
+  } catch (e) {
+    // Session tracking is non-critical
+  }
+
+  const token = jwt.sign({ teacherId: teacher.id, username: teacher.username, sessionId }, JWT_SECRET, { expiresIn: '7d' });
   const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('auth_token', token, {
     httpOnly: true,
@@ -346,6 +400,134 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQue
   }
 
   db.stmt.removeClassTeacher.run(classId, targetTeacherId);
+  res.json({ success: true });
+}));
+
+// --- INVITE SYSTEM (Phase 2.2) ---
+router.post('/classes/:classId/invites', requireRole('classId', 'admin'), postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const classId = req.params.classId;
+  const { role, expiresInHours } = req.body;
+  
+  const validRoles = ['admin', 'teacher', 'assistant'];
+  const inviteRole = role || 'teacher';
+  if (!validRoles.includes(inviteRole)) {
+    return res.status(400).json({ error: 'Invalid role. Must be admin, teacher, or assistant' });
+  }
+  
+  if (inviteRole === 'admin' && (req as any).classRole !== 'owner') {
+    return res.status(403).json({ error: 'Only class owner can create admin invites' });
+  }
+  
+  const expiryHours = Math.min(Math.max(Number(expiresInHours) || 48, 1), 720);
+  const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
+  
+  const code = `inv-${crypto.randomUUID().slice(0, 12)}`;
+  db.stmt.insertInviteCode.run(code, classId, inviteRole, teacherId, expiresAt);
+  
+  const inviteUrl = `${req.protocol}://${req.get('host')}/invite/${code}`;
+  res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
+}));
+
+router.get('/classes/:classId/invites', requireRole('classId', 'admin'), (req, res) => {
+  try {
+    db.stmt.deleteExpiredInviteCodes.run();
+    const codes = db.stmt.getClassInviteCodes.all(req.params.classId);
+    res.json(codes);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch invite codes' });
+  }
+});
+
+router.delete('/classes/:classId/invites/:code', requireRole('classId', 'admin'), postLimiter, withWriteQueue((req, res) => {
+  const result = db.stmt.deleteInviteCode.run(req.params.code);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Invite code not found' });
+  }
+  res.json({ success: true });
+}));
+
+router.post('/invites/redeem', requireAuth, postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const { code } = req.body;
+  
+  if (!code) {
+    return res.status(400).json({ error: 'Invite code is required' });
+  }
+  
+  const invite = db.stmt.getInviteCode.get(code) as { code: string; class_id: string; role: string; expires_at: string; used_by: string | null } | undefined;
+  if (!invite) {
+    return res.status(404).json({ error: 'Invalid invite code' });
+  }
+  
+  if (invite.used_by) {
+    return res.status(400).json({ error: 'This invite code has already been used' });
+  }
+  
+  if (new Date(invite.expires_at) < new Date()) {
+    return res.status(400).json({ error: 'This invite code has expired' });
+  }
+  
+  const existing = db.stmt.isClassTeacher.get(invite.class_id, teacherId) as { class_id: string } | undefined;
+  if (existing) {
+    return res.status(400).json({ error: 'You already have access to this class' });
+  }
+  
+  db.stmt.useInviteCode.run(teacherId, code);
+  db.stmt.insertClassTeacher.run(invite.class_id, teacherId, invite.role);
+  
+  const className = db.stmt.getClassById.get(invite.class_id, teacherId) as { name: string } | undefined;
+  res.json({ success: true, className: className?.name, role: invite.role });
+}));
+
+// --- SESSION MANAGEMENT (Phase 2.3) ---
+router.get('/sessions', (req, res) => {
+  try {
+    const teacherId = (req as any).teacherId;
+    db.stmt.deleteExpiredSessions.run();
+    const sessions = db.stmt.getSessionsByTeacher.all(teacherId);
+    res.json(sessions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
+});
+
+router.post('/sessions/revoke', postLimiter, withWriteQueue((req, res) => {
+  const teacherId = (req as any).teacherId;
+  const { sessionId } = req.body;
+  
+  if (sessionId === 'all') {
+    db.stmt.revokeAllSessions.run(teacherId);
+    return res.json({ success: true, message: 'All sessions revoked' });
+  }
+  
+  const session = db.stmt.getSession.get(sessionId) as { teacher_id: string } | undefined;
+  if (!session || session.teacher_id !== teacherId) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+  
+  db.stmt.revokeSession.run(sessionId);
+  res.json({ success: true });
+}));
+
+// --- CLASS TEACHER ROLE MANAGEMENT ---
+router.put('/classes/:classId/teachers/:teacherId/role', requireClassOwner('classId'), postLimiter, withWriteQueue((req, res) => {
+  const classId = req.params.classId;
+  const targetTeacherId = req.params.teacherId;
+  const { role } = req.body;
+  
+  const validRoles = ['owner', 'admin', 'teacher', 'assistant'];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+  
+  const existing = db.stmt.isClassTeacher.get(classId, targetTeacherId) as { class_id: string } | undefined;
+  if (!existing) {
+    return res.status(404).json({ error: 'Teacher not found in this class' });
+  }
+  
+  const updateStmt = db.prepare('UPDATE class_teachers SET role = ? WHERE class_id = ? AND teacher_id = ?');
+  updateStmt.run(role, classId, targetTeacherId);
   res.json({ success: true });
 }));
 

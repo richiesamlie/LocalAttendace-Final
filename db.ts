@@ -219,6 +219,55 @@ const initSchema = () => {
     }
   }
 
+  // Migration: Add invite_codes table (Phase 2.2)
+  const inviteTables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'").all();
+  if (inviteTables.length === 0) {
+    _db.exec(`
+      CREATE TABLE invite_codes (
+        code TEXT PRIMARY KEY,
+        class_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'teacher',
+        created_by TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        used_by TEXT,
+        used_at TEXT,
+        FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES teachers (id) ON DELETE CASCADE,
+        FOREIGN KEY (used_by) REFERENCES teachers (id) ON DELETE SET NULL
+      );
+      CREATE INDEX idx_invite_codes_class ON invite_codes(class_id);
+      CREATE INDEX idx_invite_codes_code ON invite_codes(code);
+    `);
+  }
+
+  // Migration: Add user_sessions table (Phase 2.3)
+  const sessionTables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_sessions'").all();
+  if (sessionTables.length === 0) {
+    _db.exec(`
+      CREATE TABLE user_sessions (
+        id TEXT PRIMARY KEY,
+        teacher_id TEXT NOT NULL,
+        device_name TEXT,
+        ip_address TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        last_active TEXT DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        is_revoked INTEGER DEFAULT 0,
+        FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
+      );
+      CREATE INDEX idx_user_sessions_teacher ON user_sessions(teacher_id);
+      CREATE INDEX idx_user_sessions_expires ON user_sessions(expires_at);
+    `);
+  }
+
+  // Migration: Add last_login to teachers (Phase 2.3)
+  const teachersInfo = _db.pragma('table_info(teachers)') as Array<{ name: string }>;
+  const hasLastLogin = teachersInfo.some(col => col.name === 'last_login');
+  if (!hasLastLogin) {
+    _db.exec('ALTER TABLE teachers ADD COLUMN last_login TEXT');
+  }
+
   // Ensure default admin teacher always exists
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
   if (teacherCount.count === 0) {
@@ -289,6 +338,20 @@ const preparedStatements = {
   getRecordsCountByTeacher: _db.prepare("SELECT COUNT(*) as count FROM attendance_records ar JOIN classes c ON ar.class_id = c.id WHERE c.teacher_id = ?"),
   getEventsCountByTeacher: _db.prepare("SELECT COUNT(*) as count FROM events e JOIN classes c ON e.class_id = c.id WHERE c.teacher_id = ?"),
   getAllClasses: _db.prepare("SELECT c.id, c.teacher_id, c.name, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id"),
+  insertInviteCode: _db.prepare('INSERT INTO invite_codes (code, class_id, role, created_by, expires_at) VALUES (?, ?, ?, ?, ?)'),
+  getInviteCode: _db.prepare('SELECT code, class_id, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE code = ?'),
+  useInviteCode: _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ?'),
+  deleteInviteCode: _db.prepare('DELETE FROM invite_codes WHERE code = ?'),
+  getClassInviteCodes: _db.prepare('SELECT code, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE class_id = ? ORDER BY created_at DESC'),
+  deleteExpiredInviteCodes: _db.prepare("DELETE FROM invite_codes WHERE expires_at < datetime('now')"),
+  insertSession: _db.prepare('INSERT INTO user_sessions (id, teacher_id, device_name, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)'),
+  getSession: _db.prepare('SELECT id, teacher_id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE id = ?'),
+  getSessionsByTeacher: _db.prepare('SELECT id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE teacher_id = ? ORDER BY last_active DESC'),
+  updateSessionActivity: _db.prepare("UPDATE user_sessions SET last_active = datetime('now') WHERE id = ?"),
+  revokeSession: _db.prepare('UPDATE user_sessions SET is_revoked = 1 WHERE id = ?'),
+  revokeAllSessions: _db.prepare('UPDATE user_sessions SET is_revoked = 1 WHERE teacher_id = ?'),
+  deleteExpiredSessions: _db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')"),
+  updateTeacherLastLogin: _db.prepare("UPDATE teachers SET last_login = datetime('now') WHERE id = ?"),
 };
 
 // Write queue for serializing write operations (Phase 1.2 + 1.3)
