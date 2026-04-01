@@ -152,10 +152,12 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | 4 | Add updated_at columns | 1.4 | db.ts | ✅ |
 | 5 | Role-Based Access Control | 2.1 | db.ts, routes.ts | ✅ |
 | 6 | Invite System API | 2.2 | routes.ts | ✅ |
-| 7 | Invite System UI | 2.2 | React components | ⬜ |
+| 7 | Invite System UI | 2.2 | React components | ✅ |
 | 8 | Session Management | 2.3 | db.ts, routes.ts | ✅ |
-| 9 | Poll-Based Sync | 3.1 | store.ts | ⬜ |
-| 10 | Query Optimization | 4.1 | db.ts | ⬜ |
+| 9 | Poll-Based Sync | 3.1 | useData.ts, App.tsx | ✅ |
+| 10 | Query Optimization | 4.1 | db.ts | ✅ |
+| 11 | Caching Layer | 4.2 | db.ts, routes.ts | ✅ |
+| 12 | Batch Operations | 4.3 | routes.ts | ✅ |
 
 ---
 
