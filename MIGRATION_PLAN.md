@@ -146,7 +146,7 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 
 | # | Task | Phase | Files | Status |
 |---|------|-------|-------|--------|
-| 1 | Teacher Isolation - ALL queries verify class access | 1.1 | routes.ts | ⬜ |
+| 1 | Teacher Isolation - ALL queries verify class access | 1.1 | routes.ts | ✅ |
 | 2 | Connection Pooling | 1.2 | db.ts | ⬜ |
 | 3 | Request Queueing for Writes | 1.3 | routes.ts | ⬜ |
 | 4 | Add updated_at columns | 1.4 | db.ts | ⬜ |
@@ -214,7 +214,10 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 
 ## Notes
 
-- **Phase 1 is CRITICAL** - Without it, multi-user introduces security vulnerabilities
+- **Phase 1.1 COMPLETED** - All class-scoped endpoints now use `requireClassAccess` middleware
+  - Added new middleware: `requireClassAccess(paramName)` - verifies teacher has access via class_teachers table
+  - Added new middleware: `requireClassOwner(paramName)` - verifies teacher is owner (for admin actions)
+  - Updated: students, records, daily-notes, events, timetable, seating endpoints
 - Current e2e tests work but can have flaky runs when all tests share DB (expected)
 - Keep main branch clean, all changes on `develop` branch
 - Test each phase thoroughly before moving to next

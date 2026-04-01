@@ -39,6 +39,47 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
   next();
 };
 
+// Middleware to verify teacher has access to a specific class
+// Use this for endpoints that take classId as a path parameter
+const requireClassAccess = (paramName: string = 'classId') => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const teacherId = (req as any).teacherId;
+    const classId = req.params[paramName];
+    
+    if (!classId) {
+      return res.status(400).json({ error: 'Class ID is required' });
+    }
+    
+    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+    
+    // Store the role for later use (e.g., owner-only actions)
+    (req as any).classRole = access.role;
+    next();
+  };
+};
+
+// Middleware to verify teacher owns the class (for admin operations)
+const requireClassOwner = (paramName: string = 'classId') => {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const teacherId = (req as any).teacherId;
+    const classId = req.params[paramName];
+    
+    if (!classId) {
+      return res.status(400).json({ error: 'Class ID is required' });
+    }
+    
+    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    if (!access || access.role !== 'owner') {
+      return res.status(403).json({ error: 'Only class owner can perform this action' });
+    }
+    
+    next();
+  };
+};
+
 // Rate limiter: 5 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -324,16 +365,10 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, (req, res) =
 });
 
 // --- STUDENTS ---
-router.get('/classes/:classId/students', (req, res) => {
+router.get('/classes/:classId/students', requireClassAccess('classId'), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
     
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
-
     const includeArchived = req.query.includeArchived === 'true';
     const students = includeArchived 
       ? db.stmt.getStudentsByClassWithArchived.all(classId) 
@@ -353,15 +388,9 @@ router.get('/classes/:classId/students', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/students', postLimiter, validate(studentSchema), (req, res) => {
+router.post('/classes/:classId/students', requireClassAccess('classId'), postLimiter, validate(studentSchema), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const { id, name, rollNumber, parentName, parentPhone, isFlagged } = req.body;
     db.stmt.insertStudent.run(id, classId, name, rollNumber, parentName || null, parentPhone || null, isFlagged ? 1 : 0);
@@ -414,16 +443,10 @@ router.delete('/students/:id', postLimiter, (req, res) => {
   }
 });
 
-router.post('/classes/:classId/students/sync', postLimiter, (req, res) => {
+router.post('/classes/:classId/students/sync', requireClassAccess('classId'), postLimiter, (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
     
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
-
     const importedStudents = Array.isArray(req.body) ? req.body : [];
     const syncedStudents: any[] = [];
     
@@ -467,15 +490,9 @@ router.post('/classes/:classId/students/sync', postLimiter, (req, res) => {
 });
 
 // --- ATTENDANCE RECORDS ---
-router.get('/classes/:classId/records', (req, res) => {
+router.get('/classes/:classId/records', requireClassAccess('classId'), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const { date, startDate, endDate, limit, offset } = req.query;
     
@@ -514,14 +531,15 @@ router.get('/classes/:classId/records', (req, res) => {
   }
 });
 
-router.post('/records', postLimiter, (req, res) => {
+router.post('/records', requireAuth, postLimiter, (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
     const records = Array.isArray(req.body) ? req.body : [req.body];
     
+    // Verify access to all classes in the request
     for (const r of records) {
-      const classOwner = db.stmt.getClassById.get(r.classId, teacherId);
-      if (!classOwner) {
+      const access = db.stmt.isClassTeacher.get(r.classId, teacherId) as { class_id: string; role: string } | undefined;
+      if (!access) {
         return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
       }
     }
@@ -540,15 +558,9 @@ router.post('/records', postLimiter, (req, res) => {
 });
 
 // --- DAILY NOTES ---
-router.get('/classes/:classId/daily-notes', (req, res) => {
+router.get('/classes/:classId/daily-notes', requireClassAccess('classId'), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const notes = db.stmt.getDailyNotesByClass.all(classId);
     const response: Record<string, string> = {};
@@ -561,15 +573,9 @@ router.get('/classes/:classId/daily-notes', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/daily-notes', postLimiter, (req, res) => {
+router.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const { date, note } = req.body;
     db.stmt.insertDailyNote.run(classId, date, note);
@@ -580,15 +586,9 @@ router.post('/classes/:classId/daily-notes', postLimiter, (req, res) => {
 });
 
 // --- EVENTS ---
-router.get('/classes/:classId/events', (req, res) => {
+router.get('/classes/:classId/events', requireClassAccess('classId'), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const { limit, offset, type, startDate, endDate } = req.query;
     
@@ -622,15 +622,9 @@ router.get('/classes/:classId/events', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/events', postLimiter, validate(eventSchema), (req, res) => {
+router.post('/classes/:classId/events', requireClassAccess('classId'), postLimiter, validate(eventSchema), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const events = Array.isArray(req.body) ? req.body : [req.body];
     const insert = db.stmt.insertEvent;
@@ -682,15 +676,9 @@ router.delete('/events/:id', postLimiter, (req, res) => {
 });
 
 // --- TIMETABLE SLOTS ---
-router.get('/classes/:classId/timetable', (req, res) => {
+router.get('/classes/:classId/timetable', requireClassAccess('classId'), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const slots = db.stmt.getTimetableByClass.all(classId);
     const mapped = slots.map((s: any) => ({
@@ -707,15 +695,9 @@ router.get('/classes/:classId/timetable', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/timetable', postLimiter, validate(timetableSlotSchema), (req, res) => {
+router.post('/classes/:classId/timetable', requireClassAccess('classId'), postLimiter, validate(timetableSlotSchema), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const { id, dayOfWeek, startTime, endTime, subject, lesson } = req.body;
     db.stmt.insertTimetableSlot.run(id, classId, dayOfWeek, startTime, endTime, subject, lesson);
@@ -761,15 +743,9 @@ router.delete('/timetable/:id', postLimiter, (req, res) => {
 });
 
 // --- SEATING LAYOUT ---
-router.get('/classes/:classId/seating', (req, res) => {
+router.get('/classes/:classId/seating', requireClassAccess('classId'), (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const layout = db.stmt.getSeatingByClass.all(classId);
     const response: Record<string, string> = {};
@@ -782,15 +758,9 @@ router.get('/classes/:classId/seating', (req, res) => {
   }
 });
 
-router.post('/classes/:classId/seating', postLimiter, (req, res) => {
+router.post('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const { seatId, studentId } = req.body;
     if (studentId === null) {
@@ -805,15 +775,9 @@ router.post('/classes/:classId/seating', postLimiter, (req, res) => {
   }
 });
 
-router.put('/classes/:classId/seating', postLimiter, (req, res) => {
+router.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     const layout = req.body;
     db.stmt.clearSeatingByClass.run(classId);
@@ -830,15 +794,9 @@ router.put('/classes/:classId/seating', postLimiter, (req, res) => {
   }
 });
 
-router.delete('/classes/:classId/seating', postLimiter, (req, res) => {
+router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
     const classId = req.params.classId;
-    
-    const classOwner = db.stmt.getClassById.get(classId, teacherId);
-    if (!classOwner) {
-      return res.status(404).json({ error: 'Class not found or access denied' });
-    }
 
     db.stmt.clearSeatingByClass.run(classId);
     res.json({ success: true });
