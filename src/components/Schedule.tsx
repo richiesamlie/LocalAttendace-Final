@@ -260,6 +260,7 @@ export default function Schedule() {
                 setEventType('Classwork');
               }}
               className="p-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors"
+              title="Add Event"
             >
               <Plus className="w-5 h-5" />
             </button>

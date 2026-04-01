@@ -45,7 +45,7 @@ export default function SlotForm({ mode, editingSlot, selectedDay, onSave, onCan
         <h3 className="font-semibold text-slate-900 dark:text-white">
           {mode === 'edit' ? 'Edit Class' : `Add Class for ${DAYS_MAP[selectedDay]}`}
         </h3>
-        <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+        <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Cancel">
           <X className="w-5 h-5" />
         </button>
       </div>
