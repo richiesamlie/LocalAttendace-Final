@@ -66,4 +66,17 @@ export const api = {
 
   getSettings: () => fetchApi<Record<string, string>>('/settings'),
   saveSetting: (key: string, value: string) => fetchApi<{success: boolean}>('/settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
+
+  // --- INVITES (Phase 2.2) ---
+  createInvite: (classId: string, role?: string, expiresInHours?: number) => fetchApi<{success: boolean, code: string, inviteUrl: string, role: string, expiresAt: string}>(`/classes/${classId}/invites`, { method: 'POST', body: JSON.stringify({ role, expiresInHours }) }),
+  getClassInvites: (classId: string) => fetchApi<Array<{code: string, role: string, created_by: string, created_at: string, expires_at: string, used_by: string | null, used_at: string | null}>>(`/classes/${classId}/invites`),
+  deleteInvite: (classId: string, code: string) => fetchApi<{success: boolean}>(`/classes/${classId}/invites/${code}`, { method: 'DELETE' }),
+  redeemInvite: (code: string) => fetchApi<{success: boolean, className: string, role: string}>('/invites/redeem', { method: 'POST', body: JSON.stringify({ code }) }),
+
+  // --- SESSIONS (Phase 2.3) ---
+  getSessions: () => fetchApi<Array<{id: string, device_name: string, ip_address: string, created_at: string, last_active: string, expires_at: string, is_revoked: number}>>('/sessions'),
+  revokeSession: (sessionId: string) => fetchApi<{success: boolean}>('/sessions/revoke', { method: 'POST', body: JSON.stringify({ sessionId }) }),
+
+  // --- ROLE MANAGEMENT ---
+  updateTeacherRole: (classId: string, teacherId: string, role: string) => fetchApi<{success: boolean}>(`/classes/${classId}/teachers/${teacherId}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
 };

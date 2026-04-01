@@ -23,15 +23,28 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isMounted, setIsMounted] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [userRole, setUserRole] = useState('teacher');
   const updateTimetableSlot = useStore((state) => state.updateTimetableSlot);
   const currentClassId = useStore((state) => state.currentClassId);
   const currentClass = useStore((state) => state.classes.find(c => c.id === state.currentClassId));
+  const teacherId = useStore((state) => state.teacherId);
   
   useEffect(() => {
     setIsMounted(true);
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (currentClassId && teacherId) {
+      import('../lib/api').then(({ api }) => {
+        api.getClassTeachers(currentClassId).then(teachers => {
+          const me = teachers.find(t => t.teacher_id === teacherId);
+          setUserRole(me?.role || 'teacher');
+        }).catch(() => setUserRole('teacher'));
+      });
+    }
+  }, [currentClassId, teacherId]);
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
   const currentDayOfWeek = currentTime.getDay();
@@ -421,6 +434,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
         <InviteTeacherModal
           classId={currentClassId}
           className={currentClass?.name || ''}
+          userRole={userRole}
           onClose={() => setShowInviteModal(false)}
         />
       )}
