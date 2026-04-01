@@ -582,15 +582,19 @@ router.put('/students/:id', postLimiter, withWriteQueue((req, res) => {
   }
 
   const { name, rollNumber, parentName, parentPhone, isFlagged, isArchived } = req.body;
-  db.stmt.updateStudent.run(
+  const result = db.stmt.updateStudent.run(
     name ?? student.name, 
     rollNumber ?? student.roll_number, 
     parentName ?? student.parent_name, 
     parentPhone ?? student.parent_phone, 
     isFlagged !== undefined ? (isFlagged ? 1 : 0) : student.is_flagged, 
     isArchived !== undefined ? (isArchived ? 1 : 0) : student.is_archived,
-    studentId
+    studentId,
+    teacherId
   );
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Student not found or access denied' });
+  }
   res.json({ success: true });
 }));
 
@@ -603,7 +607,10 @@ router.delete('/students/:id', postLimiter, withWriteQueue((req, res) => {
     return res.status(404).json({ error: 'Student not found or access denied' });
   }
 
-  db.stmt.archiveStudent.run(studentId);
+  const result = db.stmt.archiveStudent.run(studentId, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Student not found or access denied' });
+  }
   res.json({ success: true });
 }));
 
@@ -797,7 +804,10 @@ router.put('/events/:id', postLimiter, withWriteQueue((req, res) => {
   }
 
   const { date, title, type, description } = req.body;
-  db.stmt.updateEvent.run(date, title, type, description || null, eventId);
+  const result = db.stmt.updateEvent.run(date, title, type, description || null, eventId, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Event not found or access denied' });
+  }
   res.json({ success: true });
 }));
 
@@ -810,7 +820,10 @@ router.delete('/events/:id', postLimiter, withWriteQueue((req, res) => {
     return res.status(404).json({ error: 'Event not found or access denied' });
   }
 
-  db.stmt.deleteEvent.run(eventId);
+  const result = db.stmt.deleteEvent.run(eventId, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Event not found or access denied' });
+  }
   res.json({ success: true });
 }));
 
@@ -852,7 +865,10 @@ router.put('/timetable/:id', postLimiter, withWriteQueue((req, res) => {
   }
 
   const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;
-  db.stmt.updateTimetableSlot.run(dayOfWeek, startTime, endTime, subject, lesson, timetableId);
+  const result = db.stmt.updateTimetableSlot.run(dayOfWeek, startTime, endTime, subject, lesson, timetableId, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Timetable slot not found or access denied' });
+  }
   res.json({ success: true });
 }));
 
@@ -865,7 +881,10 @@ router.delete('/timetable/:id', postLimiter, withWriteQueue((req, res) => {
     return res.status(404).json({ error: 'Timetable slot not found or access denied' });
   }
 
-  db.stmt.deleteTimetableSlot.run(timetableId);
+  const result = db.stmt.deleteTimetableSlot.run(timetableId, teacherId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Timetable slot not found or access denied' });
+  }
   res.json({ success: true });
 }));
 
