@@ -93,7 +93,7 @@ export default function AdminDashboard() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Massive backup failed:', error);
-      alert('Failed to generate massive backup.');
+      toast.error('Failed to generate massive backup.');
     } finally {
       setIsMassiveBackingUp(false);
     }
@@ -101,17 +101,17 @@ export default function AdminDashboard() {
 
   const handleUpdatePassword = () => {
     if (!newPassword || !confirmNewPassword) {
-      alert('Please fill in both password fields.');
+      toast.error('Please fill in both password fields.');
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      alert('New passwords do not match.');
+      toast.error('New passwords do not match.');
       return;
     }
     updateAdminPassword(newPassword);
     setNewPassword('');
     setConfirmNewPassword('');
-    alert('Admin password updated successfully.');
+    toast.success('Admin password updated successfully.');
   };
 
   const handleImportMassiveBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,7 +151,8 @@ export default function AdminDashboard() {
           throw new Error('No classes found in backup');
         }
 
-        if (window.confirm(`Found ${finalClasses.length} classes in backup. This will overwrite your current data. Continue?`)) {
+        // Use toast confirmation instead of window.confirm to avoid blocking the main thread
+        const importData = () => {
           useStore.setState({
             classes: finalClasses,
             currentClassId: finalClasses[0].id,
@@ -162,11 +163,32 @@ export default function AdminDashboard() {
             timetable: finalClasses[0].timetable || [],
             seatingLayout: finalClasses[0].seatingLayout || {}
           });
-          alert('Backup imported successfully!');
-        }
+          toast.success('Backup imported successfully!');
+        };
+
+        toast((t) => (
+          <div>
+            <p className="font-medium">Import {finalClasses.length} class(es)?</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">This will overwrite your current data.</p>
+            <div className="flex gap-2 mt-3">
+              <button
+                className="px-3 py-1 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                onClick={() => { importData(); toast.dismiss(t.id); }}
+              >
+                Import
+              </button>
+              <button
+                className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+                onClick={() => { toast.dismiss(t.id); }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ), { duration: 15000 });
       } catch (error) {
         console.error('Import failed:', error);
-        alert('Failed to import backup. Please ensure the file is a valid Massive Backup JSON.');
+        toast.error('Failed to import backup. Please ensure the file is a valid Massive Backup JSON.');
       }
       
       if (fileInputRef.current) {
@@ -177,13 +199,53 @@ export default function AdminDashboard() {
   };
 
   const handleResetData = () => {
-    if (window.confirm('WARNING: This will permanently delete ALL classes, students, attendance records, seating charts, and events.\n\nThis action cannot be undone. Are you absolutely sure?')) {
-      if (window.confirm('FINAL WARNING: Type "YES" to confirm deletion of all data.')) {
-        clearAllData();
-        alert('All academic data has been reset.');
-        window.location.reload();
-      }
-    }
+    toast((t) => (
+      <div>
+        <p className="font-medium text-rose-600 dark:text-rose-400">Reset ALL Data?</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">This will permanently delete ALL classes, students, attendance records, seating charts, and events. This cannot be undone.</p>
+        <div className="flex gap-2 mt-3">
+          <button
+            className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700"
+            onClick={() => {
+              toast.dismiss(t.id);
+              toast((t2) => (
+                <div>
+                  <p className="font-medium">Final confirmation</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Type YES in the field below to confirm.</p>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const input = form.elements.namedItem('confirm') as HTMLInputElement;
+                    if (input.value === 'YES') {
+                      clearAllData();
+                      toast.success('All academic data has been reset.');
+                      toast.dismiss(t2.id);
+                      window.location.reload();
+                    } else {
+                      toast.error('You must type YES to confirm.');
+                    }
+                  }}>
+                    <input name="confirm" className="mt-2 w-full px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-sm dark:bg-slate-800 dark:text-white" placeholder="Type YES..." autoFocus />
+                    <div className="flex gap-2 mt-3">
+                      <button type="submit" className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700">Confirm</button>
+                      <button type="button" className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600" onClick={() => toast.dismiss(t2.id)}>Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              ), { duration: 30000 });
+            }}
+          >
+            Yes, Reset Everything
+          </button>
+          <button
+            className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+            onClick={() => { toast.dismiss(t.id); }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 10000 });
   };
 
   if (!isUnlocked) {

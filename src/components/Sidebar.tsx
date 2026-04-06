@@ -3,6 +3,7 @@ import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, Lay
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
 import { useLogout } from '../hooks/useData';
+import toast from 'react-hot-toast';
 
 function ClassSwitcher() {
   const classes = useStore((state) => state.classes);
@@ -90,9 +91,28 @@ function ClassSwitcher() {
                     {classes.length > 1 && (
                       <button 
                         onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${c.name}? All data for this class will be lost.`)) {
-                            removeClass(c.id);
-                          }
+                          const name = c.name;
+                          const classId = c.id;
+                          toast((t) => (
+                            <div>
+                              <p className="font-medium">Delete "{name}"?</p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">All data for this class will be lost.</p>
+                              <div className="flex gap-2 mt-3">
+                                <button
+                                  className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700"
+                                  onClick={() => { removeClass(classId); toast.dismiss(t.id); }}
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+                                  onClick={() => { toast.dismiss(t.id); }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ), { duration: 8000 });
                         }}
                         className="p-1 text-slate-400 hover:text-red-600 rounded"
                       >
