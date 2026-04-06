@@ -1,59 +1,66 @@
 import { z } from 'zod';
 import express from 'express';
 
+// Sanitize string inputs: trim whitespace and strip null bytes
+const sanitizeString = (val: string): string =>
+  val.replace(/\x00/g, '').trim();
+
+const safeString = (opts?: { min?: number; max?: number }) =>
+  z.string().transform(sanitizeString).pipe(z.string().min(opts?.min ?? 0).max(opts?.max ?? 10000));
+
 export const loginSchema = z.object({
-  username: z.string().min(1).max(100),
-  password: z.string().min(1).max(200),
+  username: safeString({ min: 1, max: 100 }),
+  password: safeString({ min: 1, max: 200 }),
 });
 
 export const classSchema = z.object({
-  id: z.string().max(100),
-  name: z.string().min(1).max(200),
+  id: safeString({ max: 100 }),
+  name: safeString({ min: 1, max: 200 }),
 });
 
 export const studentSchema = z.object({
-  id: z.string().max(100),
-  name: z.string().min(1).max(200),
-  rollNumber: z.string().min(1).max(100),
-  parentName: z.string().optional().nullable(),
-  parentPhone: z.string().optional().nullable(),
+  id: safeString({ max: 100 }),
+  name: safeString({ min: 1, max: 200 }),
+  rollNumber: safeString({ min: 1, max: 100 }),
+  parentName: safeString({ max: 200 }).optional().nullable(),
+  parentPhone: safeString({ max: 100 }).optional().nullable(),
   isFlagged: z.boolean().optional().default(false),
 });
 
 export const attendanceRecordSchema = z.object({
-  studentId: z.string().max(100),
-  classId: z.string().max(100),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  studentId: safeString({ max: 100 }),
+  classId: safeString({ max: 100 }),
+  date: safeString({ min: 1, max: 10 }).refine(v => /^\d{4}-\d{2}-\d{2}$/.test(v), { message: 'Invalid date format (expected YYYY-MM-DD)' }),
   status: z.enum(['Present', 'Absent', 'Sick', 'Late']),
-  reason: z.string().max(500).optional().nullable(),
+  reason: safeString({ max: 500 }).optional().nullable(),
 });
 
 export const eventSchema = z.object({
-  id: z.string().max(100),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  title: z.string().min(1).max(200),
+  id: safeString({ max: 100 }),
+  date: safeString({ min: 1, max: 10 }).refine(v => /^\d{4}-\d{2}-\d{2}$/.test(v), { message: 'Invalid date format (expected YYYY-MM-DD)' }),
+  title: safeString({ min: 1, max: 200 }),
   type: z.enum(['Classwork', 'Test', 'Exam', 'Holiday', 'Other']),
-  description: z.string().max(1000).optional().nullable(),
+  description: safeString({ max: 1000 }).optional().nullable(),
 });
 
 export const timetableSlotSchema = z.object({
-  id: z.string().max(100),
+  id: safeString({ max: 100 }),
   dayOfWeek: z.number().int().min(0).max(6),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  subject: z.string().min(1).max(200),
-  lesson: z.string().min(1).max(200),
+  startTime: safeString({ min: 1, max: 5 }).refine(v => /^\d{2}:\d{2}$/.test(v), { message: 'Invalid time format (expected HH:MM)' }),
+  endTime: safeString({ min: 1, max: 5 }).refine(v => /^\d{2}:\d{2}$/.test(v), { message: 'Invalid time format (expected HH:MM)' }),
+  subject: safeString({ min: 1, max: 200 }),
+  lesson: safeString({ min: 1, max: 200 }),
 });
 
 export const teacherSchema = z.object({
-  username: z.string().min(1).max(100),
-  password: z.string().min(4).max(200),
-  name: z.string().min(1).max(200),
+  username: safeString({ min: 1, max: 100 }),
+  password: safeString({ min: 4, max: 200 }),
+  name: safeString({ min: 1, max: 200 }),
 });
 
 export const settingSchema = z.object({
-  key: z.string().min(1).max(100),
-  value: z.string().max(10000),
+  key: safeString({ min: 1, max: 100 }),
+  value: safeString({ max: 10000 }),
 });
 
 export function validate(schema: z.ZodSchema) {

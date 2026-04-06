@@ -3,6 +3,10 @@ import { shallow } from 'zustand/shallow';
 import { api } from './lib/api';
 import toast from 'react-hot-toast';
 
+// Default class constants — must match db.ts DEFAULTS
+const DEFAULT_CLASS_NAME = 'My First Class';
+const DEFAULT_CLASS_ID_ON_CLEAR = 'class_default';
+
 export type AttendanceStatus = 'Present' | 'Absent' | 'Sick' | 'Late';
 export type EventType = 'Classwork' | 'Test' | 'Exam' | 'Holiday' | 'Other';
 
@@ -153,7 +157,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
       if (classesData.length === 0) {
         const defaultClassId = `class_${Date.now()}`;
-        await api.createClass({ id: defaultClassId, name: 'My First Class' });
+        await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
         classesData = await api.getClasses();
       }
 
@@ -704,13 +708,13 @@ export const useStore = create<AppState>()((set, get) => ({
         throw new Error('All deletions failed');
       }
       
-      const defaultClassId = 'class_default';
-      await api.createClass({ id: defaultClassId, name: 'Default Class' });
+      const defaultClassId = DEFAULT_CLASS_ID_ON_CLEAR;
+      await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
 
       set(() => {
         const defaultClass: ClassData = {
           id: defaultClassId,
-          name: 'Default Class',
+          name: DEFAULT_CLASS_NAME,
           students: [],
           records: [],
           dailyNotes: {},
