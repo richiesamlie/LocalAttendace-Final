@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Shuffle, User, Trophy } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -8,21 +8,30 @@ export default function RandomPicker() {
   const students = useMemo(() => allStudents.filter(s => !s.isArchived), [allStudents]);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const pickRandom = () => {
-    if (students.length === 0) return;
+    if (students.length === 0 || isSpinning) return;
     setIsSpinning(true);
     
-    // Simulate spinning effect
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    
     let spins = 0;
     const maxSpins = 20;
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * students.length);
       setSelectedStudent(students[randomIndex].id);
       spins++;
       
       if (spins >= maxSpins) {
-        clearInterval(interval);
+        clearInterval(intervalRef.current!);
+        intervalRef.current = null;
         setIsSpinning(false);
       }
     }, 100);

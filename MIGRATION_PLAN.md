@@ -1,6 +1,6 @@
 # Migration Plan: Teacher Assistant to Multi-User Support
 
-## Version: 1.0
+## Version: 1.1
 ## Last Updated: 2026-04-01
 ## Branch: develop
 
@@ -158,6 +158,22 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | 10 | Query Optimization | 4.1 | db.ts | ✅ |
 | 11 | Caching Layer | 4.2 | db.ts, routes.ts | ✅ |
 | 12 | Batch Operations | 4.3 | routes.ts | ✅ |
+| 13 | Audit: Fix poll-based sync no-op bug (C1) | Audit | store.ts, useData.ts | ✅ |
+| 14 | Audit: Add updated_at SQLite triggers (C2) | Audit | db.ts | ✅ |
+| 15 | Audit: Fix JWT session revocation bypass (C3) | Audit | routes.ts | ✅ |
+| 16 | Audit: Add teacher isolation to UPDATE/DELETE (M1) | Audit | db.ts, routes.ts | ✅ |
+| 17 | Audit: Namespace-aware cache invalidation (M2/M3) | Audit | db.ts, routes.ts | ✅ |
+| 18 | Audit: Fail-closed session check errors (M4) | Audit | routes.ts | ✅ |
+| 19 | Audit: Expand sync fingerprint coverage (M6) | Audit | useData.ts | ✅ |
+| 20 | Audit: Optimize Reports/Excel O(n×m) loops (M7) | Audit | Reports.tsx, excel.ts | ✅ |
+| 21 | Audit: Fix database restore write queue bypass (M5) | Audit | routes.ts | ✅ |
+| 22 | Audit: Replace alert/confirm with toast/modals (M8) | Audit | Roster.tsx, Schedule.tsx, SeatingChart.tsx | ✅ |
+| 23 | Audit: Use prepared statement for role management (L1) | Audit | db.ts, routes.ts | ✅ |
+| 24 | Audit: Use crypto.randomUUID() for event IDs (L5) | Audit | Schedule.tsx | ✅ |
+| 25 | Audit: RandomPicker interval cleanup (L6) | Audit | RandomPicker.tsx | ✅ |
+| 26 | Audit: ExamTimer interval recreation fix (L7) | Audit | ExamTimer.tsx | ✅ |
+| 27 | Audit: Stopwatch drift fix (L8) | Audit | ExamTimer.tsx | ✅ |
+| 28 | Audit: Gatekeeper local date fix (L9) | Audit | Gatekeeper.tsx | ✅ |
 
 ---
 
@@ -220,6 +236,23 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
   - Added new middleware: `requireClassAccess(paramName)` - verifies teacher has access via class_teachers table
   - Added new middleware: `requireClassOwner(paramName)` - verifies teacher is owner (for admin actions)
   - Updated: students, records, daily-notes, events, timetable, seating endpoints
+- **Post-Audit Fixes (Session 2026-04-01)** - All critical and medium issues from architecture audit fixed:
+  - C1: Poll-based sync now uses `reloadClassData()` instead of broken `loadClassData()` guard
+  - C2: SQLite triggers auto-populate `updated_at` on all 7 tables (optimistic locking now functional)
+  - C3: JWT session revocation enforced; errors fail closed instead of silently passing
+  - M1: UPDATE/DELETE prepared statements now include `class_teachers` isolation (TOCTOU fix)
+  - M2/M3: Cache invalidation uses namespace-delimited keys (`classes:X:`) instead of blanket clear
+  - M4: Session check errors return 401/503 instead of silently allowing access
+  - M5: Database restore drains write queue and uses `db.restore()` instead of raw `fs.writeFileSync`
+  - M6: Sync fingerprint expanded to cover students, timetable, seating (not just records/events)
+  - M7: Reports and Excel export use Map-indexed records (O(n) instead of O(n×m))
+  - M8: All 7 `alert`/`confirm` calls replaced with `react-hot-toast` confirmation dialogs
+  - L1: Role management uses `db.stmt.updateClassTeacherRole` prepared statement
+  - L5: Event IDs use `crypto.randomUUID()` instead of `Date.now()`
+  - L6: RandomPicker interval properly cleaned up on unmount and guarded against double-pick
+  - L7: ExamTimer uses ref-based countdown (no interval recreation on state change)
+  - L8: Stopwatch uses `Date.now()` delta to prevent timer drift
+  - L9: Gatekeeper uses `format(new Date(), 'yyyy-MM-dd')` for local date instead of UTC
 - Current e2e tests work but can have flaky runs when all tests share DB (expected)
 - Keep main branch clean, all changes on `develop` branch
 - Test each phase thoroughly before moving to next

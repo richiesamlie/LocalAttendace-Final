@@ -18,6 +18,38 @@ export default function Roster() {
   const [showArchived, setShowArchived] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null);
+
+  // Archive confirmation via toast
+  React.useEffect(() => {
+    if (!archiveConfirmId) return;
+    const student = students.find(s => s.id === archiveConfirmId);
+    if (!student) { setArchiveConfirmId(null); return; }
+    const toastId = toast(
+      (t) => (
+        <div>
+          <p className="font-medium">Archive "{student.name}"?</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">They will be hidden from attendance and reports but their records will be preserved.</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700"
+              onClick={() => { removeStudent(archiveConfirmId); toast.dismiss(t.id); setArchiveConfirmId(null); }}
+            >
+              Archive
+            </button>
+            <button
+              className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+              onClick={() => { toast.dismiss(t.id); setArchiveConfirmId(null); }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 10000 }
+    );
+    return () => toast.dismiss(toastId);
+  }, [archiveConfirmId, students, removeStudent]);
 
   // States for adding/editing
   const [isAdding, setIsAdding] = useState(false);
@@ -35,7 +67,7 @@ export default function Roster() {
     if (!file) return;
 
     if (!currentClassId) {
-      alert('Please create or select a class from the sidebar first before importing students.');
+      toast.error('Please create or select a class from the sidebar first before importing students.');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -46,7 +78,7 @@ export default function Roster() {
       // Replace the roster automatically to avoid confirm prompt issues in iframe
       await setStudents(importedStudents);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Error importing students. Please ensure it is a valid Excel file.');
+      toast.error(error instanceof Error ? error.message : 'Error importing students. Please ensure it is a valid Excel file.');
       console.error(error);
     } finally {
       setIsImporting(false);
@@ -56,7 +88,7 @@ export default function Roster() {
 
   const startAddStudent = () => {
     if (!currentClassId) {
-      alert('Please create or select a class from the sidebar first before adding students.');
+      toast.error('Please create or select a class from the sidebar first before adding students.');
       return;
     }
     setIsAdding(true);
@@ -509,9 +541,7 @@ export default function Roster() {
                               </button>
                               <button
                                 onClick={() => {
-                                  if (confirm(`Archive "${student.name}"? They will be hidden from attendance and reports but their records will be preserved.`)) {
-                                    removeStudent(student.id);
-                                  }
+                                  setArchiveConfirmId(student.id);
                                 }}
                                 title="Archive Student"
                                 className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"

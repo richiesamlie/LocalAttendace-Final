@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { cn } from '../utils/cn';
 import { LayoutGrid, User, X, Flag } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function SeatingChart() {
   const allStudents = useStore((state) => state.students);
@@ -36,9 +37,28 @@ export default function SeatingChart() {
   };
 
   const clearAllSeats = () => {
-    if (confirm('Are you sure you want to clear all seats?')) {
-      clearSeatingLayout();
-    }
+    toast(
+      (t) => (
+        <div>
+          <p className="font-medium">Clear all seats?</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700"
+              onClick={() => { clearSeatingLayout(); toast.dismiss(t.id); }}
+            >
+              Clear
+            </button>
+            <button
+              className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
+              onClick={() => { toast.dismiss(t.id); }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 5000 }
+    );
   };
 
   const autoFillSeats = () => {

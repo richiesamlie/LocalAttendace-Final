@@ -20,29 +20,38 @@ export default function ExamTimer() {
   // Refs for intervals
   const timerIntervalRef = useRef<number | null>(null);
   const stopwatchIntervalRef = useRef<number | null>(null);
+  const timerRemainingRef = useRef(timerRemaining);
+  const stopwatchStartRef = useRef<number>(0);
+  const stopwatchAccumRef = useRef<number>(0);
 
-  // --- Timer Logic ---
+  // Keep ref in sync with state
+  useEffect(() => {
+    timerRemainingRef.current = timerRemaining;
+  }, [timerRemaining]);
+
+  // --- Timer Logic (ref-based to avoid interval recreation) ---
   useEffect(() => {
     if (isTimerRunning && timerRemaining > 0) {
       timerIntervalRef.current = window.setInterval(() => {
-        setTimerRemaining((prev) => {
-          if (prev <= 1) {
-            setIsTimerRunning(false);
-            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-            // Optional: Play a sound here when timer finishes
-            return 0;
-          }
-          return prev - 1;
-        });
+        timerRemainingRef.current -= 1;
+        setTimerRemaining(timerRemainingRef.current);
+        if (timerRemainingRef.current <= 0) {
+          setIsTimerRunning(false);
+          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        }
       }, 1000);
     } else if (!isTimerRunning && timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
 
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     };
-  }, [isTimerRunning, timerRemaining]);
+  }, [isTimerRunning]);
 
   const handleSetTimer = () => {
     const h = parseInt(timerInputHours) || 0;
@@ -68,27 +77,39 @@ export default function ExamTimer() {
     setTimerRemaining(timerDuration);
   };
 
-  // --- Stopwatch Logic ---
+  // --- Stopwatch Logic (Date.now() delta to prevent drift) ---
   useEffect(() => {
     if (isStopwatchRunning) {
+      stopwatchStartRef.current = Date.now();
       stopwatchIntervalRef.current = window.setInterval(() => {
-        setStopwatchTime((prev) => prev + 10); // Update every 10ms for smooth milliseconds
-      }, 10);
+        const elapsed = Date.now() - stopwatchStartRef.current;
+        setStopwatchTime(stopwatchAccumRef.current + elapsed);
+      }, 50);
     } else if (!isStopwatchRunning && stopwatchIntervalRef.current) {
       clearInterval(stopwatchIntervalRef.current);
+      stopwatchIntervalRef.current = null;
     }
 
     return () => {
-      if (stopwatchIntervalRef.current) clearInterval(stopwatchIntervalRef.current);
+      if (stopwatchIntervalRef.current) {
+        clearInterval(stopwatchIntervalRef.current);
+        stopwatchIntervalRef.current = null;
+      }
     };
   }, [isStopwatchRunning]);
 
   const toggleStopwatch = () => {
+    if (isStopwatchRunning) {
+      // Pausing: accumulate elapsed time
+      stopwatchAccumRef.current += Date.now() - stopwatchStartRef.current;
+    }
     setIsStopwatchRunning(!isStopwatchRunning);
   };
 
   const resetStopwatch = () => {
     setIsStopwatchRunning(false);
+    stopwatchAccumRef.current = 0;
+    stopwatchStartRef.current = 0;
     setStopwatchTime(0);
   };
 

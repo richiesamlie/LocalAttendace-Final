@@ -250,8 +250,13 @@ router.get('/database/backup', requireAuth, (req, res) => {
   }
 });
 
-router.post('/database/restore', requireAuth, (req, res) => {
+router.post('/database/restore', requireAuth, async (req, res) => {
   try {
+    // Drain the write queue before restoring to prevent race conditions
+    await db.enqueueWrite(() => {
+      // No-op write ensures all queued writes complete before restore
+    });
+
     const dbPath = path.join(process.cwd(), 'database.sqlite');
     const backupDir = path.join(process.cwd(), 'backups');
     if (!fs.existsSync(backupDir)) {
@@ -269,7 +274,8 @@ router.post('/database/restore', requireAuth, (req, res) => {
       if (fileBuffer.length < 100 || fileBuffer.toString('utf8', 0, 15) !== 'SQLite format 3') {
         return res.status(400).json({ error: 'Invalid SQLite database file' });
       }
-      fs.writeFileSync(dbPath, fileBuffer);
+      // Use db.restore() which properly closes the connection, replaces the file, and reinitializes
+      db.restore(fileBuffer);
       res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
     });
   } catch (error) {
@@ -541,8 +547,7 @@ router.put('/classes/:classId/teachers/:teacherId/role', requireClassOwner('clas
     return res.status(404).json({ error: 'Teacher not found in this class' });
   }
   
-  const updateStmt = db.prepare('UPDATE class_teachers SET role = ? WHERE class_id = ? AND teacher_id = ?');
-  updateStmt.run(role, classId, targetTeacherId);
+  db.stmt.updateClassTeacherRole.run(role, classId, targetTeacherId);
   res.json({ success: true });
 }));
 

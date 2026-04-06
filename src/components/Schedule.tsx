@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isTod
 import { cn } from '../utils/cn';
 import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree, FileSpreadsheet } from 'lucide-react';
 import { exportScheduleToExcel, importScheduleFromExcel } from '../utils/excel';
+import toast from 'react-hot-toast';
 
 export default function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -45,7 +46,7 @@ export default function Schedule() {
       setIsEditingEvent(false);
     } else {
       addEvent({
-        id: `evt_${Date.now()}`,
+        id: `evt_${crypto.randomUUID()}`,
         date: selectedDate,
         title: eventTitle,
         type: eventType,
@@ -89,11 +90,11 @@ export default function Schedule() {
       const importedEvents = await importScheduleFromExcel(file);
       if (importedEvents.length > 0) {
         addEvents(importedEvents);
-        alert(`Successfully imported ${importedEvents.length} events!`);
+        toast.success(`Successfully imported ${importedEvents.length} events!`);
       }
     } catch (error) {
       console.error('Import failed:', error);
-      alert(error instanceof Error ? error.message : 'Failed to import schedule. Please check the file format.');
+      toast.error(error instanceof Error ? error.message : 'Failed to import schedule. Please check the file format.');
     }
     
     // Reset input

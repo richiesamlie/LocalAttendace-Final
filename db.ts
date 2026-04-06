@@ -366,6 +366,7 @@ const preparedStatements = {
   deleteSeatingByStudent: _db.prepare('DELETE FROM seating_layout WHERE class_id = ? AND student_id = ?'),
   insertClassTeacher: _db.prepare('INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) VALUES (?, ?, ?)'),
   removeClassTeacher: _db.prepare('DELETE FROM class_teachers WHERE class_id = ? AND teacher_id = ?'),
+  updateClassTeacherRole: _db.prepare('UPDATE class_teachers SET role = ? WHERE class_id = ? AND teacher_id = ?'),
   getClassTeachers: _db.prepare('SELECT ct.teacher_id, ct.role, t.username, t.name FROM class_teachers ct JOIN teachers t ON ct.teacher_id = t.id WHERE ct.class_id = ?'),
   isClassTeacher: _db.prepare('SELECT class_id, role FROM class_teachers WHERE class_id = ? AND teacher_id = ?'),
   countTeachers: _db.prepare('SELECT COUNT(*) as count FROM teachers'),

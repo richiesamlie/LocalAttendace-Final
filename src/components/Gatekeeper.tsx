@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useStore } from '../store';
 import { Search, Clock, CheckCircle2, UserCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { format } from 'date-fns';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -24,7 +25,7 @@ export default function Gatekeeper() {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
 
   // Flatten all students from all classes
   const allStudents = classes.flatMap(c => 

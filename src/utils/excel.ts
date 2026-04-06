@@ -636,10 +636,11 @@ export function exportClassData(
   const wsStudents = XLSX.utils.aoa_to_sheet(studentsData);
   XLSX.utils.book_append_sheet(wb, wsStudents, 'Students');
 
+  const studentMap = new Map(students.map(s => [s.id, s]));
   const recordsData = [
     ['Student Name', 'Roll Number', 'Date', 'Status', 'Reason'],
     ...records.map(r => {
-      const student = students.find(s => s.id === r.studentId);
+      const student = studentMap.get(r.studentId);
       return [student?.name || 'Unknown', student?.rollNumber || '', r.date, r.status, r.reason || ''];
     }),
   ];
