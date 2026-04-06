@@ -294,6 +294,12 @@ Zod validates shape and length, but doesn't sanitize HTML entities, control char
 - Default admin creation in db.ts (two places: lines 196-201 and 290-296)
 - Default password hints scattered across files
 
+### 7. Zero Native Dialogs Remaining (Session 2026-04-06)
+- All 7 alert/confirm calls (M8 scope) replaced in prior session
+- 9 additional alert/confirm calls in AdminDashboard.tsx + Sidebar.tsx replaced this session
+- **Every `alert()`, `confirm()`, `window.confirm()` in src/ has been eliminated**
+- All replaced with `react-hot-toast` custom JSX dialogs with proper dark mode support
+
 ---
 
 ## UNSTAGED CHANGES (Not Yet Committed)
@@ -338,7 +344,7 @@ When continuing work, address issues in this order:
   19. **L4** - Dashboard skeleton loading dead code ✅ FIXED (removed isMounted state and skeleton branch)
   20. **L10** - Invite redeem doesn't verify class exists ✅ FIXED (added getClassById check before granting access)
   21. **L11** - Compound index creation order ✅ FIXED (moved invite_codes and user_sessions indexes after table creation)
-  22. **L12** - No click-outside handlers for dropdowns — REMAINING (low priority UX improvement)
+  22. **L12** - No click-outside handlers for dropdowns — ✅ FIXED (created useClickOutside.ts hook, applied to Roster, Schedule, Reports, Timetable/ExportMenu)
   23. **L13** - Roster add row column misalignment ✅ FIXED (added missing checkbox column td)
   24. **L14** - Shared edit state in Roster ✅ FIXED (separate add* and edit* state variables)
 
@@ -371,3 +377,24 @@ When continuing work, address issues in this order:
 - The most impactful fix is C1 (sync bug) — without it, multi-teacher support doesn't actually work
 - The app is on `develop` branch, 7 commits ahead of `origin/develop`
 - No changes have been pushed to remote yet
+
+### Session 2026-04-06: Verification + Remaining Fixes
+- Started: Cloned `develop` branch from origin, found it was fully up to date with all 35 audit fixes committed
+- Verified all 35 fixes (C1-C3, M1-M8, L1-L11, L13-L14) are correctly implemented in code
+- Only remaining audit finding: L12 (click-outside handlers)
+- Created `src/hooks/useClickOutside.ts` reusable hook — clean, minimal, uses mousedown+touchstart events
+- Applied click-outside to 4 dropdown menus: Roster, Schedule, Reports, Timetable/ExportMenu
+- Committed L12 fix: `9b208a5` → pushed to origin/develop
+- Discovered 10 more alert/confirm calls outside M8 scope (AdminDashboard 9, Sidebar 1)
+- Replaced all with react-hot-toast custom JSX dialogs, including nested two-step confirmation for data reset
+- Committed remaining alert/confirm fix: `edf52a7` → pushed to origin/develop
+- Zero alert/confirm/window.confirm calls remain in src/
+- TypeScript compiles cleanly throughout
+- Updated MIGRATION_PLAN.md (added items 36-37 to checklist)
+- Updated AUDIT_LOG.md (marked L12 as fixed, added cross-cutting concern #7)
+
+### Git State (End of Session 2026-04-06)
+- Branch: develop (clean, nothing uncommitted)
+- Local and origin/develop are in sync
+- Latest commit: `edf52a7`
+- Git config: user.email=richiesamlie@users.noreply.github.com, user.name=richiesamlie (set locally in this repo)

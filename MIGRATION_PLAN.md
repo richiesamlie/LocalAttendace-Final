@@ -181,6 +181,8 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | 33 | Audit: Fix compound index creation order (L11) | Audit | db.ts | ✅ |
 | 34 | Audit: Fix Roster add row column misalignment (L13) | Audit | Roster.tsx | ✅ |
 | 35 | Audit: Separate add/edit state in Roster (L14) | Audit | Roster.tsx | ✅ |
+| 36 | Audit: Click-outside handlers for dropdowns (L12) | Audit | Roster.tsx, Schedule.tsx, Reports.tsx, Timetable/ExportMenu.tsx | ✅ |
+| 37 | Audit: Replace ALL alert/confirm with toast dialogs (full sweep) | Audit | AdminDashboard.tsx, Sidebar.tsx | ✅ |
 
 ---
 
@@ -238,6 +240,14 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 ---
 
 ## Notes
+
+- **Session 2026-04-06: Audit verification + remaining fixes**
+  - Verified all 35 audit fixes (C1-L14) were properly committed and pushed in prior sessions
+  - Fix L12: Created `src/hooks/useClickOutside.ts` reusable hook, applied to all 4 dropdown menus (Roster, Schedule, Reports, Timetable/ExportMenu)
+  - Full alert/confirm sweep: Replaced ALL remaining alert()/confirm() in AdminDashboard.tsx (9 calls) and Sidebar.tsx (1 call) with react-hot-toast
+  - Zero alert(), confirm(), or window.confirm() calls remain in entire src/ directory
+  - Git config set locally: user.email=richiesamlie@users.noreply.github.com, user.name=richiesamlie
+  - Commits pushed to origin/develop: `9b208a5` (L12 click-outside) and `edf52a7` (all remaining alert/confirm)
 
 - **Phase 1.1 COMPLETED** - All class-scoped endpoints now use `requireClassAccess` middleware
   - Added new middleware: `requireClassAccess(paramName)` - verifies teacher has access via class_teachers table
