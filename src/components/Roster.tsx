@@ -4,6 +4,7 @@ import { importStudentsFromExcel, generateTemplate, exportClassData } from '../u
 import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
+import { useClickOutside } from '../hooks/useClickOutside';
 
 export default function Roster() {
   const students = useStore((state) => state.students);
@@ -56,6 +57,8 @@ export default function Roster() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu);
   // Separate state for add mode vs edit mode to prevent value leakage
   const [addName, setAddName] = useState('');
   const [addRoll, setAddRoll] = useState('');
@@ -258,7 +261,7 @@ export default function Roster() {
             </button>
 
             {showMoreMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div ref={moreMenuRef} className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-2 space-y-1">
                   <button
                     onClick={() => {

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Download, Settings, X } from 'lucide-react';
+import { useClickOutside } from '../../hooks/useClickOutside';
 import { TimetableSlot } from '../../store';
 import { exportTimetableToExcel } from '../../utils/excel';
 import { format } from 'date-fns';
@@ -12,6 +13,8 @@ interface ExportMenuProps {
 export default function ExportMenu({ timetable, className }: ExportMenuProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [exportMonth, setExportMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const menuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(menuRef, () => setShowMenu(false), showMenu);
 
   const handleExport = (duration: 'weekly' | 'month' | 'semester') => {
     exportTimetableToExcel(timetable, exportMonth, duration, className);
@@ -30,7 +33,7 @@ export default function ExportMenu({ timetable, className }: ExportMenuProps) {
       </button>
 
       {showMenu && (
-        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+        <div ref={menuRef} className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
             <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               <Settings className="w-4 h-4" />

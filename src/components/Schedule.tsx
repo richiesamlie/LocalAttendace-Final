@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
@@ -18,6 +19,8 @@ export default function Schedule() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(exportMenuRef, () => setShowExportMenu(false), showExportMenu);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const events = useStore((state) => state.events);
@@ -141,7 +144,7 @@ export default function Schedule() {
             </button>
 
             {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div ref={exportMenuRef} className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-2 space-y-1">
                   <input
                     type="file"

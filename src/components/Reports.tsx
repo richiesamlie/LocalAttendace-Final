@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore } from '../store';
 import { exportMonthlyReportToExcel, ExportOptions } from '../utils/excel';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
@@ -8,6 +9,8 @@ export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [searchQuery, setSearchQuery] = useState('');
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const exportOptionsRef = useRef<HTMLDivElement>(null);
+  useClickOutside(exportOptionsRef, () => setShowExportOptions(false), showExportOptions);
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     includeRollNumber: true,
     includeName: true,
@@ -111,7 +114,7 @@ export default function Reports() {
             </button>
             
             {showExportOptions && (
-              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
+              <div ref={exportOptionsRef} className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Settings className="w-4 h-4" /> Export Options
