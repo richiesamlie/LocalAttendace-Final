@@ -204,49 +204,57 @@ export const useStore = create<AppState>()((set, get) => ({
     const cls = state.classes.find(c => c.id === classId);
     if (!cls || cls.loaded) return;
 
-    const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-      api.getStudents(classId, false),
-      api.getRecords(classId),
-      api.getEvents(classId),
-      api.getTimetable(classId),
-      api.getDailyNotes(classId),
-      api.getSeating(classId),
-    ]);
+    try {
+      const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+        api.getStudents(classId, false),
+        api.getRecords(classId),
+        api.getEvents(classId),
+        api.getTimetable(classId),
+        api.getDailyNotes(classId),
+        api.getSeating(classId),
+      ]);
 
-    set((state) => ({
-      classes: state.classes.map(c =>
-        c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
-      ),
-    }));
+      set((state) => ({
+        classes: state.classes.map(c =>
+          c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
+        ),
+      }));
+    } catch (error) {
+      console.error(`Failed to load class data for ${classId}`, error);
+    }
   },
 
   reloadClassData: async (classId: string) => {
-    const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-      api.getStudents(classId, false),
-      api.getRecords(classId),
-      api.getEvents(classId),
-      api.getTimetable(classId),
-      api.getDailyNotes(classId),
-      api.getSeating(classId),
-    ]);
+    try {
+      const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+        api.getStudents(classId, false),
+        api.getRecords(classId),
+        api.getEvents(classId),
+        api.getTimetable(classId),
+        api.getDailyNotes(classId),
+        api.getSeating(classId),
+      ]);
 
-    set((state) => {
-      const updatedClasses = state.classes.map(c =>
-        c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
-      );
-      const isCurrentClass = state.currentClassId === classId;
-      return {
-        classes: updatedClasses,
-        ...(isCurrentClass ? {
-          students,
-          records,
-          events,
-          timetable,
-          dailyNotes,
-          seatingLayout,
-        } : {}),
-      };
-    });
+      set((state) => {
+        const updatedClasses = state.classes.map(c =>
+          c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
+        );
+        const isCurrentClass = state.currentClassId === classId;
+        return {
+          classes: updatedClasses,
+          ...(isCurrentClass ? {
+            students,
+            records,
+            events,
+            timetable,
+            dailyNotes,
+            seatingLayout,
+          } : {}),
+        };
+      });
+    } catch (error) {
+      console.error(`Failed to reload class data for ${classId}`, error);
+    }
   },
 
   addClass: async (name) => {
@@ -661,14 +669,14 @@ export const useStore = create<AppState>()((set, get) => ({
   },
   
   clearData: async () => {
-    // This function in the UI clears the data for the current class.
     const classId = get().currentClassId;
     if (!classId) return;
-    
+
+    const className = get().classes.find(c => c.id === classId)?.name || 'Class';
+
     try {
-      // In SQLite, deleting the class cascades.
       await api.deleteClass(classId);
-      await api.createClass({ id: classId, name: get().classes.find(c => c.id === classId)?.name || 'Class' });
+      await api.createClass({ id: classId, name: className });
 
       set((state) => updateCurrentClass(state, { students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }));
       toast.success('Class data cleared');
