@@ -1,7 +1,7 @@
 # Migration Plan: Teacher Assistant to Multi-User Support
 
-## Version: 1.1
-## Last Updated: 2026-04-01
+## Version: 1.2
+## Last Updated: 2026-04-06
 ## Branch: develop
 
 ---
@@ -183,6 +183,10 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | 35 | Audit: Separate add/edit state in Roster (L14) | Audit | Roster.tsx | ✅ |
 | 36 | Audit: Click-outside handlers for dropdowns (L12) | Audit | Roster.tsx, Schedule.tsx, Reports.tsx, Timetable/ExportMenu.tsx | ✅ |
 | 37 | Audit: Replace ALL alert/confirm with toast dialogs (full sweep) | Audit | AdminDashboard.tsx, Sidebar.tsx | ✅ |
+| 38 | Cross-cutting #4: Fix api.ts error parsing, standardize catch blocks, verify store consistency | Audit | src/lib/api.ts, routes.ts, src/store.ts | ✅ |
+| 39 | Cross-cutting #2: Wrap loadClassData/reloadClassData in try/catch, clean up clearData | Audit | src/store.ts | ✅ |
+| 40 | Cross-cutting #5: Add input sanitization (trim + null byte strip) to all Zod string schemas | Audit | src/lib/validation.ts | ✅ |
+| 41 | Cross-cutting #6: Consolidate hardcoded defaults to single source in db.ts | Audit | db.ts, src/store.ts | ✅ |
 
 ---
 
@@ -240,6 +244,13 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 ---
 
 ## Notes
+
+- **Session 2026-04-06: Cross-cutting concerns #4, #2, #5, #6**
+  - **#4 Error Handling Consistency:** Fixed `src/lib/api.ts` to parse JSON error body on failed responses (preserves server error message). Added logging to empty catch in session tracking (`routes.ts`). Clarified intentional empty catch in `getTeacherId`. Fixed `setStudents` rollback pattern and `toggleTheme` missing try/catch in `src/store.ts`.
+  - **#2 Atomic Store Mutations:** Wrapped `loadClassData` and `reloadClassData` in try/catch with error logging. Cached `className` before API calls in `clearData` to avoid stale lookup mid-operation. All 22 async store actions now follow consistent try/API/then/catch pattern.
+  - **#5 Input Sanitization:** Created `safeString()` helper in `validation.ts` that chains `transform(sanitizeString)` with min/max validation. Strips null bytes (`\x00`) and trims whitespace on all string fields across all 8 Zod schemas.
+  - **#6 Hardcoded Defaults:** Extracted `DEFAULTS` constant object in `db.ts` (TEACHER_ID, TEACHER_USERNAME, TEACHER_NAME, CLASS_ID, CLASS_NAME). Created single `getDefaultPassword()` function. Both admin creation locations in db.ts now use constants. store.ts uses matching local constants — `clearAllData` creates `'My First Class'` instead of inconsistent `'Default Class'`.
+  - Commits pushed to origin/develop: `a1f8eb8` (#4), `298f7a3` (#2), `687abb5` (#5+#6)
 
 - **Session 2026-04-06: Audit verification + remaining fixes**
   - Verified all 35 audit fixes (C1-L14) were properly committed and pushed in prior sessions

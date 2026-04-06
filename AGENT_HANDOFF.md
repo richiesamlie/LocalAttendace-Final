@@ -1,8 +1,8 @@
 # Agent Handoff — Teacher Assistant Project
 
-**Last Session:** 2026-04-06 10:09 AM
+**Last Session:** 2026-04-06 12:00 PM
 **Current Branch:** `develop` — fully synced with `origin/develop`
-**Latest Commit:** `3752e31` (docs: add agent handoff file, update migration plan and audit log)
+**Latest Commit:** `687abb5` (fix(#5,#6): add input sanitization to Zod schemas, consolidate hardcoded defaults)
 **Repo:** https://github.com/richiesamlie/LocalAttendace-Final/tree/develop
 **Local Path:** `/home/richiesamlie/LocalAttendace-Final`
 
@@ -22,9 +22,9 @@
    4.6 Server Setup (server.ts)
    4.7 Validation (validation.ts)
    4.8 Error Handling (errorHandler.ts)
-5. Completed Work (37 Audit Items + Beyond)
-6. Migration Plan Status (All 37 items ✅)
-7. Remaining Cross-Cutting Concerns (6 items)
+5. Completed Work (41 Audit Items + Beyond)
+6. Migration Plan Status (All 41 items ✅)
+7. Remaining Cross-Cutting Concerns (2 items)
 8. How The App Works End-to-End
 9. Common Patterns & Gotchas
 10. Commands & Workflow
@@ -294,7 +294,7 @@ Single `fetchApi()` wrapper:
 - Base path: `/api`
 - Always includes `credentials: 'include'` (cookie auth)
 - Always sets `Content-Type: application/json`
-- Throws on non-200: `new Error('API error: ${response.statusText}')`
+- On non-200: parses JSON error body and throws `new Error(body.error || response.statusText)` — preserves server's human-readable error message
 
 Exports 30+ typed methods matching all API endpoints by name.
 
@@ -379,14 +379,23 @@ The `validate(schema)` middleware wraps Zod parsing. On ZodError, returns 400 wi
 - **Zero** alert(), confirm(), window.confirm() remain in src/
 - **useClickOutside hook** created and applied to 4 dropdowns
 
+### Cross-Cutting Concerns (Session 2026-04-06)
+- **#4 Error Handling Consistency:** Fixed `api.ts` to parse JSON error body. Logged empty catches in `routes.ts`. Fixed `setStudents` rollback and `toggleTheme` try/catch in `store.ts`.
+- **#2 Atomic Store Mutations:** Wrapped `loadClassData`/`reloadClassData` in try/catch. Cleaned up `clearData`. All 22 async store actions consistent.
+- **#5 Input Sanitization:** Created `safeString()` helper — strips null bytes, trims whitespace, validates min/max. All 8 Zod schemas updated.
+- **#6 Hardcoded Defaults:** Extracted `DEFAULTS` constant object and `getDefaultPassword()` in `db.ts`. `store.ts` uses matching constants.
+
 ---
 
 ## 6. MIGRATION PLAN STATUS
 
-All 37 items complete. See MIGRATION_PLAN.md for the original plan with phases 1-5.
+All 41 items complete. See MIGRATION_PLAN.md for the original plan with phases 1-5.
 
 **Commits on develop (recent):**
 ```
+687abb5  fix(#5,#6): add input sanitization to Zod schemas, consolidate hardcoded defaults
+298f7a3  fix(#2): wrap loadClassData/reloadClassData in try/catch, clean up clearData
+a1f8eb8  fix(#4): standardize error handling across api, routes, and store
 3752e31  docs: add agent handoff file, update migration plan and audit log
 edf52a7  fix: replace all remaining alert/confirm with toast dialogs
 9b208a5  fix(L12): add click-outside handlers for all dropdown menus
@@ -406,57 +415,10 @@ d2ead48  fix(C2): add SQLite triggers to auto-populate updated_at columns
 
 These require judgment calls before implementing. Priority order recommended:
 
-### #4 — Error Handling Inconsistency (LOW RISK, HIGH IMPACT) — RECOMMENDED FIRST
-**Problem:**
-- Most endpoints use try/catch and return `{error: 'message'}` directly
-- `errorHandler.ts` defines `APIError` class and `Errors` factory — but routes.ts barely uses them
-- Some endpoints silently swallow errors: `catch (e) { }` (empty catch blocks exist)
-- Frontend api.ts throws generic `new Error('API error: ${response.statusText}')` — loses the actual JSON error message
-- Some store actions show `toast.error('Failed to ...')` but don't re-throw, so callers don't know it failed
-- The Zod validate middleware returns `{error: 'Validation failed', details: [...]}` — inconsistent format
-
-**What to do:**
-1. **Frontend api.ts:** Parse the JSON error body and throw it: `const body = await response.json(); throw new Error(body.error || response.statusText)`. This preserves the server's human-readable error.
-2. **Routes:** Standardize to use APIError pattern: `throw Errors.BadRequest('message')` instead of `res.status(400).json({error: 'message'})`. The errorHandler will handle it.
-3. **Catch blocks:** Replace empty catches with logging or proper error returns. At minimum `console.error('[routes] ...', e)`.
-4. **Store actions:** Consider having toast.error + NOT updating local state on API failure (most already do this, but some like setStudents do a rollback in the catch block).
-
-**Files to modify:** `src/lib/api.ts` (primary), `routes.ts` (secondary), `src/store.ts` (verify consistency)
-
-### #2 — Store Mutations Are Async but Not Atomic (LOW RISK)
-**Problem:** Most store actions follow: `await api.call()` then `set(state => update)`. If the API succeeds but `set()` throws (unlikely but possible), or if the page unmounts between the two, data diverges.
-
-**What to do:**
-- Add optimistic rollback pattern: save old state → call API → if success, update state → if fail, restore old state
-- Many actions already do this (catch block shows toast.error and doesn't update state). Verify ALL actions follow this pattern.
-- Actions without the pattern: clearAllData (uses Promise.allSettled, handles partial failure), clearData (delete+recreate class pattern).
-
-**Files:** `src/store.ts`
-
-### #5 — No Input Sanitization Beyond Zod (LOW RISK)
-**Problem:** Zod validates max length and type but doesn't strip control characters, HTML entities, or leading/trailing whitespace. The app relies on React's automatic JSX escaping for rendering safety. But data stored in the database could be dirty.
-
-**What to do (pick one):**
-- Option A: Add a middleware that strips null bytes (`\x00`) and trims all string fields before they reach route handlers
-- Option B: Add `.transform()` to Zod schemas that trim/escape input
-- Option C: Do nothing — React's JSX escaping is sufficient for the rendering threat model
-
-**Files:** `src/lib/validation.ts` (for Option B) or `routes.ts`/`server.ts` (for Option A middleware)
-
-### #6 — Hardcoded Defaults in Multiple Places (LOW RISK)
-**Problem:** Default admin creation happens in db.ts at two places (lines ~197 and ~314). Default class creation in db.ts, store.ts, and routes.ts. Default password hints are scattered.
-
-**What to do:**
-- Consolidate default admin creation to ONE place in db.ts initSchema
-- Extract default constants: DEFAULT_TEACHER_ID, DEFAULT_CLASS_ID, DEFAULT_CLASS_NAME
-- Ensure only db.ts creates the default admin (removes store.ts and routes.ts defaults)
-
-**Files:** `db.ts` (primary)
-
 ### #3 — No Request Deduplication (MEDIUM EFFORT)
 **Problem:** Multiple components can trigger the same API call. React Query handles deduplication for auth hooks but NOT for the direct Zustand store actions that components call.
 
-**What to do:** Only worth doing if migrating ALL data fetching to React Query instead of Zustand actions. This is the highest-effort item.
+**What to do:** Only worth doing if migrating ALL data fetching to React Query instead of Zustand store actions. This is the highest-effort item.
 
 **Files:** `src/store.ts`, `src/hooks/useData.ts`
 
@@ -466,6 +428,36 @@ These require judgment calls before implementing. Priority order recommended:
 **What to do:** Create a repository/service layer that wraps API calls and store interactions. Components talk to services, services talk to API + store. This is a major refactor — should be planned before starting.
 
 **Risk level:** HIGH. Would touch every component and the store.
+
+---
+
+## COMPLETED CROSS-CUTTING CONCERNS
+
+### #4 — Error Handling Consistency ✅ FIXED
+**What was done:**
+- `src/lib/api.ts`: Parses JSON error body on non-200, throws server's actual error message instead of generic `API error: ${statusText}`
+- `routes.ts`: Added logging to session tracking catch block. Clarified intentional empty catch in `getTeacherId`
+- `src/store.ts`: Fixed `setStudents` rollback pattern (removed state update in catch). Added try/catch to `toggleTheme`
+- All 22 async store actions follow consistent try/API/then/catch pattern
+
+### #2 — Store Mutations Are Async but Not Atomic ✅ FIXED
+**What was done:**
+- `loadClassData` and `reloadClassData` wrapped in try/catch with error logging
+- `clearData` caches `className` before API calls to avoid stale lookup mid-operation
+- No state mutation occurs on API failure in any action
+
+### #5 — No Input Sanitization Beyond Zod ✅ FIXED
+**What was done:**
+- Created `safeString()` helper in `validation.ts`: strips null bytes (`\x00`) + trims whitespace, then validates min/max
+- All 8 Zod schemas use `safeString()` for every string field
+- Regex patterns (date, time) converted to `.refine()` on sanitized strings
+
+### #6 — Hardcoded Defaults in Multiple Places ✅ FIXED
+**What was done:**
+- Extracted `DEFAULTS` constant object in `db.ts`: TEACHER_ID, TEACHER_USERNAME, TEACHER_NAME, CLASS_ID, CLASS_NAME
+- Created single `getDefaultPassword()` function — eliminates duplicated password logic
+- Both admin creation locations in db.ts use `DEFAULTS` and `getDefaultPassword()`
+- store.ts uses matching local constants — `clearAllData` creates `'My First Class'` instead of `'Default Class'`
 
 ---
 
@@ -521,21 +513,22 @@ Sync (30s):
 
 ## 9. COMMON PATTERNS & GOTCHAS
 
-### The `api.ts` error problem
+### The `api.ts` error handling
 ```typescript
-// Current api.ts:
+// Current api.ts (FIXED):
 if (!response.ok) {
-  throw new Error(`API error: ${response.statusText}`);  // LOSES the JSON body!
+  let message = response.statusText;
+  try {
+    const body = await response.json();
+    if (body?.error) message = body.error;
+  } catch { /* ignore JSON parse errors */ }
+  throw new Error(message);  // Preserves server's human-readable error
 }
-
-// The server sends: { error: "Student already exists" }
-// But the error thrown is: "API error: Bad Request" — no detail!
-// FIX: parse the JSON body and include error message
 ```
 
-### Store action pattern inconsistency
+### Store action pattern (consistent)
 ```typescript
-// Good (most actions):
+// All 22 async actions follow this pattern:
 addStudent: async (student) => {
   try {
     await api.createStudent(classId, student);  // API call first
@@ -544,9 +537,6 @@ addStudent: async (student) => {
     toast.error('Failed to add student');  // NO state update on failure
   }
 }
-
-// Needs review: Some actions like setStudents do a weird rollback pattern
-// in the catch block that updates local state even on failure.
 ```
 
 ### Cache key collision awareness
@@ -694,12 +684,8 @@ See `.env.example`:
 
 ### Cross-Cutting Concern Priority
 If asked to continue improving the codebase, work through them in this order:
-1. **#4 Error Handling Consistency** — Fix api.ts error parsing first (10 lines), then audit catch blocks
-2. **#2 Atomic Store Mutations** — Verify all store actions follow try/API/then/catch pattern
-3. **#5 Input Sanitization** -- Decide if needed (React JSX escaping is probably sufficient)
-4. **#6 Hardcoded Defaults** -- Consolidate to one place in db.ts
-5. **#3 Request Deduplication** -- Only if migrating to React Query
-6. **#1 Service/Repository Layer** -- Major refactor, plan first
+1. **#3 Request Deduplication** — Only if migrating to React Query
+2. **#1 Service/Repository Layer** — Major refactor, plan first
 
 ### Known Quirks
 - The app auto-creates a default class if none exist (on first install)

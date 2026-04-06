@@ -281,18 +281,19 @@ Store actions like `addStudent` first call the API, then update local state. If 
 Multiple components can trigger the same API call simultaneously. React Query helps but not for Zustand-based store actions.
 
 ### 4. Error Handling Inconsistency
-- Some endpoints return `{ error: 'message' }` (JSON)
-- Some use the global error handler
+- Most endpoints return `{ error: 'message' }` directly
 - Some silently catch and ignore errors
-- Frontend mixes `alert()`, `toast.error()`, and silent failures
+- Frontend api.ts threw generic errors, losing JSON body detail
+- **FIXED 2026-04-06:** api.ts now parses JSON error body. Empty catches logged. Store actions consistent.
 
 ### 5. No Input Sanitization Beyond Zod
-Zod validates shape and length, but doesn't sanitize HTML entities, control characters, or other injection vectors. The app relies on React's automatic JSX escaping, which is fine for rendering but not for data stored in the DB.
+- Zod validates shape and length, but doesn't sanitize control characters or whitespace
+- **FIXED 2026-04-06:** `safeString()` helper strips null bytes and trims all string fields in Zod schemas.
 
 ### 6. Hardcoded Defaults in Multiple Places
-- Default class creation in store.ts, routes.ts, and db.ts
-- Default admin creation in db.ts (two places: lines 196-201 and 290-296)
-- Default password hints scattered across files
+- Default admin creation in db.ts (two places)
+- Default class creation scattered across store.ts and db.ts
+- **FIXED 2026-04-06:** Consolidated to `DEFAULTS` constant object and `getDefaultPassword()` in db.ts.
 
 ### 7. Zero Native Dialogs Remaining (Session 2026-04-06)
 - All 7 alert/confirm calls (M8 scope) replaced in prior session
@@ -333,11 +334,11 @@ When continuing work, address issues in this order:
 8. **M6** - Expand sync fingerprint ✅ FIXED
 9. **M7** - Optimize Reports/Excel nested loops ✅ FIXED (Map-indexed in Reports.tsx, excel.ts exportMonthlyReportToExcel, importAttendanceFromExcel, exportClassData)
 10. **M8** - Replace alert/confirm with toast/modals ✅ FIXED (7 calls replaced with toast.confirm patterns in Roster.tsx, Schedule.tsx, SeatingChart.tsx)
-11. **L1** - Use prepared statement for role management ✅ FIXED (added updateClassTeacherRole to db.stmt)
-12. **L5** - Use crypto.randomUUID() for event IDs ✅ FIXED
-13. **L6** - RandomPicker interval cleanup ✅ FIXED (useRef + useEffect cleanup + guard against double-pick)
-14. **L7** - ExamTimer interval recreation anti-pattern ✅ FIXED (ref-based timerRemaining, no dependency on state in useEffect)
-15. **L8** - Stopwatch drift ✅ FIXED (Date.now() delta approach with accumulated time)
+  11. **L1** - Use prepared statement for role management ✅ FIXED (added updateClassTeacherRole to db.stmt)
+  12. **L5** - Use crypto.randomUUID() for event IDs ✅ FIXED
+  13. **L6** - RandomPicker interval cleanup ✅ FIXED (useRef + useEffect cleanup + guard against double-pick)
+  14. **L7** - ExamTimer interval recreation anti-pattern ✅ FIXED (ref-based timerRemaining, no dependency on state in useEffect)
+  15. **L8** - Stopwatch drift ✅ FIXED (Date.now() delta approach with accumulated time)
   16. **L9** - Gatekeeper date uses UTC instead of local ✅ FIXED (use format(new Date(), 'yyyy-MM-dd') from date-fns)
   17. **L2** - Dead code in Timetable/types.ts ✅ FIXED (file deleted, no imports)
   18. **L3** - Duplicate parseTime function ✅ FIXED (Dashboard.tsx imports from timetableUtils)
@@ -347,6 +348,32 @@ When continuing work, address issues in this order:
   22. **L12** - No click-outside handlers for dropdowns — ✅ FIXED (created useClickOutside.ts hook, applied to Roster, Schedule, Reports, Timetable/ExportMenu)
   23. **L13** - Roster add row column misalignment ✅ FIXED (added missing checkbox column td)
   24. **L14** - Shared edit state in Roster ✅ FIXED (separate add* and edit* state variables)
+
+---
+
+## CROSS-CUTTING CONCERNS (FIXED 2026-04-06)
+
+### #4 — Error Handling Inconsistency ✅ FIXED
+- `src/lib/api.ts`: Now parses JSON error body on non-200 responses, throws server's actual error message
+- `routes.ts`: Added logging to session tracking catch block. Clarified intentional empty catch in `getTeacherId`
+- `src/store.ts`: Fixed `setStudents` rollback pattern (removed state update in catch). Added try/catch to `toggleTheme`
+- All 22 async store actions follow consistent try/API/then/catch pattern
+
+### #2 — Store Mutations Are Async but Not Atomic ✅ FIXED
+- `loadClassData` and `reloadClassData` wrapped in try/catch with error logging
+- `clearData` caches `className` before API calls to avoid stale lookup
+- No state mutation occurs on API failure in any action
+
+### #5 — No Input Sanitization Beyond Zod ✅ FIXED
+- Created `safeString()` helper: strips null bytes (`\x00`) + trims whitespace, then validates min/max
+- All 8 Zod schemas use `safeString()` for every string field
+- Regex patterns (date, time) converted to `.refine()` on sanitized strings
+
+### #6 — Hardcoded Defaults in Multiple Places ✅ FIXED
+- Extracted `DEFAULTS` constant object in `db.ts`: TEACHER_ID, TEACHER_USERNAME, TEACHER_NAME, CLASS_ID, CLASS_NAME
+- Created single `getDefaultPassword()` function — eliminates duplicated password logic
+- Both admin creation locations in db.ts use `DEFAULTS` and `getDefaultPassword()`
+- store.ts uses matching local constants — `clearAllData` creates `'My First Class'` instead of `'Default Class'`
 
 ---
 
@@ -377,6 +404,13 @@ When continuing work, address issues in this order:
 - The most impactful fix is C1 (sync bug) — without it, multi-teacher support doesn't actually work
 - The app is on `develop` branch, 7 commits ahead of `origin/develop`
 - No changes have been pushed to remote yet
+
+### Session 2026-04-06: Cross-Cutting Concerns #4, #2, #5, #6
+- **#4 Error Handling Consistency:** Fixed `src/lib/api.ts` to parse JSON error body on non-200 responses. Added logging to session tracking catch in `routes.ts`. Fixed `setStudents` rollback pattern and `toggleTheme` missing try/catch in `src/store.ts`. Commits: `a1f8eb8`
+- **#2 Atomic Store Mutations:** Wrapped `loadClassData`/`reloadClassData` in try/catch. Cleaned up `clearData`. All 22 async store actions consistent. Commit: `298f7a3`
+- **#5 Input Sanitization:** Created `safeString()` helper in `validation.ts` — strips null bytes, trims whitespace, validates min/max. All 8 Zod schemas updated.
+- **#6 Hardcoded Defaults:** Extracted `DEFAULTS` constant object and `getDefaultPassword()` in `db.ts`. store.ts uses matching constants. Commit: `687abb5`
+- TypeScript compiles cleanly throughout. All changes pushed to origin/develop.
 
 ### Session 2026-04-06: Verification + Remaining Fixes
 - Started: Cloned `develop` branch from origin, found it was fully up to date with all 35 audit fixes committed
