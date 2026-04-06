@@ -332,7 +332,15 @@ When continuing work, address issues in this order:
 13. **L6** - RandomPicker interval cleanup ✅ FIXED (useRef + useEffect cleanup + guard against double-pick)
 14. **L7** - ExamTimer interval recreation anti-pattern ✅ FIXED (ref-based timerRemaining, no dependency on state in useEffect)
 15. **L8** - Stopwatch drift ✅ FIXED (Date.now() delta approach with accumulated time)
-16. **L9** - Gatekeeper date uses UTC instead of local ✅ FIXED (use format(new Date(), 'yyyy-MM-dd') from date-fns)
+  16. **L9** - Gatekeeper date uses UTC instead of local ✅ FIXED (use format(new Date(), 'yyyy-MM-dd') from date-fns)
+  17. **L2** - Dead code in Timetable/types.ts ✅ FIXED (file deleted, no imports)
+  18. **L3** - Duplicate parseTime function ✅ FIXED (Dashboard.tsx imports from timetableUtils)
+  19. **L4** - Dashboard skeleton loading dead code ✅ FIXED (removed isMounted state and skeleton branch)
+  20. **L10** - Invite redeem doesn't verify class exists ✅ FIXED (added getClassById check before granting access)
+  21. **L11** - Compound index creation order ✅ FIXED (moved invite_codes and user_sessions indexes after table creation)
+  22. **L12** - No click-outside handlers for dropdowns — REMAINING (low priority UX improvement)
+  23. **L13** - Roster add row column misalignment ✅ FIXED (added missing checkbox column td)
+  24. **L14** - Shared edit state in Roster ✅ FIXED (separate add* and edit* state variables)
 
 ---
 

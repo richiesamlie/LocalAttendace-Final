@@ -5,23 +5,10 @@ import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircl
 import { cn } from '../utils/cn';
 import InviteTeacherModal from './InviteTeacherModal';
 import { CardSkeleton } from './Skeleton';
-
-/** Parse a time string like "8:15 AM" or "13:30" into minutes-since-midnight */
-function parseTime(timeStr: string): number {
-  if (!timeStr) return 0;
-  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
-  if (!match) return 0;
-  let h = parseInt(match[1], 10);
-  const m = parseInt(match[2], 10);
-  const modifier = match[3]?.toLowerCase();
-  if (modifier === 'pm' && h < 12) h += 12;
-  if (modifier === 'am' && h === 12) h = 0;
-  return h * 60 + m;
-}
+import { parseTime } from './Timetable/timetableUtils';
 
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isMounted, setIsMounted] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [userRole, setUserRole] = useState('teacher');
   const updateTimetableSlot = useStore((state) => state.updateTimetableSlot);
@@ -30,7 +17,6 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   const teacherId = useStore((state) => state.teacherId);
   
   useEffect(() => {
-    setIsMounted(true);
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -164,14 +150,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
         </div>
       </div>
 
-      {students.length === 0 && !isMounted ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-          <CardSkeleton />
-        </div>
-      ) : students.length === 0 ? (
+      {students.length === 0 ? (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 flex items-start gap-4">
           <AlertCircle className="w-6 h-6 text-amber-500 dark:text-amber-400 mt-1 flex-shrink-0" />
           <div>

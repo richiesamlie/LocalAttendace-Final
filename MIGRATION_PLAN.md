@@ -174,6 +174,13 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | 26 | Audit: ExamTimer interval recreation fix (L7) | Audit | ExamTimer.tsx | ✅ |
 | 27 | Audit: Stopwatch drift fix (L8) | Audit | ExamTimer.tsx | ✅ |
 | 28 | Audit: Gatekeeper local date fix (L9) | Audit | Gatekeeper.tsx | ✅ |
+| 29 | Audit: Remove dead code Timetable/types.ts (L2) | Audit | types.ts | ✅ |
+| 30 | Audit: Deduplicate parseTime in Dashboard (L3) | Audit | Dashboard.tsx | ✅ |
+| 31 | Audit: Remove Dashboard skeleton dead code (L4) | Audit | Dashboard.tsx | ✅ |
+| 32 | Audit: Invite redeem verify class exists (L10) | Audit | routes.ts | ✅ |
+| 33 | Audit: Fix compound index creation order (L11) | Audit | db.ts | ✅ |
+| 34 | Audit: Fix Roster add row column misalignment (L13) | Audit | Roster.tsx | ✅ |
+| 35 | Audit: Separate add/edit state in Roster (L14) | Audit | Roster.tsx | ✅ |
 
 ---
 
@@ -253,6 +260,13 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
   - L7: ExamTimer uses ref-based countdown (no interval recreation on state change)
   - L8: Stopwatch uses `Date.now()` delta to prevent timer drift
   - L9: Gatekeeper uses `format(new Date(), 'yyyy-MM-dd')` for local date instead of UTC
+  - L2: Removed dead code `Timetable/types.ts` (unused re-export)
+  - L3: Dashboard now imports `parseTime` from `timetableUtils` instead of duplicating it
+  - L4: Removed dead skeleton loading state from Dashboard (`isMounted` never used)
+  - L10: Invite redeem now verifies class exists before granting access
+  - L11: Compound indexes for `invite_codes` and `user_sessions` moved after table creation
+  - L13: Roster add row now has 6 `<td>` cells matching 6 header columns
+  - L14: Separate `add*` and `edit*` state in Roster to prevent value leakage between modes
 - Current e2e tests work but can have flaky runs when all tests share DB (expected)
 - Keep main branch clean, all changes on `develop` branch
 - Test each phase thoroughly before moving to next

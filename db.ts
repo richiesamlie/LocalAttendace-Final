@@ -250,15 +250,9 @@ const initSchema = () => {
     ['idx_records_class_date_status', 'attendance_records', '(class_id, date, status)'],
     ['idx_events_class_date_type', 'events', '(class_id, date, type)'],
     ['idx_timetable_class_day', 'timetable_slots', '(class_id, day_of_week)'],
-    ['idx_invite_codes_class_active', 'invite_codes', '(class_id, expires_at, used_by)'],
-    ['idx_user_sessions_teacher_active', 'user_sessions', '(teacher_id, is_revoked, expires_at)'],
   ];
   for (const [idxName, table, columns] of compoundIndexes) {
-    try {
-      _db.exec(`CREATE INDEX IF NOT EXISTS ${idxName} ON ${table} ${columns}`);
-    } catch {
-      // Index may already exist or table may not exist yet
-    }
+    _db.exec(`CREATE INDEX IF NOT EXISTS ${idxName} ON ${table} ${columns}`);
   }
 
   // Migration: Add invite_codes table (Phase 2.2)
@@ -309,6 +303,10 @@ const initSchema = () => {
   if (!hasLastLogin) {
     _db.exec('ALTER TABLE teachers ADD COLUMN last_login TEXT');
   }
+
+  // Create compound indexes for invite_codes and user_sessions tables (after tables exist)
+  _db.exec(`CREATE INDEX IF NOT EXISTS idx_invite_codes_class_active ON invite_codes (class_id, expires_at, used_by)`);
+  _db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher_active ON user_sessions (teacher_id, is_revoked, expires_at)`);
 
   // Ensure default admin teacher always exists
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };

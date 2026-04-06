@@ -56,6 +56,12 @@ export default function Roster() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  // Separate state for add mode vs edit mode to prevent value leakage
+  const [addName, setAddName] = useState('');
+  const [addRoll, setAddRoll] = useState('');
+  const [addParentName, setAddParentName] = useState('');
+  const [addParentPhone, setAddParentPhone] = useState('');
+  const [addIsFlagged, setAddIsFlagged] = useState(false);
   const [editName, setEditName] = useState('');
   const [editRoll, setEditRoll] = useState('');
   const [editParentName, setEditParentName] = useState('');
@@ -91,24 +97,24 @@ export default function Roster() {
       toast.error('Please create or select a class from the sidebar first before adding students.');
       return;
     }
+    setAddName('');
+    setAddRoll('');
+    setAddParentName('');
+    setAddParentPhone('');
+    setAddIsFlagged(false);
     setIsAdding(true);
-    setEditName('');
-    setEditRoll('');
-    setEditParentName('');
-    setEditParentPhone('');
-    setEditIsFlagged(false);
     setEditingId(null);
   };
 
   const saveAddStudent = () => {
-    if (!editName.trim() || !editRoll.trim()) return;
+    if (!addName.trim() || !addRoll.trim()) return;
     addStudent({
       id: `std_${Date.now()}`,
-      name: editName,
-      rollNumber: editRoll,
-      parentName: editParentName,
-      parentPhone: editParentPhone,
-      isFlagged: editIsFlagged,
+      name: addName,
+      rollNumber: addRoll,
+      parentName: addParentName,
+      parentPhone: addParentPhone,
+      isFlagged: addIsFlagged,
     });
     setIsAdding(false);
   };
@@ -342,12 +348,13 @@ export default function Roster() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {isAdding && (
                 <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
+                  <td className="px-6 py-4" />
                   <td className="px-6 py-4">
                     <input
                       type="text"
                       placeholder="Roll No"
-                      value={editRoll}
-                      onChange={(e) => setEditRoll(e.target.value)}
+                      value={addRoll}
+                      onChange={(e) => setAddRoll(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
                       autoFocus
                     />
@@ -356,8 +363,8 @@ export default function Roster() {
                     <input
                       type="text"
                       placeholder="Student Name"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
                     />
                   </td>
@@ -365,8 +372,8 @@ export default function Roster() {
                     <input
                       type="text"
                       placeholder="Parent Name"
-                      value={editParentName}
-                      onChange={(e) => setEditParentName(e.target.value)}
+                      value={addParentName}
+                      onChange={(e) => setAddParentName(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
                     />
                   </td>
@@ -374,24 +381,24 @@ export default function Roster() {
                     <input
                       type="text"
                       placeholder="Phone Number"
-                      value={editParentPhone}
-                      onChange={(e) => setEditParentPhone(e.target.value)}
+                      value={addParentPhone}
+                      onChange={(e) => setAddParentPhone(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
                     />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => setEditIsFlagged(!editIsFlagged)}
+                        onClick={() => setAddIsFlagged(!addIsFlagged)}
                         className={cn(
                           "p-2 rounded-lg transition-colors",
-                          editIsFlagged 
+                          addIsFlagged 
                             ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50" 
                             : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
                         )}
-                        title={editIsFlagged ? "Remove Flag" : "Flag Student"}
+                        title={addIsFlagged ? "Remove Flag" : "Flag Student"}
                       >
-                        <Flag className={cn("w-5 h-5", editIsFlagged && "fill-current")} />
+                        <Flag className={cn("w-5 h-5", addIsFlagged && "fill-current")} />
                       </button>
                       <button
                         onClick={saveAddStudent}

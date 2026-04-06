@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(chmod +x:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

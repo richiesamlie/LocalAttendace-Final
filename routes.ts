@@ -489,6 +489,11 @@ router.post('/invites/redeem', requireAuth, postLimiter, withWriteQueue((req, re
     return res.status(400).json({ error: 'This invite code has expired' });
   }
   
+  const classExists = db.stmt.getClassById.get(invite.class_id, teacherId);
+  if (!classExists) {
+    return res.status(404).json({ error: 'This class no longer exists' });
+  }
+  
   const existing = db.stmt.isClassTeacher.get(invite.class_id, teacherId) as { class_id: string } | undefined;
   if (existing) {
     return res.status(400).json({ error: 'You already have access to this class' });
