@@ -1,200 +1,715 @@
-# Agent Handoff — Next Session Context
+# Agent Handoff — Teacher Assistant Project
 
-**Last Session Date:** 2026-04-06
-**Branch:** `develop` (fully synced with `origin/develop`)
-**Latest Commit:** `edf52a7` (fix: replace all remaining alert/confirm with toast dialogs)
-**Repo:** https://github.com/richiesamlie/LocalAttendace-Final
-
----
-
-## PROJECT OVERVIEW
-
-Teacher Assistant is a classroom management app:
-- **Frontend:** React 19, TypeScript, Vite 6, Tailwind CSS 4, Zustand (state), React Query, react-hot-toast, lucide-react, date-fns, xlsx
-- **Backend:** Express.js, better-sqlite3 (synchronous, single connection), JWT auth (7-day), bcrypt, express-rate-limit, Zod validation, helmet, cookie-based auth
-- **Database:** SQLite with WAL mode, prepared statements, write queue serialization, in-memory TTL cache
-- **Deployment:** Docker + docker-compose, Windows batch startup scripts, Linux systemd service template
-
-**Key Features:** Attendance tracking, roster management, reports/Excel export, timetable/schedule, seating chart, random picker, group generator, exam timer, gatekeeper (exam monitor), admin dashboard, multi-teacher support with invite system
+**Last Session:** 2026-04-06 10:09 AM
+**Current Branch:** `develop` — fully synced with `origin/develop`
+**Latest Commit:** `3752e31` (docs: add agent handoff file, update migration plan and audit log)
+**Repo:** https://github.com/richiesamlie/LocalAttendace-Final/tree/develop
+**Local Path:** `/home/richiesamlie/LocalAttendace-Final`
 
 ---
 
-## WHAT HAS BEEN DONE
+## TABLE OF CONTENTS
 
-### Migration Phases 1-5 (all complete):
-1. **Foundation:** Teacher isolation via `class_teachers` join in ALL queries, write queue serialization, connection pooling, `updated_at` columns + SQLite triggers
-2. **Multi-Teacher:** RBAC (owner/admin/teacher/assistant), invite system with codes, session management (device tracking, force logout), session DB table
-3. **Real-Time Sync:** Poll-based sync every 30s with fingerprint detection (students, records, events, timetable, seating counts)
-4. **Performance:** Compound indexes, in-memory cache with namespace-aware invalidation, batch operations, Map-indexed record lookups (O(n) instead of O(n*m))
-5. **PostgreSQL Prep:** Data layer abstraction via prepared statements (all queries use `db.stmt.*`)
-
-### All 37 Audit Items (all complete):
-| ID | Status | What |
-|----|--------|------|
-| C1 | ✅ | Poll-based sync was calling `loadClassData()` with `cls.loaded` guard (no-op). Fixed: created `reloadClassData()` bypassing guard, sync now refetches all data |
-| C2 | ✅ | `updated_at` columns existed but were never populated. Fixed: SQLite AFTER UPDATE triggers on all 7 tables |
-| C3 | ✅ | JWT remained valid after session revocation, session check silently failed open. Fixed: session validation in requireAuth, revocation check, fail-closed error handling |
-| M1 | ✅ | M1: Write endpoints (PUT/DELETE students, events, timetable) use prepared statements with class_teachers isolation |
-| M2 | ✅ | M2: Cache invalidation is namespace-aware (`cacheInvalidate('classes:abc123:')` with trailing colon) |
-| M3 | ✅ | M3: Cache keys use delimiter format preventing `classes:1` vs `classes:10` collision |
-| M4 | ✅ | M4: Session check errors return 401/503 instead of silently passing |
-| M5 | ✅ | M5: Database restore drains write queue + uses `db.restore()` |
-| M6 | ✅ | M6: Sync fingerprint expanded to 5 dimensions (students, records, events, timetable, seating) |
-| M7 | ✅ | M7: Reports/Excel use Map-indexed records for O(1) lookup |
-| M8 | ✅ | M8: 7 alert/confirm calls in Roster, Schedule, SeatingChart replaced with react-hot-toast |
-| L1 | ✅ | Role management uses prepared statement `db.stmt.updateClassTeacherRole` |
-| L2 | ✅ | Dead code `Timetable/types.ts` deleted |
-| L3 | ✅ | Dashboard imports `parseTime` from `timetableUtils` |
-| L4 | ✅ | Dashboard skeleton loading dead code removed |
-| L5 | ✅ | Event IDs use `crypto.randomUUID()` |
-| L6 | ✅ | RandomPicker interval cleanup + double-pick guard |
-| L7 | ✅ | ExamTimer ref-based countdown (no interval recreation) |
-| L8 | ✅ | Stopwatch uses `Date.now()` delta (no drift) |
-| L9 | ✅ | Gatekeeper uses `format(new Date(), 'yyyy-MM-dd')` for local date |
-| L10 | ✅ | Invite redeem verifies class exists before granting access |
-| L11 | ✅ | Compound indexes created after table creation |
-| L12 | ✅ | Click-outside handlers for ALL dropdowns (created `useClickOutside.ts` hook) |
-| L13 | ✅ | Roster add row has 6 td cells matching 6 header columns |
-| L14 | ✅ | Roster has separate add* and edit* state variables |
-
-### Beyond Audit:
-- 9 additional alert/confirm in AdminDashboard.tsx + Sidebar.tsx replaced with react-hot-toast
-- Zero `alert()`, `confirm()`, `window.confirm()` remain anywhere in `src/`
+1. Project Overview
+2. Tech Stack & Dependencies
+3. File Map with Line Counts
+4. Architecture Deep Dive
+   4.1 Database Schema
+   4.2 Backend API (routes.ts)
+   4.3 Frontend State (store.ts)
+   4.4 API Client (api.ts)
+   4.5 Frontend Components
+   4.6 Server Setup (server.ts)
+   4.7 Validation (validation.ts)
+   4.8 Error Handling (errorHandler.ts)
+5. Completed Work (37 Audit Items + Beyond)
+6. Migration Plan Status (All 37 items ✅)
+7. Remaining Cross-Cutting Concerns (6 items)
+8. How The App Works End-to-End
+9. Common Patterns & Gotchas
+10. Commands & Workflow
+11. Testing
+12. Deployment
+13. Important Notes for Next Agent
 
 ---
 
-## REMAINING CROSS-CUTTING CONCERNS (from AUDIT_LOG.md)
+## 1. PROJECT OVERVIEW
 
-These were listed in the audit but NOT fixed yet. All require judgment calls before implementing:
+Teacher Assistant is a **local-first classroom management web app** for teachers. It was originally single-user and has been fully migrated to multi-user support with teacher isolation, RBAC, invite system, session tracking, and real-time sync.
 
-1. **No Service/Repository Layer** — Components read directly from Zustand store. No abstraction between components and data. Future PSG migration would scatter changes.
-2. **Store Mutations Are Async but Not Atomic** — `addStudent` calls API then updates local state. If API succeeds but state update fails (or vice versa), UI and DB diverge.
-3. **No Request Deduplication** — Multiple components can trigger same API call simultaneously. React Query helps but not for Zustand store actions.
-4. **Error Handling Inconsistency** — Some endpoints return `{ error: 'message' }`, some use global error handler, some silently catch. Frontend mixes `toast.error()` with silent failures.
-5. **No Input Sanitization Beyond Zod** — Zod validates shape/length but doesn't sanitize HTML entities, control characters. App relies on React's automatic JSX escaping (fine for rendering, not for DB storage).
-6. **Hardcoded Defaults in Multiple Places** — Default class creation in store.ts, routes.ts, and db.ts. Default admin creation in db.ts (two places). Default password hints scattered.
+**Core Features:**
+- Attendance marking per-class per-day with undo
+- Student roster management (CRUD, archive, bulk import/export via Excel)
+- Attendance reports with monthly Excel export (configurable columns)
+- Timetable/schedule builder (day-of-week slots with subjects and lessons)
+- Class schedule calendar with events (Classwork, Test, Exam, Holiday, Other)
+- Seating chart (drag-and-drop style grid)
+- Random student picker with spinning animation
+- Student group generator
+- Exam countdown timer + stopwatch
+- Gatekeeper: exam entry monitor that verifies student ID against roster
+- Admin dashboard: backup/restore, data reset, teacher management, invite management
+
+**Design Philosophy:** Local-first (runs on a single machine, SQLite file database), dark/light theme, responsive.
 
 ---
 
-## KEY FILES MAP
+## 2. TECH STACK & DEPENDENCIES
+
+### Frontend
+- **React 19** with TypeScript
+- **Vite 6** (dev server + build)
+- **Tailwind CSS 4** (with `@tailwindcss/vite` plugin)
+- **Zustand 5** (global state management, no Redux)
+- **React Query 5** (auth + data fetching hooks)
+- **react-hot-toast** (all notifications/dialogs — zero alert/confirm remaining)
+- **lucide-react** (icons)
+- **date-fns 4** (date formatting)
+- **xlsx 0.18.5** (Excel import/export)
+- **motion** (animations)
+- **recharts 3.7** (charts in Reports)
+- **react-window + react-virtualized-auto-sizer** (virtualized lists)
+- **clsx + tailwind-merge** (class merging via `cn()` utility)
+- **react-error-boundary** (error recovery)
+
+### Backend
+- **Express 4.21** (API server)
+- **better-sqlite3 12.4** (synchronous SQLite, single connection)
+- **jsonwebtoken 9.0.3** (JWT auth, 7-day expiry)
+- **bcrypt 6.0** (password hashing)
+- **express-rate-limit 8.3** (throttling: 5 login attempts/15min, 100 POST/15min)
+- **helmet 8.1** (security headers)
+- **compression** (gzip responses)
+- **cookie-parser** (cookie-based auth)
+- **dotenv** (.env file)
+- **Zod 4.3.6** (request validation schemas)
+
+### Dev/Tooling
+- **TypeScript 5.8** (`tsc --noEmit`)
+- **tsx 4.21** (TypeScript runner for server/scripts)
+- **Playwright 1.58.2** (E2E testing)
+- **Vitest 4.0.18** (unit testing)
+- **@testing-library/react 16.3** (component testing)
+
+---
+
+## 3. FILE MAP WITH LINE COUNTS
 
 ```
-db.ts          — Database schema, prepared statements, write queue, cache layer
-routes.ts      — All API endpoints, auth middleware, rate limiting, invite system
-server.ts      — Express setup, Vite middleware integration, error handling
-src/store.ts   — Zustand store (all state + CRUD actions + reloadClassData)
-src/hooks/useData.ts — React Query hooks + useClassSync poll hook
-src/hooks/useClickOutside.ts — Reusable click-outside handler (added this session)
-src/components/AdminDashboard.tsx  — Admin panel (backup, reset, password, invite management)
-src/components/Dashboard.tsx       — Main dashboard view
-src/components/Roster.tsx          — Student roster management
-src/components/Schedule.tsx        — Schedule/calendar with events
-src/components/Reports.tsx         — Attendance reports + Excel export
-src/components/Settings.tsx        — Class settings
-src/components/Sidebar.tsx         — Navigation + class switcher
-src/components/Timetable/Timetable.tsx — Timetable component
-src/components/Timetable/ExportMenu.tsx — Timetable export dropdown
-src/components/Timetable/timetableUtils.ts — Shared timetable utilities
-src/components/SeatingChart.tsx    — Interactive seating chart
-src/components/RandomPicker.tsx    — Random student picker
-src/components/GroupGenerator.tsx  — Student group generator
-src/components/ExamTimer.tsx       — Exam countdown timer
-src/components/Gatekeeper.tsx      — Gate/entry monitor for exams
-src/components/TakeAttendance.tsx  — Quick attendance marking
-src/lib/api.ts   — Frontend fetch wrapper (all API calls go through here)
-src/lib/validation.ts — Zod schemas for server-side validation
-src/lib/errorHandler.ts — Express error middleware
-src/utils/excel.ts — Excel import/export (xlsx library)
-src/utils/cn.ts — Tailwind class merge utility
-MIGRATION_PLAN.md — Migration plan (37 items, all complete)
-AUDIT_LOG.md — Architecture audit log (all fixes complete)
+├── db.ts (533 lines)              — Database: schema, prepared statements, write queue, cache, migrations
+├── routes.ts (986 lines)          — All API endpoints + auth/rate-limit middleware
+├── server.ts (129 lines)          — Express setup, Vite integration, request logger, error handling
+├── package.json (75 lines)        — Dependencies + npm scripts
+├── MIGRATION_PLAN.md              — Original migration plan, all 37 items complete
+├── AUDIT_LOG.md                   — Architecture audit, all fixes complete
+├── AGENT_HANDOFF.md               — This file
+│
+├── src/
+│   ├── store.ts (776 lines)       — Zustand state: all data types + CRUD actions + sync
+│   ├── App.tsx (205 lines)        — Main app: auth routing, layout, class sync
+│   ├── main.tsx                   — React entry point
+│   ├── index.css                  — Tailwind directives + global styles
+│   │
+│   ├── lib/
+│   │   ├── api.ts (82 lines)      — Frontend fetch wrapper (all API calls go through here)
+│   │   ├── validation.ts (74 lines) — Zod schemas + validation middleware
+│   │   └── errorHandler.ts (85 lines) — Express error middleware
+│   │
+│   ├── hooks/
+│   │   ├── useData.ts (99 lines)  — React Query hooks + useClassSync poll hook
+│   │   └── useClickOutside.ts (28 lines) — Dropdown click-outside handler
+│   │
+│   ├── components/
+│   │   ├── AdminDashboard.tsx     — Admin panel (backup, reset, password, teacher management)
+│   │   ├── Dashboard.tsx          — Main dashboard (stats + today's attendance)
+│   │   ├── Roster.tsx             — Student roster: add/edit/archive/import/export
+│   │   ├── Schedule.tsx           — Monthly calendar with event CRUD
+│   │   ├── Reports.tsx            — Attendance reports per student per month
+│   │   ├── Settings.tsx           — Class settings
+│   │   ├── Sidebar.tsx            — Navigation + class switcher
+│   │   ├── TakeAttendance.tsx     — Quick attendance grid
+│   │   ├── SeatingChart.tsx       — Interactive seating chart
+│   │   ├── RandomPicker.tsx       — Spinning random student picker
+│   │   ├── GroupGenerator.tsx     — Student group generator
+│   │   ├── ExamTimer.tsx          — Countdown timer + stopwatch
+│   │   ├── Gatekeeper.tsx         — Exam entry gate monitor
+│   │   ├── InviteTeacherModal.tsx — Invite system modal
+│   │   ├── ErrorBoundary.tsx      — React error boundary wrapper
+│   │   ├── Skeleton.tsx           — Loading skeleton component
+│   │   │
+│   │   └── Timetable/
+│   │       ├── Timetable.tsx      — Main timetable component
+│   │       ├── ExportMenu.tsx     — Timetable export dropdown
+│   │       ├── DaySelector.tsx    — Day-of-week selector
+│   │       ├── SlotForm.tsx       — Add/edit slot form
+│   │       ├── SlotCard.tsx       — Slot card display
+│   │       ├── SlotListItem.tsx   — Slot list display
+│   │       ├── WeekView.tsx       — Weekly timetable view
+│   │       ├── index.ts           — Re-exports
+│   │       └── timetableUtils.ts  — Shared utilities (DAYS, parseTime, colors)
+│   │
+│   ├── utils/
+│   │   ├── excel.ts (673 lines)   — All Excel import/export functions
+│   │   └── cn.ts (6 lines)        — Tailwind class merge: clsx + twMerge
+│   │
+│   └── test/
+│       ├── setup.ts               — Test setup
+│       ├── store.test.ts          — Store unit tests
+│       └── e2e/                   — Playwright E2E tests
+│           ├── auth.spec.ts
+│           ├── attendance.spec.ts
+│           ├── classroom-tools.spec.ts
+│           ├── dashboard.spec.ts
+│           ├── reports-settings-navigation.spec.ts
+│           ├── roster.spec.ts
+│           └── timetable.spec.ts
 ```
 
 ---
 
-## KEY ARCHITECTURE PATTERNS
+## 4. ARCHITECTURE DEEP DIVE
 
-### Multi-Teacher Access Control
-- Every data table is scoped to a class
-- `class_teachers` table maps (teacher_id, class_id, role)
-- All prepared statements verify teacher access via subquery: `class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)`
-- Middleware: `requireAuth`, `requireClassAccess`, `requireClassOwner`, `requireRole`
-- Role hierarchy: owner(4) > admin(3) > teacher(2) > assistant(1)
+### 4.1 Database Schema (db.ts, 533 lines)
 
-### Write Queue
-- better-sqlite3 is synchronous, so concurrent writes can cause "database is locked"
-- `db.enqueueWrite(fn)` serializes writes through a queue, reads bypass the queue
-- REST handlers use `withWriteQueue(handler)` wrapper
+**Tables:**
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| teachers | Teacher accounts | id, username, password_hash, name, created_at, last_login |
+| classes | Class metadata | id, teacher_id (owner), name, updated_at |
+| students | Student records | id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived, updated_at |
+| attendance_records | Daily attendance | student_id, class_id, date, status, reason (composite PK: student_id+date), updated_at |
+| daily_notes | Per-class notes | class_id, date, note (composite PK: class_id+date) |
+| events | Calendar events | id, class_id, date, title, type, description, updated_at |
+| timetable_slots | Weekly timetable | id, class_id, day_of_week(0-6), start_time, end_time, subject, lesson, updated_at |
+| seating_layout | Seating chart | class_id, seat_id, student_id (composite PK: class_id+seat_id) |
+| admin_settings | Key-value settings | key, value |
+| class_teachers | Teacher-class access | class_id, teacher_id, role (owner/admin/teacher/assistant), (composite PK) |
+| invite_codes | Invite system | code, class_id, role, created_by, created_at, expires_at, used_by, used_at |
+| user_sessions | Session tracking | id, teacher_id, device_name, ip_address, created_at, last_active, expires_at, is_revoked |
 
-### Cache Layer
-- In-memory TTL cache in `db.ts` with namespace-aware invalidation
-- Keys use colon-delimiters: `classes:teacherId`, `teachers:class:classId`, `teachers:all`, `settings:all`
-- `cacheInvalidate(pattern)` uses trailing colon to prevent `classes:1` matching `classes:10`
-- Default TTL: 5s for class data, 60s for static data (settings, teacher list)
+**Indexes:** 20+ indexes covering class_id, date, compound patterns:
+- idx_students_class_archived (class_id, is_archived)
+- idx_records_class_date_status (class_id, date, status)
+- idx_events_class_date_type (class_id, date, type)
+- idx_timetable_class_day (class_id, day_of_week)
+- idx_invite_codes_class_active (class_id, expires_at, used_by)
+- idx_user_sessions_teacher_active (teacher_id, is_revoked, expires_at)
 
-### Real-Time Sync
-- `useClassSync` hook polls every 30s
-- Compares 5-part fingerprint: `students:length:records:events:timetable:seating`
-- On mismatch, calls `reloadClassData(classId)` (bypasses the `cls.loaded` guard)
+**Key Patterns:**
+- All data-modifying prepared statements include teacher isolation via `class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)`
+- SQLite triggers auto-populate `updated_at` on UPDATE for 7 tables
+- Write queue serializes writes: `db.enqueueWrite(fn)` prevents "database is locked"
+- In-memory TTL cache with namespace-aware invalidation: `db.cache.get(key)`, `db.cache.invalidate('classes:abc123:')`
 
-### Frontend State
-- Zustand store with flat state (students, records, events, timetable, etc.)
-- `currentClassId` selects which class to display
-- `loadClassData()` has `cls.loaded` guard (lazy load only)
-- `reloadClassData()` fetches fresh data unconditionally (for sync)
-- API layer in `src/lib/api.ts` — centralized fetch wrapper with error handling
+**dbProxy:** The exported `db` is a Proxy wrapping the SQLite connection. It exposes:
+- All native better-sqlite3 methods (.prepare, .pragma, .close, etc.)
+- `db.stmt` — 57 pre-compiled prepared statements
+- `db.enqueueWrite(fn)` — Queue a write operation
+- `db.cache` — { get, set, invalidate, cached }
+- `db.restore(buffer)` — Safely replace the database file with proper connection handling
+
+### 4.2 Backend API (routes.ts, 986 lines)
+
+**Middleware Stack:**
+1. `requireAuth` — Validates JWT cookie, checks session revocation, fails closed on errors
+2. `requireClassAccess(paramName)` — Verifies teacher has access to the class via class_teachers
+3. `requireClassOwner(paramName)` — Verifies teacher is the class owner
+4. `requireRole(paramName, minRole)` — Verifies minimum role level
+5. `withWriteQueue(handler)` — Wraps write handlers through the serializing queue
+
+**Auth Endpoints (no auth required):**
+- `POST /auth/login` — Username/password → JWT cookie + session record
+- `POST /auth/logout` — Clear auth cookie
+- `GET /auth/verify` — Check if authenticated
+- `GET /auth/me` — Get current teacher info
+- `GET /health` — Database health check
+
+**Public (post-auth required):**
+- `/teachers/register` — Create new teacher (auth required, rate limited)
+- `/teachers` — List all teachers (public, cached)
+- `/database/backup` — Download database file (auth required)
+- `/database/restore` — Upload and restore database (auth required, drains write queue first)
+
+**Class-scoped endpoints (all require auth + class access):**
+- GET/POST/PUT/DELETE `/classes` and `/classes/:id`
+- GET/POST `/classes/:classId/students` + PUT/DELETE `/students/:id`
+- GET/POST `/classes/:classId/records` + POST `/records` (batch save)
+- GET/POST `/classes/:classId/daily-notes`
+- GET/POST `/classes/:classId/events` + PUT/DELETE `/events/:id`
+- GET/POST `/classes/:classId/timetable` + PUT/DELETE `/timetable/:id`
+- GET/POST/PUT/DELETE `/classes/:classId/seating`
+- GET `/settings`, POST `/settings`
+
+**Multi-Teacher endpoints:**
+- GET/POST/DELETE `/classes/:classId/teachers`
+- GET/POST/DELETE `/classes/:classId/invites`
+- POST `/invites/redeem`
+- PUT `/classes/:classId/teachers/:teacherId/role`
+- GET `/sessions`, POST `/sessions/revoke`
+- GET `/classes` — returns classes teacher has access to via class_teachers
+
+**Admin endpoints (after requireAuth):**
+- Admin dashboard data aggregated across ALL classes/teachers
+- `/classes` GET returns all classes when teacher has admin role
+- Global settings management
+
+### 4.3 Frontend State (store.ts, 776 lines)
+
+**Zustand Store Structure:**
+```
+AppState:
+  isInitialized: boolean
+  isAuthenticated: boolean
+  teacherId: string | null
+  teacherName: string | null
+  classes: ClassData[]          // All classes (loaded on demand)
+  currentClassId: string | null
+  
+  // Flat view of current class data (what components subscribe to):
+  students: Student[]
+  records: AttendanceRecord[]
+  dailyNotes: Record<string, string>
+  events: CalendarEvent[]
+  timetable: TimetableSlot[]
+  seatingLayout: Record<string, string>
+  theme: 'light' | 'dark'
+  lastAttendanceChange: AttendanceRecord | null   // For undo
+```
+
+**Key Methods & Flow:**
+1. `initializeStore()` — Fetches classes from API, eagerly loads first class, sets flat state
+2. `loadClassData(classId)` — Lazy-loads a class ONCE (guarded by `cls.loaded`)
+3. `reloadClassData(classId)` — FORCE-reloads class data (used by sync, bypasses guard)
+4. `setCurrentClass(id)` — Triggers loadClassData if not loaded, then updates flat state
+5. All CRUD methods: call API → update local state on success → toast on error
+6. `setStudents()` — Bulk sync (used by Excel import)
+7. `clearAllData()` — Deletes all classes, creates fresh default class
+
+**Dual-State Pattern:** The store maintains BOTH `classes[]` (per-class data) AND flat fields (`students`, `records`, etc. for current class). The `updateCurrentClass()` helper syncs both when mutating.
+
+### 4.4 API Client (api.ts, 82 lines)
+
+Single `fetchApi()` wrapper:
+- Base path: `/api`
+- Always includes `credentials: 'include'` (cookie auth)
+- Always sets `Content-Type: application/json`
+- Throws on non-200: `new Error('API error: ${response.statusText}')`
+
+Exports 30+ typed methods matching all API endpoints by name.
+
+### 4.5 Frontend Components
+
+Every component follows this pattern:
+```tsx
+const students = useStore((state) => state.students);
+const addStudent = useStore((state) => state.addStudent);
+// ... subscribe to specific slices
+```
+
+No prop drilling of data — components read directly from Zustand. All mutations go through store actions (which handle API calls).
+
+**Notable patterns:**
+- Reports.tsx: Uses Map-indexed records for O(1) lookup (M7 fix)
+- SeatingChart.tsx: Grid-based layout with editable seats
+- ExamTimer.tsx: Ref-based countdown + Date.now() delta stopwatch (L7, L8 fixes)
+- RandomPicker.tsx: setInterval with cleanup on unmount (L6 fix)
+- Gatekeeper.tsx: Local date format for matching records (L9 fix)
+
+### 4.6 Server Setup (server.ts, 129 lines)
+
+- Express on port 3000
+- Local mode: `127.0.0.1` only
+- Network mode: `0.0.0.0` (run with `npm run dev:network`)
+- Vite middleware in dev mode, static files in production
+- Custom request logger (color-coded, 500s to server-error.log)
+- Global error handler at the end
+- Uncaught exception/rejection handlers log to server-error.log
+
+### 4.7 Validation (validation.ts, 74 lines)
+
+Zod schemas for: login, class, student, attendance_record, event, timetable_slot, teacher, setting.
+
+The `validate(schema)` middleware wraps Zod parsing. On ZodError, returns 400 with field-level error details.
+
+### 4.8 Error Handling (errorHandler.ts, 85 lines)
+
+- `APIError` class with statusCode
+- `Errors` factory: NotFound, Unauthorized, Forbidden, BadRequest, Conflict
+- `errorHandler` middleware: handles APIError, SyntaxError, SQLite constraints, defaults to 500
+- `asyncHandler` for async route wrappers (not used in routes.ts, routes use manual try/catch)
+- `validateRequest` for custom validators
 
 ---
 
-## COMMON COMMANDS
+## 5. COMPLETED WORK (ALL 37 AUDIT ITEMS)
+
+### Critical (3/3 fixed)
+- **C1:** Poll-based sync was no-op (loadClassData guarded by cls.loaded). Fix: created reloadClassData() that bypasses guard. useClassSync calls it.
+- **C2:** updated_at columns were NULL forever. Fix: SQLite AFTER UPDATE triggers on all 7 tables.
+- **C3:** JWT session revocation bypassable. Fix: requireAuth now checks session, fails closed on DB errors, auth is cookie-only (no Authorization header bypass).
+
+### Medium (8/8 fixed)
+- **M1:** PUT/DELETE endpoints use class_teachers isolation in prepared statements
+- **M2/M3:** Cache invalidation uses namespace-aware pattern with trailing colon (`classes:abc123:`)
+- **M4:** Session check errors return 401/503 instead of silently passing
+- **M5:** Database restore drains write queue + uses db.restore()
+- **M6:** Sync fingerprint expanded to 5 dimensions
+- **M7:** Reports + Excel use Map-indexed records (O(n) instead of O(n*m))
+- **M8:** 7 alert/confirm in Roster, Schedule, SeatingChart → react-hot-toast
+
+### Low (12/12 fixed)
+- **L1:** Prepared statement for role management
+- **L2:** Dead code Timetable/types.ts deleted
+- **L3:** Dashboard imports parseTime from timetableUtils
+- **L4:** Dashboard skeleton dead code removed
+- **L5:** Event IDs use crypto.randomUUID()
+- **L6:** RandomPicker interval cleanup
+- **L7:** ExamTimer ref-based countdown
+- **L8:** Stopwatch Date.now() delta
+- **L9:** Gatekeeper local date format
+- **L10:** Invite redeem verifies class exists
+- **L11:** Compound index creation order fixed
+- **L12:** Click-outside handlers for ALL dropdowns (useClickOutside hook)
+- **L13:** Roster add row column alignment
+- **L14:** Separate add/edit state in Roster
+
+### Beyond Audit
+- **9 additional** alert/confirm replaced in AdminDashboard.tsx + Sidebar.tsx
+- **Zero** alert(), confirm(), window.confirm() remain in src/
+- **useClickOutside hook** created and applied to 4 dropdowns
+
+---
+
+## 6. MIGRATION PLAN STATUS
+
+All 37 items complete. See MIGRATION_PLAN.md for the original plan with phases 1-5.
+
+**Commits on develop (recent):**
+```
+3752e31  docs: add agent handoff file, update migration plan and audit log
+edf52a7  fix: replace all remaining alert/confirm with toast dialogs
+9b208a5  fix(L12): add click-outside handlers for all dropdown menus
+f345dd8  fix: resolve remaining low-priority audit findings (L2-L4, L10-L11, L13-L14)
+9da0db1  fix: resolve all remaining audit findings (M5, M7, M8, L1, L5-L9)
+213cee3  fix(M7): optimize Reports and Excel export from O(n×m) to O(n) with record indexing
+dd799c9  fix(M2,M3): implement namespace-aware cache invalidation
+ec70cb7  fix(M1): add teacher isolation to UPDATE/DELETE prepared statements
+51680f5  fix(C3,M4): fix JWT session revocation bypass and fail-closed session checks
+d2ead48  fix(C2): add SQLite triggers to auto-populate updated_at columns
+3339055  fix(C1): fix poll-based sync no-op bug
+```
+
+---
+
+## 7. REMAINING CROSS-CUTTING CONCERNS (NOT FIXED YET)
+
+These require judgment calls before implementing. Priority order recommended:
+
+### #4 — Error Handling Inconsistency (LOW RISK, HIGH IMPACT) — RECOMMENDED FIRST
+**Problem:**
+- Most endpoints use try/catch and return `{error: 'message'}` directly
+- `errorHandler.ts` defines `APIError` class and `Errors` factory — but routes.ts barely uses them
+- Some endpoints silently swallow errors: `catch (e) { }` (empty catch blocks exist)
+- Frontend api.ts throws generic `new Error('API error: ${response.statusText}')` — loses the actual JSON error message
+- Some store actions show `toast.error('Failed to ...')` but don't re-throw, so callers don't know it failed
+- The Zod validate middleware returns `{error: 'Validation failed', details: [...]}` — inconsistent format
+
+**What to do:**
+1. **Frontend api.ts:** Parse the JSON error body and throw it: `const body = await response.json(); throw new Error(body.error || response.statusText)`. This preserves the server's human-readable error.
+2. **Routes:** Standardize to use APIError pattern: `throw Errors.BadRequest('message')` instead of `res.status(400).json({error: 'message'})`. The errorHandler will handle it.
+3. **Catch blocks:** Replace empty catches with logging or proper error returns. At minimum `console.error('[routes] ...', e)`.
+4. **Store actions:** Consider having toast.error + NOT updating local state on API failure (most already do this, but some like setStudents do a rollback in the catch block).
+
+**Files to modify:** `src/lib/api.ts` (primary), `routes.ts` (secondary), `src/store.ts` (verify consistency)
+
+### #2 — Store Mutations Are Async but Not Atomic (LOW RISK)
+**Problem:** Most store actions follow: `await api.call()` then `set(state => update)`. If the API succeeds but `set()` throws (unlikely but possible), or if the page unmounts between the two, data diverges.
+
+**What to do:**
+- Add optimistic rollback pattern: save old state → call API → if success, update state → if fail, restore old state
+- Many actions already do this (catch block shows toast.error and doesn't update state). Verify ALL actions follow this pattern.
+- Actions without the pattern: clearAllData (uses Promise.allSettled, handles partial failure), clearData (delete+recreate class pattern).
+
+**Files:** `src/store.ts`
+
+### #5 — No Input Sanitization Beyond Zod (LOW RISK)
+**Problem:** Zod validates max length and type but doesn't strip control characters, HTML entities, or leading/trailing whitespace. The app relies on React's automatic JSX escaping for rendering safety. But data stored in the database could be dirty.
+
+**What to do (pick one):**
+- Option A: Add a middleware that strips null bytes (`\x00`) and trims all string fields before they reach route handlers
+- Option B: Add `.transform()` to Zod schemas that trim/escape input
+- Option C: Do nothing — React's JSX escaping is sufficient for the rendering threat model
+
+**Files:** `src/lib/validation.ts` (for Option B) or `routes.ts`/`server.ts` (for Option A middleware)
+
+### #6 — Hardcoded Defaults in Multiple Places (LOW RISK)
+**Problem:** Default admin creation happens in db.ts at two places (lines ~197 and ~314). Default class creation in db.ts, store.ts, and routes.ts. Default password hints are scattered.
+
+**What to do:**
+- Consolidate default admin creation to ONE place in db.ts initSchema
+- Extract default constants: DEFAULT_TEACHER_ID, DEFAULT_CLASS_ID, DEFAULT_CLASS_NAME
+- Ensure only db.ts creates the default admin (removes store.ts and routes.ts defaults)
+
+**Files:** `db.ts` (primary)
+
+### #3 — No Request Deduplication (MEDIUM EFFORT)
+**Problem:** Multiple components can trigger the same API call. React Query handles deduplication for auth hooks but NOT for the direct Zustand store actions that components call.
+
+**What to do:** Only worth doing if migrating ALL data fetching to React Query instead of Zustand actions. This is the highest-effort item.
+
+**Files:** `src/store.ts`, `src/hooks/useData.ts`
+
+### #1 — No Service/Repository Layer (HIGHEST EFFORT)
+**Problem:** Components read directly from Zustand store. No abstraction between UI and data. Future PostgreSQL migration (Phase 5) would require changes in many files.
+
+**What to do:** Create a repository/service layer that wraps API calls and store interactions. Components talk to services, services talk to API + store. This is a major refactor — should be planned before starting.
+
+**Risk level:** HIGH. Would touch every component and the store.
+
+---
+
+## 8. HOW THE APP WORKS END-TO-END
+
+### User Journey
+1. **First visit:** User opens app at localhost:3000 → sees login screen
+2. **Login:** Default admin username=`admin` with auto-generated password (logged to console on first start)
+3. **After auth:** Dashboard shows attendance stats for the current class
+4. **Sidebar:** Switch between classes, create new class, access admin panel
+5. **Main features:** Take attendance, manage roster, view reports, build timetable, create schedule events, manage seating chart, use random picker, generate groups, run exam timer, use gatekeeper
+
+### Data Flow (Read)
+```
+Component renders → useStore(selector) reads flat state → display data
+
+On mount (App.tsx):
+  1. useAuth() queries /auth/verify
+  2. If authenticated: initializeStore() fetches classes from /api/classes
+  3. First class data is eagerly loaded (students, records, events, timetable, notes, seating)
+  4. Flat state populated from first class
+  
+On class switch:
+  1. setCurrentClass(id) called
+  2. If class not loaded: loadClassData(id) fetches all 6 data types from API
+  3. Flat state updated from the class's data
+```
+
+### Data Flow (Write)
+```
+User action → store method (e.g., addStudent) → api.createStudent() → POST /api/classes/:id/students
+  → Express handler validates → writes to SQLite (via db.enqueueWrite) → returns success
+  → Store updates local state → component re-renders
+
+Sync (30s):
+  → useClassSync polls API (GET all 5 data types)
+  → Compares fingerprint with previous
+  → If changed: reloadClassData() forces fresh fetch
+  → Store state updated, all subscribed components re-render
+```
+
+### Security Model
+- All routes after line 315 of routes.ts require `requireAuth` (JWT cookie)
+- `/database/restore` drains write queue first to prevent corruption
+- All class-scoped reads/writes verify teacher has access via class_teachers
+- Role hierarchy prevents non-owners from admin actions
+- Rate limiting prevents brute-force login
+- Helmet sets security headers
+- Prepared statements prevent SQL injection
+- Foreign keys with CASCADE delete prevent orphaned data
+
+---
+
+## 9. COMMON PATTERNS & GOTCHAS
+
+### The `api.ts` error problem
+```typescript
+// Current api.ts:
+if (!response.ok) {
+  throw new Error(`API error: ${response.statusText}`);  // LOSES the JSON body!
+}
+
+// The server sends: { error: "Student already exists" }
+// But the error thrown is: "API error: Bad Request" — no detail!
+// FIX: parse the JSON body and include error message
+```
+
+### Store action pattern inconsistency
+```typescript
+// Good (most actions):
+addStudent: async (student) => {
+  try {
+    await api.createStudent(classId, student);  // API call first
+    set(...);  // Update state only if API succeeds
+  } catch {
+    toast.error('Failed to add student');  // NO state update on failure
+  }
+}
+
+// Needs review: Some actions like setStudents do a weird rollback pattern
+// in the catch block that updates local state even on failure.
+```
+
+### Cache key collision awareness
+```typescript
+// GOOD: Keys use colons, invalidation uses trailing colon
+db.cache.set(`classes:${teacherId}`, value);  
+db.cache.invalidate(`classes:${teacherId}`); // becomes "classes:abc123:" for matching
+
+// The cache TTL is short (5s) so this is mainly for burst protection, not long-term caching.
+```
+
+### The `setRecordForClass` method
+This exists to record attendance for a class that is NOT the current class. It's used by some admin flows. Unlike other methods, it doesn't update flat state unless the target class IS the current class.
+
+### Class ID format
+Client-generated IDs: `class_${Date.now()}` format. This means if two classes are created in the same millisecond, IDs collide. Consider crypto.randomUUID() for future-proofing (like was done for events in L5).
+
+### SQLite WAL files
+You'll see `database.sqlite-wal` and `database.sqlite-shm` files in the directory. These are normal — SQLite WAL mode creates them automatically. Do not delete them while the server is running.
+
+### Testing caveat
+All E2E tests share a single database. Running the full suite in parallel causes flaky failures. The tests are designed to be run one at a time or with a clean DB between runs.
+
+---
+
+## 10. COMMANDS & WORKFLOW
 
 ```bash
 cd /home/richiesamlie/LocalAttendace-Final
 
-# Install deps (if needed)
-npm install
+# Dependencies
+npm install                          # Install all deps
 
-# TypeScript check
-npx tsc --noEmit
+# Dev server
+npm run dev                          # Start on localhost:3000
+npm run dev:network                  # Start on 0.0.0.0:3000 (LAN access)
 
-# Start dev server
-npm run dev
+# Build
+npm run build                        # Production build to dist/
+npm run preview                      # Preview production build
+npm run clean                        # Remove dist/
 
-# Commit and push
-git add -A && git commit -m "fix: ..." && git push origin develop
+# TypeScript
+npm run lint                         # tsc --noEmit (type check only)
 
-# Git config (already set)
-git config user.email "richiesamlie@users.noreply.github.com"
-git config user.name "richiesamlie"
+# Database
+npm run db:backup                    # Copy database.sqlite to backups/
+npm run db:restore                   # Interactive restore from backup
+npm run db:restore:list              # List available backups
+npm run db:seed                      # Seed database with test data
+
+# Docker
+npm run docker:build                 # Build Docker image
+npm run docker:up                    # docker-compose up -d
+npm run docker:down                  # docker-compose down
+npm run docker:logs                  # docker-compose logs -f
+
+# Tests
+npx playwright test                  # Run all E2E tests (can be flaky)
+npx vitest                           # Run unit tests
+npx vitest --ui                      # Run with UI
+
+# Git
+git status                           # Check working tree
+git log --oneline -10                # Recent commits
+git add -A && git commit -m "..."    # Stage and commit
+git push origin develop              # Push to remote
+git fetch origin && git diff develop origin/develop  # Check remote divergence
+```
+
+**Git config** (already set locally in this repo):
+```
+user.email = richiesamlie@users.noreply.github.com
+user.name = richiesamlie
 ```
 
 ---
 
-## IMPORTANT NOTES FOR NEXT SESSION
+## 11. TESTING
 
-1. **DO NOT clone the repo again** — it's already at `/home/richiesamlie/LocalAttendace-Final` with develop branch checked out and synced
-2. **Git config is set locally** — `user.email` and `user.name` configured in this repo
-3. **All 37 audit items are done** — do not re-verify them unless asked
-4. **Cross-cutting concerns are the next priority** — items #1-6 in "Remaining Cross-Cutting Concerns" above
-5. **The database is SQLite** — any schema changes need migrations (ALTER TABLE) and trigger updates
-6. **Tests exist** but e2e tests share a single DB — runs can be flaky with parallel execution
-7. **react-hot-toast** is the only dialog/notification system now — use `toast()`, `toast.success()`, `toast.error()` for all user feedback
-8. **useClickOutside hook** is at `src/hooks/useClickOutside.ts` — use for any new dropdowns
+### E2E Tests (Playwright)
+Located in `src/test/e2e/`. 7 test files covering:
+- auth.spec.ts — login, logout, auth flows
+- attendance.spec.ts — taking attendance, marking all present, undo
+- roster.spec.ts — adding students, importing, exporting, archiving
+- timetable.spec.ts — adding/removing/editing slots
+- classroom-tools.spec.ts — random picker, group generator
+- reports-settings-navigation.spec.ts — reports, navigation
+- dashboard.spec.ts — dashboard stats and rendering
+
+**Caveat:** Tests share a single database. The CI workflow (`.github/workflows/ci.yml`) handles DB isolation. Local runs may need manual DB management between test runs.
+
+### Unit Tests
+`src/test/store.test.ts` — Tests Zustand store actions in isolation.
 
 ---
 
-## CROSS-CUTTING CONCERN PRIORITY RECOMMENDATION
+## 12. DEPLOYMENT
 
-If continuing work, tackle these in order:
+### Docker
+```dockerfile
+# Multi-stage: builds frontend with Vite, then serves with Node
+# Uses node:22-alpine base
+# Exposes port 3000
+# Environment: NODE_ENV=production
+```
 
-1. **Error Handling Consistency (#4)** — Standardize API error format, ensure all endpoints return `{error: 'message'}`, make frontend `api.ts` surface all errors consistently. Low risk, high impact.
+### Production Startup
+```bash
+npm run build          # Build frontend
+NODE_ENV=production npm start    # Serve with Express
+```
 
-2. **Atomic Store Mutations (#2)** — Add rollback in store actions when API fails. Pattern: try API call, if it fails return error without updating local state (most already do this but some don't).
+### Environment Variables
+See `.env.example`:
+- `JWT_SECRET` (required) — for JWT signing
+- `DEFAULT_ADMIN_PASSWORD` (optional) — override default admin password
+- `NODE_ENV` — 'production' for prod mode
 
-3. **Input Sanitization (#5)** — Add middleware to strip/escape control characters in text fields before DB insert. Low risk.
+---
 
-4. **Hardcoded Defaults (#6)** — Consolidate admin/teacher default creation to one place in db.ts. Low risk.
+## 13. IMPORTANT NOTES FOR NEXT AGENT
 
-5. **Request Deduplication (#3)** — Use React Query for all data fetching instead of direct Zustand actions. Higher effort.
+### CRITICAL — Read These First
+1. **DO NOT clone the repo** — it is already at `/home/richiesamlie/LocalAttendace-Final` with `develop` branch checked out and fully synced with origin
+2. **Git config is set** — `user.email` and `user.name` configured locally
+3. **All 37 audit items are DONE** — do not re-verify them unless explicitly asked
+4. **TypeScript compiles cleanly** — `npx tsc --noEmit` exits 0
+5. **Dependencies are installed** — `npm install` already ran, `node_modules/` exists
+6. **The database file exists** — `database.sqlite` is present (may have test data from seed)
 
-6. **Service/Repository Layer (#1)** — Create abstraction between components and store. Highest effort, best for future PostgreSQL migration (#5).
+### When Committing
+- Always run `npx tsc --noEmit` first to confirm no type errors
+- Commit incrementally per fix/change (small, descriptive commits)
+- Always push to `origin/develop` after committing
+- Follow the existing commit message pattern: `fix(label): description` or `feat(label): description`
+
+### When Modifying Specific Files
+- **db.ts:** Always add migrations for schema changes. Check if column/index/trigger exists before creating. Use `db.stmt` for all queries.
+- **routes.ts:** Write endpoints MUST use `withWriteQueue()`. All class-scoped endpoints MUST verify access. Use `requireClassAccess` or `requireClassOwner` middleware.
+- **store.ts:** All async actions: API call first, then set state in try block, catch shows toast.
+- **src/lib/api.ts:** All fetch calls go through this file. Currently throws generic errors.
+- **Any new dropdown:** Use `useClickOutside` hook from `src/hooks/useClickOutside.ts`
+- **Any user notification:** Use `react-hot-toast` — NO alert/confirm anywhere
+
+### Cross-Cutting Concern Priority
+If asked to continue improving the codebase, work through them in this order:
+1. **#4 Error Handling Consistency** — Fix api.ts error parsing first (10 lines), then audit catch blocks
+2. **#2 Atomic Store Mutations** — Verify all store actions follow try/API/then/catch pattern
+3. **#5 Input Sanitization** -- Decide if needed (React JSX escaping is probably sufficient)
+4. **#6 Hardcoded Defaults** -- Consolidate to one place in db.ts
+5. **#3 Request Deduplication** -- Only if migrating to React Query
+6. **#1 Service/Repository Layer** -- Major refactor, plan first
+
+### Known Quirks
+- The app auto-creates a default class if none exist (on first install)
+- Student archive (soft delete) keeps the record in DB with `is_archived=1`
+- The write queue serializes writes but reads are concurrent and uncached unless explicitly cached
+- The cache TTL is 5 seconds — it's for burst protection, not long-term caching
+- The session system creates a session record on login, checks it on every request via cookie
+- JWT has 7-day expiry matching session expiry (intentional design, no refresh token)
+- `clearData()` deletes the class and recreates it with the same name (resets all data for that class)
+
+---
+
+*Last updated: 2026-04-06 by AI Agent, session following the multi-user migration + architecture audit.*
