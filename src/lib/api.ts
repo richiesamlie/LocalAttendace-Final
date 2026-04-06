@@ -12,7 +12,12 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     },
   });
   if (!response.ok) {
-    throw new Error(`API error: ${response.statusText}`);
+    let message = response.statusText;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch { /* ignore JSON parse errors */ }
+    throw new Error(message);
   }
   return response.json();
 }

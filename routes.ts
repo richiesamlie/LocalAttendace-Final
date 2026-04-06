@@ -26,7 +26,7 @@ const getTeacherId = (req: express.Request): string | null => {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return decoded.teacherId;
   } catch {
-    return null;
+    return null; // Invalid/expired JWT — let requireAuth return 401
   }
 };
 
@@ -188,7 +188,7 @@ router.post('/auth/login', authLimiter, validate(loginSchema), (req, res) => {
     db.stmt.updateTeacherLastLogin.run(teacher.id);
     db.stmt.insertSession.run(sessionId, teacher.id, req.headers['user-agent']?.slice(0, 100) || 'unknown', req.ip || 'unknown', expiresAt);
   } catch (e) {
-    // Session tracking is non-critical
+    console.warn('[auth] Failed to create session record:', (e as Error).message);
   }
 
   const token = jwt.sign({ teacherId: teacher.id, username: teacher.username, sessionId }, JWT_SECRET, { expiresIn: '7d' });

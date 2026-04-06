@@ -368,7 +368,6 @@ export const useStore = create<AppState>()((set, get) => ({
     } catch (error) {
       console.error('Failed to sync students', error);
       toast.error('Failed to sync students with database');
-      set((state) => updateCurrentClass(state, { students }));
     }
   },
   
@@ -653,8 +652,12 @@ export const useStore = create<AppState>()((set, get) => ({
   
   toggleTheme: async () => {
     const newTheme = get().theme === 'light' ? 'dark' : 'light';
-    await api.saveSetting('theme', newTheme);
-    set({ theme: newTheme });
+    try {
+      await api.saveSetting('theme', newTheme);
+      set({ theme: newTheme });
+    } catch (error) {
+      toast.error('Failed to update theme');
+    }
   },
   
   clearData: async () => {
