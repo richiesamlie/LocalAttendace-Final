@@ -417,6 +417,20 @@ These require judgment calls before implementing. Priority order recommended:
 
 (None currently — all cross-cutting concerns have been addressed)
 
+### Future: PostgreSQL Migration (Phase 5)
+
+When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
+
+1. **5.1 Data Layer Abstraction** ✅ NOW COMPLETE
+   - Repository interfaces created in `src/repositories/`
+   - SQLite implementations ready
+   - Repository container (`repositories` object) for easy swapping
+   - To add PostgreSQL: create `PostgreSQL*Repository` classes, update `createRepositoryContainer()`
+
+2. **5.2 Keep API Same**
+   - Route handlers stay mostly the same
+   - Only update repository implementations
+
 ---
 
 ## COMPLETED CROSS-CUTTING CONCERNS
