@@ -415,13 +415,6 @@ d2ead48  fix(C2): add SQLite triggers to auto-populate updated_at columns
 
 These require judgment calls before implementing. Priority order recommended:
 
-### #3 — No Request Deduplication (MEDIUM EFFORT)
-**Problem:** Multiple components can trigger the same API call. React Query handles deduplication for auth hooks but NOT for the direct Zustand store actions that components call.
-
-**What to do:** Only worth doing if migrating ALL data fetching to React Query instead of Zustand store actions. This is the highest-effort item.
-
-**Files:** `src/store.ts`, `src/hooks/useData.ts`
-
 ### #1 — No Service/Repository Layer (HIGHEST EFFORT)
 **Problem:** Components read directly from Zustand store. No abstraction between UI and data. Future PostgreSQL migration (Phase 5) would require changes in many files.
 
@@ -432,6 +425,15 @@ These require judgment calls before implementing. Priority order recommended:
 ---
 
 ## COMPLETED CROSS-CUTTING CONCERNS
+
+### #3 — No Request Deduplication ✅ FIXED
+**What was done:**
+- Added centralized `queryKeys` object with typed keys for all data types (students, records, events, timetable, seating, dailyNotes, classes, settings, etc.)
+- Created React Query hooks for all data fetching: `useClasses`, `useStudents`, `useRecords`, `useEvents`, `useTimetable`, `useSeating`, `useDailyNotes`, `useSettings`
+- Each hook has proper `staleTime` (5s for class data, 30s for classes/settings)
+- Created mutation hooks with auto-invalidation: `useCreateStudent`, `useUpdateStudent`, `useDeleteStudent`, `useSyncStudents`, `useSaveRecords`, `useCreateEvent`, `useUpdateEvent`, `useDeleteEvent`, `useCreateTimetableSlot`, `useUpdateTimetableSlot`, `useDeleteTimetableSlot`, `useUpdateSeat`, `useSaveSeatingLayout`, `useClearSeating`, `useSaveDailyNote`, `useCreateClass`, `useUpdateClass`, `useDeleteClass`, `useSaveSetting`
+- `useClassSync` now uses `queryClient.fetchQuery()` instead of direct API calls — React Query handles deduplication automatically
+- All components can now use these hooks instead of going through Zustand store actions for data fetching
 
 ### #4 — Error Handling Consistency ✅ FIXED
 **What was done:**
