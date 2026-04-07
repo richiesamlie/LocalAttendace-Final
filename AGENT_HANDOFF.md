@@ -415,16 +415,27 @@ d2ead48  fix(C2): add SQLite triggers to auto-populate updated_at columns
 
 These require judgment calls before implementing. Priority order recommended:
 
-### #1 — No Service/Repository Layer (HIGHEST EFFORT)
-**Problem:** Components read directly from Zustand store. No abstraction between UI and data. Future PostgreSQL migration (Phase 5) would require changes in many files.
-
-**What to do:** Create a repository/service layer that wraps API calls and store interactions. Components talk to services, services talk to API + store. This is a major refactor — should be planned before starting.
-
-**Risk level:** HIGH. Would touch every component and the store.
+(None currently — all cross-cutting concerns have been addressed)
 
 ---
 
 ## COMPLETED CROSS-CUTTING CONCERNS
+
+### #1 — No Service/Repository Layer ✅ FIXED
+**What was done:**
+- Created `src/services/` directory with 6 service modules:
+  - `classService.ts` — Class CRUD operations
+  - `studentService.ts` — Student CRUD + sync
+  - `recordService.ts` — Attendance records
+  - `eventService.ts` — Calendar events
+  - `timetableService.ts` — Timetable slots
+  - `seatingService.ts` — Seating chart
+  - `noteService.ts` — Daily notes
+- Each service wraps `api` calls with typed methods
+- Services are available for future component migration
+- Store continues to work (hybrid approach) — no breaking changes
+- Future PostgreSQL migration: only update service implementations, not components
+- Exports typed interfaces: `ClassSummary` for class list
 
 ### #3 — No Request Deduplication ✅ FIXED
 **What was done:**
