@@ -24,10 +24,12 @@ function requestLogger() {
       const timestamp = new Date().toISOString();
       const logLine = `${timestamp} ${method} ${url} ${status} ${duration}ms`;
       
-      // Color-coded console output
-      const statusColor = status >= 500 ? '\x1b[31m' : status >= 400 ? '\x1b[33m' : '\x1b[32m';
-      const reset = '\x1b[0m';
-      console.log(`  ${method.padEnd(6)} ${url.padEnd(45)} ${statusColor}${status}${reset} ${duration}ms`);
+      // Only log errors to console (non-debug mode)
+      if (status >= 400) {
+        const statusColor = status >= 500 ? '\x1b[31m' : '\x1b[33m';
+        const reset = '\x1b[0m';
+        console.error(`  ${statusColor}${status}${reset} ${method} ${url} ${duration}ms`);
+      }
       
       // Log errors to file
       if (status >= 500) {
@@ -108,8 +110,6 @@ async function startServer() {
       console.log(` (Run with 'npm run dev:network' to share on Wi-Fi)`);
     }
     console.log(`========================================\n`);
-    console.log('  METHOD   URL                                           STATUS DURATION');
-    console.log('  ──────────────────────────────────────────────────────────────────────');
   });
 }
 

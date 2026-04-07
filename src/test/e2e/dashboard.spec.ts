@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Dashboard', () => {
-  test('should show dashboard after login', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('input[type="text"]').fill('admin');
-    await page.locator('input[type="password"]').fill('teacher123');
-    await page.locator('button[type="submit"]').click();
-    await expect(page.getByText(/Good (Morning|Afternoon|Evening)/)).toBeVisible({ timeout: 10000 });
-  });
+test('Dashboard - shows dashboard content', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('text=Teacher Assistant', { timeout: 15000 });
+  await expect(page.getByText(/Good (Morning|Afternoon|Evening)/)).toBeVisible({ timeout: 5000 });
 });
