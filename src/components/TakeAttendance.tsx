@@ -19,6 +19,7 @@ export default function TakeAttendance() {
   const date = activeTab === 'today' ? format(new Date(), 'yyyy-MM-dd') : selectedDate;
   
   const students = useStore((state) => state.students);
+  const isLoading = useStore((state) => state.isLoading);
   const currentClassId = useStore((state) => state.currentClassId);
   const allRecords = useStore((state) => state.records);
   const records = useMemo(
@@ -244,8 +245,20 @@ export default function TakeAttendance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {students.length === 0 && !searchQuery ? (
+              {isLoading ? (
                 <tr><td colSpan={4} className="px-6 py-8"><AttendanceGridSkeleton /></td></tr>
+              ) : students.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
+                        <Check className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <p className="text-base font-medium text-slate-900 dark:text-white">No students found</p>
+                      <p className="text-sm">Please add students in the <span className="font-semibold text-indigo-600 dark:text-indigo-400">Student Roster</span> tab first.</p>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredStudents.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
@@ -308,26 +321,6 @@ export default function TakeAttendance() {
                   </tr>
                 );
               })}
-              {filteredStudents.length === 0 && students.length > 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    No students found matching "{searchQuery}".
-                  </td>
-                </tr>
-              )}
-              {students.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                        <Check className="w-6 h-6 text-slate-400" />
-                      </div>
-                      <p className="text-base font-medium text-slate-900 dark:text-white">No students found</p>
-                      <p className="text-sm">Please add students in the <span className="font-semibold text-indigo-600 dark:text-indigo-400">Student Roster</span> tab first.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

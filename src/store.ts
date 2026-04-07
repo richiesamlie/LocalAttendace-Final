@@ -66,6 +66,7 @@ interface AppState {
 
   students: Student[];
   records: AttendanceRecord[];
+  isLoading: boolean;
   dailyNotes: Record<string, string>;
   events: CalendarEvent[];
   timetable: TimetableSlot[];
@@ -138,6 +139,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   students: [],
   records: [],
+  isLoading: false,
   dailyNotes: {},
   events: [],
   timetable: [],
@@ -150,6 +152,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   initializeStore: async () => {
     try {
+      set({ isLoading: true });
       let [classesData, settings] = await Promise.all([
         api.getClasses(),
         api.getSettings(),
@@ -191,6 +194,7 @@ export const useStore = create<AppState>()((set, get) => ({
         currentClassId: defaultClassId,
         students: initialClass?.students || [],
         records: initialClass?.records || [],
+        isLoading: false,
         dailyNotes: initialClass?.dailyNotes || {},
         events: initialClass?.events || [],
         timetable: initialClass?.timetable || [],
@@ -199,7 +203,7 @@ export const useStore = create<AppState>()((set, get) => ({
       });
     } catch (error) {
       console.error('Failed to initialize store from API', error);
-      set({ isInitialized: true });
+      set({ isInitialized: true, isLoading: false });
     }
   },
 
@@ -342,8 +346,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const targetClass = state.classes.find(c => c.id === id);
     if (!targetClass) return;
 
-    // Lazy-load if this class hasn't been loaded yet
     if (!targetClass.loaded) {
+      set({ isLoading: true });
       await get().loadClassData(id);
     }
 
@@ -356,6 +360,7 @@ export const useStore = create<AppState>()((set, get) => ({
       events: updated.events,
       timetable: updated.timetable,
       seatingLayout: updated.seatingLayout,
+      isLoading: false,
     });
   },
 
