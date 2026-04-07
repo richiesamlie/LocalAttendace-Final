@@ -435,44 +435,55 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 
 ## TODO: Tomorrow — PostgreSQL Implementation
 
-**Status:** PostgreSQL implementations DONE. TypeScript compiles.
+**Status:** PostgreSQL implementations DONE. Schema SQL file created. Ready to switch.
 
 ### What's Complete:
-- ✅ Installed `pg` package
-- ✅ Created all 7 PostgreSQL repository implementations
-- ✅ Updated container.ts for PostgreSQL switching
-- ✅ All TypeScript compiles cleanly
+- ✅ All 7 PostgreSQL repository implementations
+- ✅ `src/repositories/postgres.ts` (connection pool + query helpers)
+- ✅ `src/repositories/schema.sql` (PostgreSQL database schema)
+- ✅ `.env.example` updated with `DATABASE_URL`
+- ✅ Updated `container.ts` to return PostgreSQL repos
 
-### What Remains (for full migration):
-1. Create PostgreSQL database schema (SQL migration file)
-2. Set `DATABASE_URL` environment variable
-3. Switch container: `createRepositoryContainer('postgres')`
-4. Run migration script to create tables
-5. (Optional) Data migration from SQLite
+### How to Switch to PostgreSQL:
 
-### How to Switch:
-```typescript
-// In your app, change:
-export const repositories = createRepositoryContainer('postgres');
-```
+1. **Create the database:**
+   ```bash
+   createdb teacher_assistant
+   ```
 
-### Files Created Today:
+2. **Run the schema:**
+   ```bash
+   psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
+   ```
+
+3. **Set environment variable:**
+   ```bash
+   export DATABASE_URL=postgresql://postgres:password@localhost:5432/teacher_assistant
+   ```
+
+4. **Switch in code** (in `src/repositories/container.ts`):
+   ```typescript
+   export const repositories = createRepositoryContainer('postgres');
+   ```
+
+### Files for PostgreSQL:
 ```
 src/repositories/
-├── postgres.ts                          # Connection pool + query helpers
+├── postgres.ts              # Connection pool
+├── schema.sql               # Database schema
 ├── PostgreSQLClassRepository.ts
 ├── PostgreSQLStudentRepository.ts
 ├── PostgreSQLRecordRepository.ts
 ├── PostgreSQLEventRepository.ts
 ├── PostgreSQLTimetableRepository.ts
 ├── PostgreSQLSeatingRepository.ts
-├── PostgreSQLNoteRepository.ts
+└── PostgreSQLNoteRepository.ts
 ```
 
-### Database Schema Needed:
-Create tables matching SQLite schema:
-- classes, students, attendance_records, events, timetable_slots, seating_layout, daily_notes
-- Plus: teachers, class_teachers, invite_codes, user_sessions, admin_settings
+### To Rollback to SQLite:
+```typescript
+export const repositories = createRepositoryContainer('sqlite');
+```
 
 ---
 
