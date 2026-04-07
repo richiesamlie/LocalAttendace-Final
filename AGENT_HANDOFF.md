@@ -421,15 +421,61 @@ These require judgment calls before implementing. Priority order recommended:
 
 When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 
-1. **5.1 Data Layer Abstraction** ✅ NOW COMPLETE
+1. **5.1 Data Layer Abstraction** ✅ COMPLETE
    - Repository interfaces created in `src/repositories/`
    - SQLite implementations ready
    - Repository container (`repositories` object) for easy swapping
    - To add PostgreSQL: create `PostgreSQL*Repository` classes, update `createRepositoryContainer()`
 
-2. **5.2 Keep API Same**
+2. **5.2 Keep API Same** ✅ COMPLETE
    - Route handlers stay mostly the same
    - Only update repository implementations
+
+---
+
+## TODO: Tomorrow — PostgreSQL Implementation
+
+**Status:** Repository layer ready, PostgreSQL implementations NOT YET written.
+
+### What's Needed:
+Create these new files in `src/repositories/`:
+
+| File | Description |
+|------|-------------|
+| `PostgreSQLClassRepository.ts` | Class CRUD with `pg` library |
+| `PostgreSQLStudentRepository.ts` | Student CRUD + sync |
+| `PostgreSQLRecordRepository.ts` | Attendance records |
+| `PostgreSQLEventRepository.ts` | Calendar events |
+| `PostgreSQLTimetableRepository.ts` | Timetable slots |
+| `PostgreSQLSeatingRepository.ts` | Seating chart |
+| `PostgreSQLNoteRepository.ts` | Daily notes |
+
+### How:
+1. Install `pg` package: `npm install pg && npm install -D @types/pg`
+2. Create connection pool in new file or config
+3. Copy SQLite repository and replace `better-sqlite3` calls with `pg` queries
+4. Update `createRepositoryContainer()` in `container.ts` to return PostgreSQL repos
+5. Test that API works the same
+
+### Example Pattern:
+```typescript
+import { Pool } from 'pg';
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+export class PostgreSQLClassRepository implements IClassRepository {
+  async getAll(): Promise<ClassSummary[]> {
+    const result = await pool.query('SELECT id, teacher_id, name, owner_name FROM classes');
+    return result.rows;
+  }
+  // ... other methods
+}
+```
+
+### Notes:
+- PostgreSQL connection string: `postgresql://user:pass@host:port/database`
+- Add to `.env.example`: `DATABASE_URL`
+- Keep SQLite implementations as fallback or remove if not needed
 
 ---
 
