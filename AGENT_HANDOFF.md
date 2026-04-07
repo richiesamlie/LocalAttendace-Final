@@ -444,6 +444,46 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 - ✅ `.env.example` updated with `DATABASE_URL`
 - ✅ Updated `container.ts` to return PostgreSQL repos
 
+### TODO Tomorrow: SQLite → PostgreSQL Data Migration
+
+**Not yet implemented** - Need to create a migration script.
+
+### What's Needed:
+Create `src/repositories/migrate.ts` that:
+1. Opens SQLite database (`database.sqlite`)
+2. Opens PostgreSQL connection pool
+3. Exports all tables: teachers, classes, students, attendance_records, daily_notes, events, timetable_slots, seating_layout, admin_settings, class_teachers, invite_codes, user_sessions
+4. Transforms data (snake_case → camelCase where needed)
+5. Imports into PostgreSQL
+6. Verifies row counts match
+
+### Rough Implementation Plan:
+```typescript
+// src/repositories/migrate.ts
+import Database from 'better-sqlite3';
+import { pool } from './postgres';
+
+async function migrate() {
+  const sqlite = new Database('database.sqlite');
+  
+  // Export from SQLite
+  const teachers = sqlite.prepare('SELECT * FROM teachers').all();
+  const classes = sqlite.prepare('SELECT * FROM classes').all();
+  // ... other tables
+  
+  // Import to PostgreSQL (use transactions)
+  for (const t of teachers) {
+    await pool.query(
+      'INSERT INTO teachers (id, username, password_hash, name, created_at) VALUES ($1, $2, $3, $4, $5)',
+      [t.id, t.username, t.password_hash, t.name, t.created_at]
+    );
+  }
+  // ... repeat for other tables
+  
+  console.log('Migration complete!');
+}
+```
+
 ### How to Switch to PostgreSQL:
 
 1. **Create the database:**
@@ -456,12 +496,17 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
    psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
    ```
 
-3. **Set environment variable:**
+3. **Run the migration script:**
+   ```bash
+   npx tsx src/repositories/migrate.ts
+   ```
+
+4. **Set environment variable:**
    ```bash
    export DATABASE_URL=postgresql://postgres:password@localhost:5432/teacher_assistant
    ```
 
-4. **Switch in code** (in `src/repositories/container.ts`):
+5. **Switch in code** (in `src/repositories/container.ts`):
    ```typescript
    export const repositories = createRepositoryContainer('postgres');
    ```
@@ -471,6 +516,7 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 src/repositories/
 ├── postgres.ts              # Connection pool
 ├── schema.sql               # Database schema
+├── migrate.ts               # TODO: Create this tomorrow - SQLite to PostgreSQL migration
 ├── PostgreSQLClassRepository.ts
 ├── PostgreSQLStudentRepository.ts
 ├── PostgreSQLRecordRepository.ts
