@@ -15,5 +15,13 @@ export { SQLiteTimetableRepository } from './SQLiteTimetableRepository';
 export { SQLiteSeatingRepository } from './SQLiteSeatingRepository';
 export { SQLiteNoteRepository } from './SQLiteNoteRepository';
 
+export { PostgreSQLClassRepository } from './PostgreSQLClassRepository';
+export { PostgreSQLStudentRepository } from './PostgreSQLStudentRepository';
+export { PostgreSQLRecordRepository } from './PostgreSQLRecordRepository';
+export { PostgreSQLEventRepository } from './PostgreSQLEventRepository';
+export { PostgreSQLTimetableRepository } from './PostgreSQLTimetableRepository';
+export { PostgreSQLSeatingRepository } from './PostgreSQLSeatingRepository';
+export { PostgreSQLNoteRepository } from './PostgreSQLNoteRepository';
+
 export { createRepositoryContainer, repositories } from './container';
 export type { RepositoryContainer } from './container';

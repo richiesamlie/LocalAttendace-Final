@@ -435,47 +435,44 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 
 ## TODO: Tomorrow — PostgreSQL Implementation
 
-**Status:** Repository layer ready, PostgreSQL implementations NOT YET written.
+**Status:** PostgreSQL implementations DONE. TypeScript compiles.
 
-### What's Needed:
-Create these new files in `src/repositories/`:
+### What's Complete:
+- ✅ Installed `pg` package
+- ✅ Created all 7 PostgreSQL repository implementations
+- ✅ Updated container.ts for PostgreSQL switching
+- ✅ All TypeScript compiles cleanly
 
-| File | Description |
-|------|-------------|
-| `PostgreSQLClassRepository.ts` | Class CRUD with `pg` library |
-| `PostgreSQLStudentRepository.ts` | Student CRUD + sync |
-| `PostgreSQLRecordRepository.ts` | Attendance records |
-| `PostgreSQLEventRepository.ts` | Calendar events |
-| `PostgreSQLTimetableRepository.ts` | Timetable slots |
-| `PostgreSQLSeatingRepository.ts` | Seating chart |
-| `PostgreSQLNoteRepository.ts` | Daily notes |
+### What Remains (for full migration):
+1. Create PostgreSQL database schema (SQL migration file)
+2. Set `DATABASE_URL` environment variable
+3. Switch container: `createRepositoryContainer('postgres')`
+4. Run migration script to create tables
+5. (Optional) Data migration from SQLite
 
-### How:
-1. Install `pg` package: `npm install pg && npm install -D @types/pg`
-2. Create connection pool in new file or config
-3. Copy SQLite repository and replace `better-sqlite3` calls with `pg` queries
-4. Update `createRepositoryContainer()` in `container.ts` to return PostgreSQL repos
-5. Test that API works the same
-
-### Example Pattern:
+### How to Switch:
 ```typescript
-import { Pool } from 'pg';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-export class PostgreSQLClassRepository implements IClassRepository {
-  async getAll(): Promise<ClassSummary[]> {
-    const result = await pool.query('SELECT id, teacher_id, name, owner_name FROM classes');
-    return result.rows;
-  }
-  // ... other methods
-}
+// In your app, change:
+export const repositories = createRepositoryContainer('postgres');
 ```
 
-### Notes:
-- PostgreSQL connection string: `postgresql://user:pass@host:port/database`
-- Add to `.env.example`: `DATABASE_URL`
-- Keep SQLite implementations as fallback or remove if not needed
+### Files Created Today:
+```
+src/repositories/
+├── postgres.ts                          # Connection pool + query helpers
+├── PostgreSQLClassRepository.ts
+├── PostgreSQLStudentRepository.ts
+├── PostgreSQLRecordRepository.ts
+├── PostgreSQLEventRepository.ts
+├── PostgreSQLTimetableRepository.ts
+├── PostgreSQLSeatingRepository.ts
+├── PostgreSQLNoteRepository.ts
+```
+
+### Database Schema Needed:
+Create tables matching SQLite schema:
+- classes, students, attendance_records, events, timetable_slots, seating_layout, daily_notes
+- Plus: teachers, class_teachers, invite_codes, user_sessions, admin_settings
 
 ---
 

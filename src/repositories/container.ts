@@ -8,6 +8,15 @@ import {
   SQLiteSeatingRepository,
   SQLiteNoteRepository,
 } from './index';
+import {
+  PostgreSQLClassRepository,
+  PostgreSQLStudentRepository,
+  PostgreSQLRecordRepository,
+  PostgreSQLEventRepository,
+  PostgreSQLTimetableRepository,
+  PostgreSQLSeatingRepository,
+  PostgreSQLNoteRepository,
+} from './index';
 import type {
   IClassRepository,
   IStudentRepository,
@@ -41,8 +50,15 @@ export function createRepositoryContainer(dbType: DatabaseType = 'sqlite'): Repo
         noteRepository: new SQLiteNoteRepository(),
       };
     case 'postgres':
-      // Future: return PostgreSQL implementations
-      throw new Error('PostgreSQL not yet implemented');
+      return {
+        classRepository: new PostgreSQLClassRepository(),
+        studentRepository: new PostgreSQLStudentRepository(),
+        recordRepository: new PostgreSQLRecordRepository(),
+        eventRepository: new PostgreSQLEventRepository(),
+        timetableRepository: new PostgreSQLTimetableRepository(),
+        seatingRepository: new PostgreSQLSeatingRepository(),
+        noteRepository: new PostgreSQLNoteRepository(),
+      };
     default:
       throw new Error(`Unknown database type: ${dbType}`);
   }
