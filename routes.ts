@@ -299,10 +299,12 @@ router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSche
     return res.status(400).json({ error: 'Username, password, and name are required' });
   }
 
-  // N6: Only class owners (admins) can register new teachers
-  const isAdmin = await svc.teacherService.isAdmin(teacherId);
-  if (!isAdmin) {
-    return res.status(403).json({ error: 'Only class owners can register new teachers' });
+  // Only global administrators or Homeroom teachers can register new teachers
+  const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+  const myClasses = await svc.classService.getByTeacher(teacherId);
+  const isHomeroom = myClasses.some((c: any) => c.role === 'owner');
+  if (!isGlobalAdmin && !isHomeroom) {
+    return res.status(403).json({ error: 'Only Administrators or Homeroom Teachers can register new teachers' });
   }
 
   const existing = await svc.teacherService.getByUsername(username);
@@ -341,9 +343,14 @@ router.get('/classes', async (req, res) => {
 
 router.post('/classes', postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
-  const canCreate = await svc.classService.canCreateClass(teacherId);
-  if (!canCreate) {
-    return res.status(403).json({ error: 'You already manage a Homeroom class. To teach other classes, please ask their owners to invite you as a Subject Teacher.' });
+  
+  // Global administrators can create unlimited classes
+  const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+  if (!isGlobalAdmin) {
+    const canCreate = await svc.classService.canCreateClass(teacherId);
+    if (!canCreate) {
+      return res.status(403).json({ error: 'You already manage a Homeroom class. To teach other classes, please ask their owners to invite you as a Subject Teacher.' });
+    }
   }
 
   const { id, name } = req.body;
