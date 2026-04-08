@@ -175,12 +175,20 @@ export const classService = {
 
   async insert(id: string, teacherId: string, name: string) {
     if (isPostgres()) {
-      return pgQuery(
+      await pgQuery(
         'INSERT INTO classes (id, teacher_id, name, owner_name) VALUES ($1, $2, $3, (SELECT name FROM teachers WHERE id = $2))',
         [id, teacherId, name]
       );
+      // Also add creator as 'owner' in class_teachers so requireClassAccess works
+      await pgQuery(
+        'INSERT INTO class_teachers (class_id, teacher_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+        [id, teacherId, 'owner']
+      );
+      return;
     }
-    return db.stmt.insertClass.run(id, teacherId, name);
+    // In SQLite: insert class then immediately add creator as owner in class_teachers
+    db.stmt.insertClass.run(id, teacherId, name);
+    db.stmt.insertClassTeacher.run(id, teacherId, 'owner');
   },
 
   async update(name: string, id: string, teacherId: string) {

@@ -334,6 +334,14 @@ const initSchema = () => {
     _db.exec(`UPDATE classes SET teacher_id = '${DEFAULTS.TEACHER_ID}' WHERE teacher_id IS NULL`);
     _db.exec("INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes");
   }
+  // Migration: Heal any classes that are missing a class_teachers owner entry.
+  // This was caused by class creation not inserting into class_teachers (pre-fix bug).
+  // Safe to run every startup — INSERT OR IGNORE is idempotent.
+  _db.exec(`
+    INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role)
+    SELECT id, teacher_id, 'owner' FROM classes
+    WHERE id NOT IN (SELECT DISTINCT class_id FROM class_teachers WHERE role = 'owner')
+  `);
 };
 initSchema();
 
