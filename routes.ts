@@ -303,7 +303,7 @@ router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSche
     return res.status(400).json({ error: 'Username already exists' });
   }
   
-  const id = `teacher_${Date.now()}`;
+  const id = `teacher_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
   const hash = bcrypt.hashSync(password, 10);
   await svc.teacherService.insert(id, username, hash, name);
   res.json({ success: true, id, username, name });
