@@ -70,6 +70,13 @@ const requireClassAccess = (paramName: string = 'classId') => {
       return res.status(400).json({ error: 'Class ID is required' });
     }
     
+    // Global administrators can access any class
+    const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+    if (isGlobalAdmin) {
+      (req as any).classRole = 'administrator';
+      return next();
+    }
+    
     const access = await svc.classService.isClassTeacher(classId, teacherId);
     if (!access) {
       return res.status(404).json({ error: 'Class not found or access denied' });
@@ -89,9 +96,15 @@ const requireClassOwner = (paramName: string = 'classId') => {
       return res.status(400).json({ error: 'Class ID is required' });
     }
     
+    // Global administrators can perform any class action
+    const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+    if (isGlobalAdmin) {
+      return next();
+    }
+    
     const access = await svc.classService.isClassTeacher(classId, teacherId);
     if (!access || (access as any).role !== 'owner') {
-      return res.status(403).json({ error: 'Only class owner can perform this action' });
+      return res.status(403).json({ error: 'Only the Homeroom Teacher can perform this action' });
     }
     
     next();
