@@ -40,6 +40,22 @@ open_browser() {
 # Open browser in background
 open_browser &
 
+# Check for debug param
+MODE="production"
+for arg in "$@"; do
+    if [ "$arg" == "--debug" ]; then
+        MODE="debug"
+    fi
+done
+
 # Start the Node.js server
-echo "Starting Teacher Assistant Server..."
-npm run dev
+if [ "$MODE" == "debug" ]; then
+    echo "Starting Teacher Assistant Server in Debug Mode..."
+    npm run dev
+else
+    echo "Building the application for production..."
+    npm run build
+    echo "Starting Teacher Assistant Server in Production Mode..."
+    export NODE_ENV=production
+    npm run start
+fi

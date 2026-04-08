@@ -1,10 +1,20 @@
 @echo off
+setlocal
+
+:: Check for debug flag
+set MODE=production
+if /i "%~1"=="--debug" set MODE=debug
+if /i "%~2"=="--debug" set MODE=debug
+if /i "%~3"=="--debug" set MODE=debug
+
 if "%~1"=="hidden" goto :run
+if "%~2"=="hidden" goto :run
+if "%~3"=="hidden" goto :run
 
 :: Create a VBScript to run this batch file silently
 set "vbs=%temp%\hide_cmd_%RANDOM%.vbs"
 echo Set WshShell = CreateObject("WScript.Shell") > "%vbs%"
-echo WshShell.Run chr(34) ^& "%~f0" ^& chr(34) ^& " hidden", 0, False >> "%vbs%"
+echo WshShell.Run chr(34) ^& "%~f0" ^& chr(34) ^& " %* hidden", 0, False >> "%vbs%"
 cscript //nologo "%vbs%"
 del "%vbs%"
 exit /b
@@ -34,4 +44,14 @@ IF NOT EXIST ".env" (
 start "" cmd /c "timeout /t 5 /nobreak > NUL && start http://127.0.0.1:3000"
 
 :: Start the Node.js server
-npm run dev
+if "%MODE%"=="debug" (
+    echo Starting Teacher Assistant Server in Debug Mode...
+    call npm run dev
+) else (
+    echo Building the application for production...
+    call npm run build
+    echo Starting Teacher Assistant Server in Production Mode...
+    set NODE_ENV=production
+    call npm run start
+)
+endlocal

@@ -68,5 +68,8 @@ export default defineConfig(({mode}) => {
       setupFiles: './src/test/setup.ts',
       exclude: ['**/node_modules/**', '**/e2e/**'],
     },
+    esbuild: {
+      pure: mode === 'production' ? ['console.log', 'console.debug', 'console.info'] : [],
+    },
   };
 });

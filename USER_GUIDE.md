@@ -114,11 +114,12 @@ You have two options to install the app. Choose the one that works best for you.
 
 #### Step 3: Install Dependencies
 1. Open the extracted folder
-2. Double-click `start-app.bat`
+2. Double-click `start-app.bat` to launch the app in optimized Production Mode.
+   - *Optional:* To run in Debug mode instead, open a Command Prompt in the folder and type `start-app.bat --debug`
 3. A black window will appear and automatically install required files
-4. Wait until you see "Teacher Assistant Server Started"
+4. Wait until you see "Starting Teacher Assistant Server in Production Mode..."
 
-> **Note:** This only happens once. Future starts will be instant.
+> **Note:** Installation only happens once. Future starts will be instant.
 
 ---
 
@@ -350,10 +351,13 @@ The app uses SQLite by default (no setup needed). You can switch to PostgreSQL f
    - Ask if you want to migrate existing data
    - Create `.env` file with connection string
 
-3. **Start the app:**
+3. **Start the app (Production Mode):**
    ```cmd
-   npm run dev
+   npm run build
+   set NODE_ENV=production
+   npm run start
    ```
+   *(To start in debug mode, just run `npm run dev` instead)*
 
    The app will automatically detect PostgreSQL and connect.
 
@@ -367,10 +371,13 @@ brew services start postgresql
 # Run setup script
 npm run db:setup:postgres
 
-# Start app
-npm run db:setup:postgres
-npm run dev
+# Start app (Production Mode)
+npm run build
+export NODE_ENV=production
+npm run start
 ```
+
+*(To start in debug mode, just use `npm run dev` instead)*
 
 ### Manual PostgreSQL Setup
 
@@ -391,7 +398,7 @@ If you prefer to set it up manually:
    DATABASE_URL=postgresql://postgres:your_password@localhost:5432/teacher_assistant
    ```
 
-4. Start app: `npm run dev`
+4. Start app: `npm run build` and `npm run start` (or `npm run dev` for debug mode)
 
 ### Switch Back to SQLite
 
@@ -426,7 +433,7 @@ Or set: `DB_TYPE=sqlite`
 **Solution:**
 1. Open Command Prompt
 2. Navigate to the app folder: `cd C:\TeacherAssistant`
-3. Run: `npm run dev`
+3. Run: `start-app.bat` (or `npm run start`)
 4. Read the error message
 
 ### App Won't Start (Docker Method)

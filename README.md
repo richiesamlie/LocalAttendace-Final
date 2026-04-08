@@ -86,19 +86,27 @@ Generate a strong secret: `openssl rand -hex 32`
 
 ### 4. Start the Server
 
-#### 🔒 Local Mode (Default)
+#### 🔒 Local Mode (Production)
 Only accessible from this computer:
 ```bash
-npm run dev
+npm run build
+export NODE_ENV=production
+npm run start
 ```
 Open `http://127.0.0.1:3000`
 
+*(To run in debug mode with hot reloading: `npm run dev`)*
+
 #### 🌍 Network Mode (Shared on Wi-Fi)
-Accessible from other devices on the same network:
+Accessible from other devices on the same network (Production):
 ```bash
-npm run dev:network
+npm run build
+export NODE_ENV=production
+npm run start:network
 ```
 Open the displayed IP address (e.g., `http://192.168.1.50:3000`) on other devices.
+
+*(To run in debug mode: `npm run dev:network`)*
 
 ### 5. First Login
 
@@ -221,10 +229,13 @@ psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
 npm run db:migrate:to-postgres
 ```
 
-3. **Start the app:**
+3. **Start the app (Production Mode):**
 ```bash
-npm run dev
+npm run build
+export NODE_ENV=production
+npm run start
 ```
+*(Or use `npm run dev` to start in development mode)*
 
 The app auto-detects PostgreSQL when `DATABASE_URL` is set in `.env`.
 
@@ -262,14 +273,16 @@ npm run db:restore:list         # List all available backups
 
 ### Windows
 ```bash
-start-app.bat              # Start server and open browser
+start-app.bat              # Start server in production mode and open browser
+start-app.bat --debug      # Start server in debug mode with hot reloading
 setup-windows-startup.bat  # Auto-start on Windows login
 ```
 
 ### Linux / macOS
 ```bash
-./start-app.sh           # Start server and open browser
-./start-internal-site.sh # Share on local network
+./start-app.sh           # Start server in production mode and open browser
+./start-app.sh --debug   # Start server in debug mode with hot reloading
+./start-internal-site.sh # Share on local network (production module)
 ```
 
 ## Windows Automation

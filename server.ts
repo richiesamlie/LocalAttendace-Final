@@ -56,12 +56,14 @@ function requestLogger() {
       const status = res.statusCode;
       const timestamp = new Date().toISOString();
       const logLine = `${timestamp} ${method} ${url} ${status} ${duration}ms`;
-      
-      // Only log errors to console (non-debug mode)
-      if (status >= 400) {
-        const statusColor = status >= 500 ? '\x1b[31m' : '\x1b[33m';
+      const isDebug = process.env.NODE_ENV !== 'production';
+      // Only log all requests in debug mode. In production, only log errors.
+      if (isDebug || status >= 400) {
+        const isError = status >= 400;
+        const statusColor = status >= 500 ? '\x1b[31m' : status >= 400 ? '\x1b[33m' : '\x1b[32m';
         const reset = '\x1b[0m';
-        console.error(`  ${statusColor}${status}${reset} ${method} ${url} ${duration}ms`);
+        const logFn = isError ? console.error : console.log;
+        logFn(`  ${statusColor}${status}${reset} ${method} ${url} ${duration}ms`);
       }
       
       // Log errors to file

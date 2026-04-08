@@ -667,9 +667,11 @@ cd /home/richiesamlie/LocalAttendace-Final
 # Dependencies
 npm install                          # Install all deps
 
-# Dev server
-npm run dev                          # Start on localhost:3000
-npm run dev:network                  # Start on 0.0.0.0:3000 (LAN access)
+# Servers
+npm run start                        # Production server on localhost:3000
+npm run start:network                # Production server on 0.0.0.0:3000 (LAN access)
+npm run dev                          # Debug server on localhost:3000 with hot reloading
+npm run dev:network                  # Debug server on 0.0.0.0:3000 (LAN access)
 
 # Build
 npm run build                        # Production build to dist/
