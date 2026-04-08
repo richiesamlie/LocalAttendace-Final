@@ -462,7 +462,7 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQue
 }));
 
 // --- INVITE SYSTEM (Phase 2.2) ---
-router.post('/classes/:classId/invites', requireRole('classId', 'owner'), postLimiter, withWriteQueue(async (req, res) => {
+router.post('/classes/:classId/invites', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
@@ -483,7 +483,7 @@ router.post('/classes/:classId/invites', requireRole('classId', 'owner'), postLi
   res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
 }));
 
-router.get('/classes/:classId/invites', requireRole('classId', 'owner'), async (req, res) => {
+router.get('/classes/:classId/invites', requireRole('classId', 'teacher'), async (req, res) => {
   try {
     await svc.inviteService.deleteExpired();
     const codes = await svc.inviteService.getByClass(req.params.classId);
@@ -493,7 +493,7 @@ router.get('/classes/:classId/invites', requireRole('classId', 'owner'), async (
   }
 });
 
-router.delete('/classes/:classId/invites/:code', requireRole('classId', 'owner'), postLimiter, withWriteQueue(async (req, res) => {
+router.delete('/classes/:classId/invites/:code', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
   await svc.inviteService.delete(req.params.code);
   res.json({ success: true });
 }));
