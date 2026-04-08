@@ -6,6 +6,7 @@ import db from './db';
 import path from 'path';
 import fs from 'fs';
 import { validate, loginSchema, classSchema, studentSchema, attendanceRecordSchema, eventSchema, timetableSlotSchema, teacherSchema, settingSchema } from './src/lib/validation';
+import * as svc from './services';
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ const getTeacherId = (req: express.Request): string | null => {
   }
 };
 
-const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const teacherId = getTeacherId(req);
   if (!teacherId) {
     return res.status(401).json({ error: 'Authentication required' });
@@ -41,13 +42,12 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { sessionId?: string };
       if (decoded.sessionId) {
-        const session = db.stmt.getSession.get(decoded.sessionId) as { is_revoked: number; expires_at: string } | undefined;
-        if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
+        const session = await svc.sessionService.get(decoded.sessionId);
+        if (!session || (session as any).is_revoked === 1 || new Date((session as any).expires_at) < new Date()) {
           res.clearCookie('auth_token');
           return res.status(401).json({ error: 'Session expired or revoked' });
         }
-        try { db.stmt.updateSessionActivity.run(decoded.sessionId); } catch (e) {
-          // Session activity update is non-critical, but log it
+        try { await svc.sessionService.updateActivity(decoded.sessionId); } catch (e) {
           console.warn('[auth] Failed to update session activity:', (e as Error).message);
         }
       }
@@ -65,7 +65,7 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
 };
 
 const requireClassAccess = (paramName: string = 'classId') => {
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const teacherId = (req as any).teacherId;
     const classId = req.params[paramName];
     
@@ -73,18 +73,18 @@ const requireClassAccess = (paramName: string = 'classId') => {
       return res.status(400).json({ error: 'Class ID is required' });
     }
     
-    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    const access = await svc.classService.isClassTeacher(classId, teacherId);
     if (!access) {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
     
-    (req as any).classRole = access.role;
+    (req as any).classRole = (access as any).role;
     next();
   };
 };
 
 const requireClassOwner = (paramName: string = 'classId') => {
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const teacherId = (req as any).teacherId;
     const classId = req.params[paramName];
     
@@ -92,8 +92,8 @@ const requireClassOwner = (paramName: string = 'classId') => {
       return res.status(400).json({ error: 'Class ID is required' });
     }
     
-    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
-    if (!access || access.role !== 'owner') {
+    const access = await svc.classService.isClassTeacher(classId, teacherId);
+    if (!access || (access as any).role !== 'owner') {
       return res.status(403).json({ error: 'Only class owner can perform this action' });
     }
     
@@ -105,7 +105,7 @@ const requireClassOwner = (paramName: string = 'classId') => {
 const ROLE_HIERARCHY: Record<string, number> = { owner: 4, admin: 3, teacher: 2, assistant: 1 };
 
 const requireRole = (paramName: string = 'classId', minRole: string = 'teacher') => {
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const teacherId = (req as any).teacherId;
     const classId = req.params[paramName];
     
@@ -113,19 +113,19 @@ const requireRole = (paramName: string = 'classId', minRole: string = 'teacher')
       return res.status(400).json({ error: 'Class ID is required' });
     }
     
-    const access = db.stmt.isClassTeacher.get(classId, teacherId) as { class_id: string; role: string } | undefined;
+    const access = await svc.classService.isClassTeacher(classId, teacherId);
     if (!access) {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
     
-    const userLevel = ROLE_HIERARCHY[access.role] || 0;
+    const userLevel = ROLE_HIERARCHY[(access as any).role] || 0;
     const requiredLevel = ROLE_HIERARCHY[minRole] || 0;
     
     if (userLevel < requiredLevel) {
       return res.status(403).json({ error: `Role '${minRole}' or higher required` });
     }
     
-    (req as any).classRole = access.role;
+    (req as any).classRole = (access as any).role;
     next();
   };
 };
