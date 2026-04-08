@@ -31,7 +31,7 @@ export const api = {
   registerTeacher: (username: string, password: string, name: string) => fetchApi<{success: boolean, id: string, username: string, name: string}>('/teachers/register', { method: 'POST', body: JSON.stringify({ username, password, name }) }),
 
   // --- CLASSES ---
-  getClasses: () => fetchApi<Array<{id: string, teacher_id: string, name: string, owner_name: string}>>('/classes'),
+  getClasses: () => fetchApi<Array<{id: string, teacher_id: string, name: string, owner_name: string, role: string}>>('/classes'),
   createClass: (cls: Partial<ClassData>) => fetchApi<ClassData>('/classes', { method: 'POST', body: JSON.stringify(cls) }),
   updateClass: (id: string, name: string) => fetchApi<{success: boolean}>(`/classes/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
   deleteClass: (id: string) => fetchApi<{success: boolean}>(`/classes/${id}`, { method: 'DELETE' }),

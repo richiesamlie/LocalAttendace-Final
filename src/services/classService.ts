@@ -6,6 +6,7 @@ export interface ClassSummary {
   teacher_id: string;
   name: string;
   owner_name: string;
+  role: string;
 }
 
 export const classService = {

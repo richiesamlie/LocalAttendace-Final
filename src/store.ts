@@ -47,13 +47,16 @@ export interface TimetableSlot {
 export interface ClassData {
   id: string;
   name: string;
+  teacher_id?: string;
+  owner_name?: string;
+  role?: string; // 'owner' | 'admin' | 'teacher' | 'assistant' - current user's role in this class
   students: Student[];
   records: AttendanceRecord[];
   dailyNotes: Record<string, string>;
   events: CalendarEvent[];
   timetable: TimetableSlot[];
   seatingLayout: Record<string, string>;
-  loaded?: boolean; // true once all data for this class has been fetched
+  loaded?: boolean;
 }
 
 interface AppState {

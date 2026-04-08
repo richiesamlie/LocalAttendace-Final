@@ -141,9 +141,9 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
 
   const roleBadge = (role: string) => {
     const config: Record<string, { bg: string; text: string; icon: React.ReactNode; label: string }> = {
-      owner: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400", icon: <Shield className="w-3 h-3" />, label: 'Owner' },
+      owner: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400", icon: <Shield className="w-3 h-3" />, label: 'Homeroom' },
       admin: { bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-400", icon: <UserCheck className="w-3 h-3" />, label: 'Admin' },
-      teacher: { bg: "bg-slate-100 dark:bg-slate-700", text: "text-slate-600 dark:text-slate-300", icon: <User className="w-3 h-3" />, label: 'Teacher' },
+      teacher: { bg: "bg-slate-100 dark:bg-slate-700", text: "text-slate-600 dark:text-slate-300", icon: <User className="w-3 h-3" />, label: 'Subject Teacher' },
       assistant: { bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-400", icon: <UserPlus className="w-3 h-3" />, label: 'Assistant' },
     };
     const c = config[role] || config.teacher;
@@ -268,7 +268,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                         className="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                       >
                         <option value="admin">Admin</option>
-                        <option value="teacher">Teacher</option>
+                        <option value="teacher">Subject Teacher</option>
                         <option value="assistant">Assistant</option>
                       </select>
                     ) : (
@@ -331,7 +331,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                     onChange={(e) => setInviteRole(e.target.value)}
                     className="flex-1 text-sm rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="teacher">Teacher</option>
+                    <option value="teacher">Subject Teacher</option>
                     <option value="assistant">Assistant</option>
                     {userRole === 'owner' && <option value="admin">Admin</option>}
                   </select>

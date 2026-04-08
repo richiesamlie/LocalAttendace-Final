@@ -139,8 +139,8 @@ export const sessionService = {
 export const classService = {
   async getByTeacher(teacherId: string): Promise<ClassSummary[]> {
     if (isPostgres()) {
-      return pgQuery<ClassSummary>(
-        `SELECT c.id, c.teacher_id, c.name, t.name as owner_name 
+      return pgQuery<{ id: string; teacher_id: string; name: string; owner_name: string; role: string }>(
+        `SELECT c.id, c.teacher_id, c.name, t.name as owner_name, ct.role
          FROM classes c 
          JOIN class_teachers ct ON c.id = ct.class_id 
          JOIN teachers t ON c.teacher_id = t.id 
@@ -149,7 +149,18 @@ export const classService = {
         [teacherId]
       );
     }
-    return db.stmt.getClassesByTeacher.all(teacherId) as ClassSummary[];
+    const classes = db.stmt.getClassesByTeacher.all(teacherId) as (ClassSummary & { teacher_id?: string })[];
+    const teacherRoles = db.prepare(`
+      SELECT class_id, role FROM class_teachers WHERE teacher_id = ?
+    `).all(teacherId) as { class_id: string; role: string }[];
+    const roleMap = new Map(teacherRoles.map(r => [r.class_id, r.role]));
+    return classes.map(c => ({
+      id: c.id,
+      teacher_id: c.teacher_id,
+      name: c.name,
+      owner_name: c.owner_name,
+      role: roleMap.get(c.id) || 'teacher'
+    }));
   },
 
   async getById(id: string, teacherId: string) {
@@ -252,6 +263,23 @@ export const classService = {
       return pgQuery('UPDATE class_teachers SET role = $1 WHERE class_id = $2 AND teacher_id = $3', [role, classId, teacherId]);
     }
     return db.stmt.updateClassTeacherRole.run(role, classId, teacherId);
+  },
+
+  async getOwnedClassCount(teacherId: string): Promise<number> {
+    if (isPostgres()) {
+      const result = await pgQueryOne<{ count: string }>(
+        `SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = $1 AND role = 'owner'`,
+        [teacherId]
+      );
+      return result ? Number(result.count) : 0;
+    }
+    const result = db.stmt.isAdminTeacher.get(teacherId) as { count: number } | undefined;
+    return result?.count || 0;
+  },
+
+  async canCreateClass(teacherId: string): Promise<boolean> {
+    const count = await this.getOwnedClassCount(teacherId);
+    return count === 0;
   },
 };
 

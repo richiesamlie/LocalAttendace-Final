@@ -334,6 +334,11 @@ router.get('/classes', async (req, res) => {
 
 router.post('/classes', postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
+  const canCreate = await svc.classService.canCreateClass(teacherId);
+  if (!canCreate) {
+    return res.status(403).json({ error: 'You already manage a Homeroom class. To teach other classes, please ask their owners to invite you as a Subject Teacher.' });
+  }
+
   const { id, name } = req.body;
   await svc.classService.insert(id, teacherId, name);
   res.json({ id, teacher_id: teacherId, name });
@@ -344,7 +349,7 @@ router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
   const { name } = req.body;
   const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
   if (!access || (access as any).role !== 'owner') {
-    return res.status(403).json({ error: 'Only class owner can update class' });
+    return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
   }
   await svc.classService.update(name, req.params.id, teacherId);
   res.json({ success: true });
@@ -354,7 +359,7 @@ router.delete('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
   const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
   if (!access || (access as any).role !== 'owner') {
-    return res.status(403).json({ error: 'Only class owner can delete class' });
+    return res.status(403).json({ error: 'Only the Homeroom Teacher can delete the class' });
   }
   await svc.classService.delete(req.params.id, teacherId);
   res.json({ success: true });
@@ -384,7 +389,7 @@ router.post('/classes/:classId/teachers', postLimiter, withWriteQueue(async (req
   
   const access = await svc.classService.isClassTeacher(classId, teacherId);
   if (!access || (access as any).role !== 'owner') {
-    return res.status(403).json({ error: 'Only class owner can add teachers' });
+    return res.status(403).json({ error: 'Only the Homeroom Teacher can add other teachers' });
   }
 
   const { teacherId: newTeacherId } = req.body;
@@ -408,7 +413,7 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQue
   
   const access = await svc.classService.isClassTeacher(classId, teacherId);
   if (!access || (access as any).role !== 'owner') {
-    return res.status(403).json({ error: 'Only class owner can remove teachers' });
+    return res.status(403).json({ error: 'Only the Homeroom Teacher can remove other teachers' });
   }
 
   if (targetTeacherId === teacherId) {
@@ -432,7 +437,7 @@ router.post('/classes/:classId/invites', requireRole('classId', 'admin'), postLi
   }
   
   if (inviteRole === 'admin' && (req as any).classRole !== 'owner') {
-    return res.status(403).json({ error: 'Only class owner can create admin invites' });
+    return res.status(403).json({ error: 'Only the Homeroom Teacher can create admin invites' });
   }
   
   const expiryHours = Math.min(Math.max(Number(expiresInHours) || 48, 1), 720);
