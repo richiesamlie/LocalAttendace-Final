@@ -444,7 +444,7 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 - ✅ `.env.example` updated with `DATABASE_URL`
 - ✅ Service layer with SQLite/PostgreSQL switching (`services.ts`)
 - ✅ `src/repositories/migrate.ts` - full data migration script
-- ⚠️ Routes.ts partially refactored (middleware done, endpoints use db.stmt directly)
+- ✅ Routes.ts fully refactored to use services (69 db.stmt.* → services)
 
 ### Current Switch Mechanism:
 ```bash
@@ -455,8 +455,11 @@ npm run dev
 DB_TYPE=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/db npm run dev
 ```
 
-### What's Needed:
-Complete routes.ts refactor to use `services.ts` for all endpoints:
+### Migration Steps:
+1. Create PostgreSQL database: `createdb teacher_assistant`
+2. Run schema: `psql -U postgres -d teacher_assistant -f src/repositories/schema.sql`
+3. Migrate data: `npx tsx src/repositories/migrate.ts`
+4. Start with PostgreSQL: `DB_TYPE=postgres DATABASE_URL=... npm run dev`
   }
   // ... repeat for other tables
   

@@ -160,10 +160,11 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 - PostgreSQL queries use `pg` library with connection pool
 - SQLite uses existing `db.stmt.*` prepared statements
 
-#### 5.5 Routes Refactor 🟡 PARTIAL
+#### 5.5 Routes Refactor ✅ COMPLETE
 - Refactored middleware (requireAuth, requireClassAccess, requireClassOwner, requireRole) to use services
-- Endpoints still use `db.stmt.*` directly - needs completion
-- Once complete: switch DB with `DB_TYPE=postgres`
+- Refactored all endpoints (teachers, classes, students, records, events, timetable, seating, notes, settings, invites, sessions) to use services
+- All 69 db.stmt.* calls replaced with service layer calls
+- Full PostgreSQL support: switch with `DB_TYPE=postgres`
 - Ready to switch: `createRepositoryContainer('postgres')`
 
 ---
