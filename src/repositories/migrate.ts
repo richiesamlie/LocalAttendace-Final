@@ -31,8 +31,8 @@ async function migrate() {
     }[];
     for (const t of teachers) {
       await query(
-        `INSERT INTO teachers (id, username, password_hash, name, created_at, last_login)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO teachers (id, username, password_hash, name, is_admin, created_at, last_login)
+         VALUES ($1, $2, $3, $4, 0, $5, $6)
          ON CONFLICT (id) DO NOTHING`,
         [t.id, t.username, t.password_hash, t.name, t.created_at, t.last_login || null]
       );

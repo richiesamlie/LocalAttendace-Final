@@ -139,10 +139,14 @@ Open the displayed IP address (e.g., `http://192.168.1.50:3000`) on other device
 
 ### Teacher Roles
 
-| Role | Permissions |
-|------|-------------|
-| **Owner** | Full access: edit/delete class, manage teachers, all data operations |
-| **Teacher** | Read/write access: attendance, students, events, timetable, seating |
+| Role | Scope | Permissions |
+|------|-------|-------------|
+| **Administrator** | Global | Can access any class, register new teachers, unlimited class creation |
+| **Homeroom** | Class | Full access: edit/delete class, manage teachers, all data operations |
+| **Subject Teacher** | Class | Read/write: attendance, students, events, timetable, seating, invites |
+| **Assistant** | Class | Limited helper access |
+
+The default `admin` account is a global **Administrator** (can manage all classes). Class owners are called **Homeroom**.
 
 ## Windows Automation
 

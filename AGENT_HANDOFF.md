@@ -1,8 +1,18 @@
 # Agent Handoff — Teacher Assistant Project
 
-**Last Session:** 2026-04-08 09:25 AM (WIB)
+**Last Session:** 2026-04-08 11:45 AM (WIB)
 **Current Branch:** `develop` — fully synced with `origin/develop`
 **Latest Commit:** (see section 6 for commit log)
+
+### Recent Changes (2026-04-08 Session)
+1. Implemented global Administrator role with `is_admin` column
+2. Renamed roles in UI: Owner → Homeroom, Teacher → Subject Teacher
+3. Removed "admin" as class-level role (now only global)
+4. Added global admin bypass to all class access checks
+5. Updated all DB insert operations to include `is_admin`
+6. Consolidated code: renamed `teacherService.isAdmin` → `teacherService.isHomeroom`
+7. Fixed remaining authorization gaps in backend
+8. Fixed GET /settings to require authentication
 **Repo:** https://github.com/richiesamlie/LocalAttendace-Final/tree/develop
 **Local Path:** `c:/repo`
 
@@ -175,7 +185,7 @@ Teacher Assistant is a **local-first classroom management web app** for teachers
 **Tables:**
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| teachers | Teacher accounts | id, username, password_hash, name, created_at, last_login |
+| teachers | Teacher accounts | id, username, password_hash, name, **is_admin**, created_at, last_login |
 | classes | Class metadata | id, teacher_id (owner), name, updated_at |
 | students | Student records | id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived, updated_at |
 | attendance_records | Daily attendance | student_id, class_id, date, status, reason (composite PK: student_id+date), updated_at |
@@ -184,7 +194,7 @@ Teacher Assistant is a **local-first classroom management web app** for teachers
 | timetable_slots | Weekly timetable | id, class_id, day_of_week(0-6), start_time, end_time, subject, lesson, updated_at |
 | seating_layout | Seating chart | class_id, seat_id, student_id (composite PK: class_id+seat_id) |
 | admin_settings | Key-value settings | key, value |
-| class_teachers | Teacher-class access | class_id, teacher_id, role (owner/admin/teacher/assistant), (composite PK) |
+| class_teachers | Teacher-class access | class_id, teacher_id, role (owner/teacher/assistant), (composite PK) |
 | invite_codes | Invite system | code, class_id, role, created_by, created_at, expires_at, used_by, used_at |
 | user_sessions | Session tracking | id, teacher_id, device_name, ip_address, created_at, last_active, expires_at, is_revoked |
 
@@ -379,6 +389,15 @@ The `validate(schema)` middleware wraps Zod parsing. On ZodError, returns 400 wi
 - **Zero** alert(), confirm(), window.confirm() remain in src/
 - **useClickOutside hook** created and applied to 4 dropdowns
 
+### Role System Redesign (V2 - 2026-04-08)
+Complete redesign of teacher roles:
+- **Administrator** (global): Can access any class, create unlimited classes, register teachers
+- **Homeroom** (class owner): Full control of their class
+- **Subject Teacher** (class): Manage students, attendance, events, timetable, invites
+- **Assistant** (class): Limited helper access
+
+All endpoints now check for global admin OR class membership appropriately.
+
 ### Second Audit Session (2026-04-08) — 15 New Findings, All Fixed
 - **N1:** Removed unused `@google/genai` dependency from package.json
 - **N2:** Fixed `npm start` — changed `node server.ts` → `tsx server.ts` (node can't run .ts)
@@ -395,6 +414,17 @@ The `validate(schema)` middleware wraps Zod parsing. On ZodError, returns 400 wi
 - **N13:** `clearAllData` generates unique class ID (was hardcoded, failed on 2nd reset)
 - **N14:** `useClassSync` uses ref-pattern for reloadClassData to stabilize dependency array
 - **N15:** Committed package-lock.json changes
+
+### Third Session (2026-04-08) — Role System Redesign
+- **V1:** Added global `Administrator` role with `is_admin` column in `teachers` table
+- **V2:** Renamed roles in UI: Owner → Homeroom, Teacher → Subject Teacher
+- **V3:** Removed "admin" as class-level role (only global Administrator now)
+- **V4:** Global admins bypass ALL class access checks
+- **V5:** CanCreateClass check bypassed for global admins
+- **V6:** Subject Teacher can manage invites (was owner-only)
+- **V7:** Renamed `teacherService.isAdmin` → `teacherService.isHomeroom`
+- **V8:** Fixed GET /settings to require authentication
+- **V9:** All database INSERT operations include `is_admin`
 
 ---
 
@@ -788,6 +818,9 @@ If asked to continue improving the codebase, work through them in this order:
 
 ### Known Quirks
 - The app auto-creates a default class if none exist (on first install)
+- Global Administrator is determined by `is_admin` column in `teachers` table (1 = admin, 0 = regular)
+- The default `admin` user is automatically a global Administrator (`is_admin=1`)
+- Homeroom status is determined by `role='owner'` in `class_teachers` table
 - Student archive (soft delete) keeps the record in DB with `is_archived=1`
 - The write queue serializes writes but reads are concurrent and uncached unless explicitly cached
 - The cache TTL is 5 seconds — it's for burst protection, not long-term caching

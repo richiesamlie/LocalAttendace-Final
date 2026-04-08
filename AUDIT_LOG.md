@@ -1,6 +1,7 @@
 # Architecture Audit Log & Problem Register
 **Project:** Teacher Assistant (Multi-User Migration)
-**Date:** 2026-04-01
+**Date:** 2026-04-01 (Original)
+**Updated:** 2026-04-08 (Role System Redesign)
 **Branch:** develop
 **Auditor:** opencode AI
 

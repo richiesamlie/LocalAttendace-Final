@@ -1,7 +1,7 @@
 # Migration Plan: Teacher Assistant to Multi-User Support
 
-## Version: 1.2
-## Last Updated: 2026-04-06
+## Version: 1.3
+## Last Updated: 2026-04-08
 ## Branch: develop
 
 ---
@@ -222,6 +222,42 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 | 39 | Cross-cutting #2: Wrap loadClassData/reloadClassData in try/catch, clean up clearData | Audit | src/store.ts | ✅ |
 | 40 | Cross-cutting #5: Add input sanitization (trim + null byte strip) to all Zod string schemas | Audit | src/lib/validation.ts | ✅ |
 | 41 | Cross-cutting #6: Consolidate hardcoded defaults to single source in db.ts | Audit | db.ts, src/store.ts | ✅ |
+
+---
+
+## Role System V2 (2026-04-08)
+
+### New Role Hierarchy
+
+| Level | Role | UI Term | Scope |
+|-------|------|--------|-------|
+| 5 | **administrator** | Administrator | Global (all classes) |
+| 4 | **owner** | Homeroom | Class owner |
+| 2 | **teacher** | Subject Teacher | Class teacher |
+| 1 | **assistant** | Assistant | Helper |
+
+### Global Administrator
+- Added `is_admin` column to `teachers` table (boolean flag)
+- Global admins can access ANY class without explicit membership
+- Can create unlimited classes
+- Can register new teachers
+- Default `admin` user has `is_admin=1`
+
+### Changes Made
+- `requireClassAccess`: bypassed for global admins
+- `requireClassOwner`: bypassed for global admins
+- Class creation: global admins bypass one-Homeroom limit
+- Teacher registration: allowed for global admins OR Homeroom teachers
+- UI: role badges updated (Administrator, Homeroom, Subject Teacher, Assistant)
+
+### Database Updates
+All INSERT operations now include `is_admin`:
+- `db.ts` schema + migrations
+- `services.ts` (PostgreSQL)
+- `seed.ts`
+- `e2e/globalSetup.ts`
+- `schema.sql` (PostgreSQL)
+- `migrate.ts` (SQLite → PostgreSQL)
 
 ---
 
