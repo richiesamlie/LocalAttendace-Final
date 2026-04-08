@@ -15,7 +15,7 @@ export const DEFAULTS = {
 } as const;
 
 function getDefaultPassword(): string {
-  return process.env.DEFAULT_ADMIN_PASSWORD || process.env.JWT_SECRET?.slice(0, 16) || crypto.randomUUID().slice(0, 16);
+  return process.env.DEFAULT_ADMIN_PASSWORD || 'teacher123';
 }
 
 // Backup database before migrations

@@ -2,10 +2,8 @@ import db from './db';
 import { query as pgQuery, queryOne as pgQueryOne } from './src/repositories/postgres';
 import type { ClassSummary } from './src/repositories/IClassRepository';
 
-const DB_TYPE = process.env.DB_TYPE || 'sqlite';
-
 function isPostgres(): boolean {
-  return DB_TYPE === 'postgres';
+  return (process.env.DB_TYPE || 'sqlite') === 'postgres';
 }
 
 export const teacherService = {

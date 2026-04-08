@@ -10,10 +10,7 @@ import * as svc from './services';
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required. Set it in your .env file before starting the server.');
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
 interface JwtPayload {
   teacherId: string;
