@@ -390,12 +390,11 @@ export default function Sidebar({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{useStore((state) => state.teacherName) || 'Teacher'}</p>
-              {useStore((state) => state.isAdmin) && (
+              {useStore((state) => state.isAdmin) ? (
                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
                   Admin
                 </span>
-              )}
-              {!useStore((state) => state.isAdmin) && useStore.getState().classes.some((c: any) => c.role === 'owner') && (
+              ) : useStore.getState().classes.some((c: any) => c.role === 'owner') && (
                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
                   Homeroom
                 </span>
