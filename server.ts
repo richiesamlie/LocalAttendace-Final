@@ -90,7 +90,18 @@ async function startServer() {
 
   // Security headers
   app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameSrc: ["'none'"],
+      },
+    } : false, // Disabled in dev because Vite injects inline scripts
     crossOriginEmbedderPolicy: false,
   }));
 

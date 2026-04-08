@@ -1,10 +1,10 @@
 # Agent Handoff — Teacher Assistant Project
 
-**Last Session:** 2026-04-06 12:00 PM
+**Last Session:** 2026-04-08 09:25 AM (WIB)
 **Current Branch:** `develop` — fully synced with `origin/develop`
-**Latest Commit:** `687abb5` (fix(#5,#6): add input sanitization to Zod schemas, consolidate hardcoded defaults)
+**Latest Commit:** (see section 6 for commit log)
 **Repo:** https://github.com/richiesamlie/LocalAttendace-Final/tree/develop
-**Local Path:** `/home/richiesamlie/LocalAttendace-Final`
+**Local Path:** `c:/repo`
 
 ---
 
@@ -379,11 +379,22 @@ The `validate(schema)` middleware wraps Zod parsing. On ZodError, returns 400 wi
 - **Zero** alert(), confirm(), window.confirm() remain in src/
 - **useClickOutside hook** created and applied to 4 dropdowns
 
-### Cross-Cutting Concerns (Session 2026-04-06)
-- **#4 Error Handling Consistency:** Fixed `api.ts` to parse JSON error body. Logged empty catches in `routes.ts`. Fixed `setStudents` rollback and `toggleTheme` try/catch in `store.ts`.
-- **#2 Atomic Store Mutations:** Wrapped `loadClassData`/`reloadClassData` in try/catch. Cleaned up `clearData`. All 22 async store actions consistent.
-- **#5 Input Sanitization:** Created `safeString()` helper — strips null bytes, trims whitespace, validates min/max. All 8 Zod schemas updated.
-- **#6 Hardcoded Defaults:** Extracted `DEFAULTS` constant object and `getDefaultPassword()` in `db.ts`. `store.ts` uses matching constants.
+### Second Audit Session (2026-04-08) — 15 New Findings, All Fixed
+- **N1:** Removed unused `@google/genai` dependency from package.json
+- **N2:** Fixed `npm start` — changed `node server.ts` → `tsx server.ts` (node can't run .ts)
+- **N3:** Re-enabled Helmet CSP in production with strict directives (was fully disabled)
+- **N4:** Seating `PUT` now uses `seatingService.saveLayout()` — atomic SQLite transaction
+- **N5:** Class IDs now use `crypto.randomUUID()` instead of `Date.now()` (3 locations in store.ts)
+- **N6:** `POST /teachers/register` now requires owner role (via `teacherService.isAdmin()`)
+- **N7:** `GET /teachers` now requires authentication (was fully public)
+- **N8:** `POST /records` now validates `studentId` belongs to the specified `classId`
+- **N9:** Default credentials removed from login screen UI
+- **N10:** `db.restore()` recompiles all prepared statements after connection replacement
+- **N11:** Removed duplicate wrong index from PostgreSQL schema.sql
+- **N12:** `adminPassword` setting now actually updates `teachers.password_hash` (was dead code)
+- **N13:** `clearAllData` generates unique class ID (was hardcoded, failed on 2nd reset)
+- **N14:** `useClassSync` uses ref-pattern for reloadClassData to stabilize dependency array
+- **N15:** Committed package-lock.json changes
 
 ---
 
@@ -391,22 +402,15 @@ The `validate(schema)` middleware wraps Zod parsing. On ZodError, returns 400 wi
 
 All 41 items complete. See MIGRATION_PLAN.md for the original plan with phases 1-5.
 
-**Commits on develop (recent):**
+**Recent commits on develop:**
 ```
-687abb5  fix(#5,#6): add input sanitization to Zod schemas, consolidate hardcoded defaults
-298f7a3  fix(#2): wrap loadClassData/reloadClassData in try/catch, clean up clearData
-a1f8eb8  fix(#4): standardize error handling across api, routes, and store
-3752e31  docs: add agent handoff file, update migration plan and audit log
-edf52a7  fix: replace all remaining alert/confirm with toast dialogs
-9b208a5  fix(L12): add click-outside handlers for all dropdown menus
-f345dd8  fix: resolve remaining low-priority audit findings (L2-L4, L10-L11, L13-L14)
-9da0db1  fix: resolve all remaining audit findings (M5, M7, M8, L1, L5-L9)
-213cee3  fix(M7): optimize Reports and Excel export from O(n×m) to O(n) with record indexing
-dd799c9  fix(M2,M3): implement namespace-aware cache invalidation
-ec70cb7  fix(M1): add teacher isolation to UPDATE/DELETE prepared statements
-51680f5  fix(C3,M4): fix JWT session revocation bypass and fail-closed session checks
-d2ead48  fix(C2): add SQLite triggers to auto-populate updated_at columns
-3339055  fix(C1): fix poll-based sync no-op bug
+(2026-04-08) security: fix 15 audit findings (N1-N15) — remove genai, fix npm start, auth on /teachers, CSP, seating tx, UUID class IDs, admin guard, studentId validation, stale db.restore stmts, adminPassword wiring
+687abb5       fix(#5,#6): add input sanitization to Zod schemas, consolidate hardcoded defaults
+298f7a3       fix(#2): wrap loadClassData/reloadClassData in try/catch, clean up clearData
+a1f8eb8       fix(#4): standardize error handling across api, routes, and store
+3752e31       docs: add agent handoff file, update migration plan and audit log
+edf52a7       fix: replace all remaining alert/confirm with toast dialogs
+9b208a5       fix(L12): add click-outside handlers for all dropdown menus
 ```
 
 ---
@@ -754,10 +758,10 @@ See `.env.example`:
 ## 13. IMPORTANT NOTES FOR NEXT AGENT
 
 ### CRITICAL — Read These First
-1. **DO NOT clone the repo** — it is already at `/home/richiesamlie/LocalAttendace-Final` with `develop` branch checked out and fully synced with origin
+1. **Local path is `c:/repo`** — Already cloned and on `develop` branch, synced with origin
 2. **Git config is set** — `user.email` and `user.name` configured locally
-3. **All 37 audit items are DONE** — do not re-verify them unless explicitly asked
-4. **TypeScript compiles cleanly** — `npx tsc --noEmit` exits 0
+3. **All 56 audit items are DONE** (37 original + 4 CC + 15 new)
+4. **TypeScript compiles cleanly** — `tsc --noEmit` exits 0 (verified 2026-04-08)
 5. **Dependencies are installed** — `npm install` already ran, `node_modules/` exists
 6. **The database file exists** — `database.sqlite` is present (may have test data from seed)
 
@@ -788,7 +792,10 @@ If asked to continue improving the codebase, work through them in this order:
 - The session system creates a session record on login, checks it on every request via cookie
 - JWT has 7-day expiry matching session expiry (intentional design, no refresh token)
 - `clearData()` deletes the class and recreates it with the same name (resets all data for that class)
+- Only teachers with 'owner' role in at least one class can register new teachers (N6)
+- `adminPassword` in settings now actually updates the admin teacher's password (N12)
+- Production deploys must use `npm start` or `npm run start:network` (tsx, not node) (N2)
 
 ---
 
-*Last updated: 2026-04-06 by AI Agent, session following the multi-user migration + architecture audit.*
+*Last updated: 2026-04-08 by Antigravity AI — second architecture audit, 15 new findings fixed.*

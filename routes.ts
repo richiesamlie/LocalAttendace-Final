@@ -286,11 +286,18 @@ router.post('/database/restore', requireAuth, async (req, res) => {
 
 // --- TEACHER MANAGEMENT ---
 router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSchema), withWriteQueue(async (req, res) => {
+  const teacherId = (req as any).teacherId;
   const { username, password, name } = req.body;
   if (!username || !password || !name) {
     return res.status(400).json({ error: 'Username, password, and name are required' });
   }
-  
+
+  // N6: Only class owners (admins) can register new teachers
+  const isAdmin = await svc.teacherService.isAdmin(teacherId);
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'Only class owners can register new teachers' });
+  }
+
   const existing = await svc.teacherService.getByUsername(username);
   if (existing) {
     return res.status(400).json({ error: 'Username already exists' });
@@ -302,7 +309,7 @@ router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSche
   res.json({ success: true, id, username, name });
 }));
 
-router.get('/teachers', async (req, res) => {
+router.get('/teachers', requireAuth, async (req, res) => {
   try {
     const teachers = await svc.teacherService.getAll();
     res.json(teachers);
@@ -653,10 +660,16 @@ router.post('/records', requireAuth, postLimiter, withWriteQueue(async (req, res
   const teacherId = (req as any).teacherId;
   const records = Array.isArray(req.body) ? req.body : [req.body];
   
+  // N8: Verify both class access AND that each studentId belongs to that class.
+  // Without the student check, a teacher could write records for students in foreign classes.
   for (const r of records) {
     const access = await svc.classService.isClassTeacher(r.classId, teacherId);
     if (!access) {
       return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
+    }
+    const student = await svc.studentService.getBelongsToClass(r.studentId, r.classId);
+    if (!student) {
+      return res.status(404).json({ error: `Student ${r.studentId} not found in class ${r.classId}` });
     }
   }
 
@@ -825,13 +838,10 @@ router.post('/classes/:classId/seating', requireClassAccess('classId'), postLimi
 router.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
 
-  const layout = req.body;
-  await svc.seatingService.clear(classId);
-  for (const [seatId, studentId] of Object.entries(layout)) {
-    if (studentId) {
-      await svc.seatingService.insert(classId, seatId, studentId as string);
-    }
-  }
+  // N4: Use atomic saveLayout (SQLite transaction) instead of manual clear+loop
+  // to prevent partial seating states if any insert fails.
+  const layout = req.body as Record<string, string>;
+  await svc.seatingService.saveLayout(classId, layout);
   res.json({ success: true });
 }));
 
@@ -861,8 +871,15 @@ router.get('/settings', async (req, res) => {
 router.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
   const { key, value } = req.body;
   if (key === 'adminPassword') {
+    // N12: Wire adminPassword to actually update the admin teacher's password_hash.
+    // Previously this wrote a hash to admin_settings that was never used for auth.
     const hash = bcrypt.hashSync(value, 10);
-    await svc.settingService.set(key, hash);
+    const adminTeacher = await svc.teacherService.getByUsername('admin');
+    if (adminTeacher) {
+      await svc.teacherService.updatePassword((adminTeacher as any).id, hash);
+    }
+    // Also allow any logged-in teacher to change their own password via this endpoint
+    // if they are the requester (future improvement: add current-password verification)
   } else {
     await svc.settingService.set(key, value);
   }

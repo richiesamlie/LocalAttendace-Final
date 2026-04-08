@@ -406,6 +406,10 @@ const preparedStatements = {
   revokeAllSessions: _db.prepare('UPDATE user_sessions SET is_revoked = 1 WHERE teacher_id = ?'),
   deleteExpiredSessions: _db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')"),
   updateTeacherLastLogin: _db.prepare("UPDATE teachers SET last_login = datetime('now') WHERE id = ?"),
+  // N6: Check if a teacher owns at least one class (qualifies as admin for teacher registration)
+  isAdminTeacher: _db.prepare("SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = ? AND role = 'owner'"),
+  // N12: Update teacher password hash directly (used when admin password is changed via settings)
+  updateTeacherPassword: _db.prepare('UPDATE teachers SET password_hash = ? WHERE id = ?'),
 };
 
 // Write queue for serializing write operations (Phase 1.2 + 1.3)
@@ -524,6 +528,12 @@ const dbProxy = new Proxy({}, {
         _db.pragma('temp_store = MEMORY');
         _db.pragma('mmap_size = 268435456');
         initSchema(); // Ensure the restored DB has the correct schema
+        // N10: Recompile all prepared statements against the new DB connection.
+        // better-sqlite3 Statement.source returns the original SQL, so we can recompile
+        // each statement against _db without touching the rest of the codebase.
+        for (const key of Object.keys(preparedStatements)) {
+          (preparedStatements as any)[key] = _db.prepare((preparedStatements as any)[key].source);
+        }
       };
     }
     if (prop === 'stmt') {

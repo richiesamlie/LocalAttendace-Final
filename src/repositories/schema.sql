@@ -105,7 +105,6 @@ CREATE INDEX IF NOT EXISTS idx_class_teachers_teacher ON class_teachers(teacher_
 CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id);
 CREATE INDEX IF NOT EXISTS idx_students_class_archived ON students(class_id, is_archived);
 CREATE INDEX IF NOT EXISTS idx_records_student_date ON attendance_records(student_id, date);
-CREATE INDEX IF NOT EXISTS idx_records_class_date ON attendance_records(student_id, date);
 CREATE INDEX IF NOT EXISTS idx_daily_notes_class ON daily_notes(class_id);
 CREATE INDEX IF NOT EXISTS idx_events_class ON events(class_id);
 CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);

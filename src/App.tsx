@@ -88,7 +88,7 @@ function LoginScreen() {
             {loginMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Log In'}
           </button>
         </form>
-        <p className="text-xs text-slate-400 text-center mt-4">Default: username: admin, password: teacher123</p>
+
       </div>
     </div>
   );

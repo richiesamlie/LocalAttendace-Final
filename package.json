@@ -10,8 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "start": "node server.ts",
-    "start:network": "node server.ts --network",
+    "start": "tsx server.ts",
+    "start:network": "tsx server.ts --network",
     "db:backup": "node -e \"const d=new Date(); require('child_process').execSync('cp database.sqlite backups/db-'+d.getFullYear()+(d.getMonth()+1).toString().padStart(2,'0')+d.getDate().toString().padStart(2,'0')+'.sqlite', {stdio:'inherit'})\"",
     "db:restore": "tsx scripts/restore.ts",
     "db:restore:list": "tsx scripts/restore.ts --list",
@@ -24,7 +24,7 @@
     "docker:build": "docker-compose build"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query": "^5.90.21",
     "@vitejs/plugin-react": "^5.0.4",

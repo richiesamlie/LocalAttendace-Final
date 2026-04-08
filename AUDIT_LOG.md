@@ -432,3 +432,82 @@ When continuing work, address issues in this order:
 - Local and origin/develop are in sync
 - Latest commit: `edf52a7`
 - Git config: user.email=richiesamlie@users.noreply.github.com, user.name=richiesamlie (set locally in this repo)
+
+---
+
+## SECOND AUDIT (2026-04-08) — 15 New Findings
+
+**Auditor:** Antigravity AI  
+**Status:** All 15 fixed and committed.
+
+### HIGH Issues
+
+#### N1: `@google/genai` Dependency Listed But Never Used ✅ FIXED
+**File:** `package.json`  
+Removed `"@google/genai": "^1.29.0"` from production dependencies. Was never imported anywhere in the codebase.
+
+#### N2: `npm start` Used `node` to Run TypeScript ✅ FIXED  
+**File:** `package.json`  
+Changed `"start": "node server.ts"` → `"start": "tsx server.ts"`. `node` cannot run `.ts` files directly; production deploys were broken.
+
+#### N7: `GET /teachers` Had No Authentication ✅ FIXED
+**File:** `routes.ts:305`  
+Added `requireAuth` middleware to `GET /teachers`. Teacher usernames were publicly accessible without login.
+
+#### N8: `POST /records` Didn't Validate StudentId Belongs to Class ✅ FIXED
+**Files:** `routes.ts:652`, `services.ts`  
+Added `studentService.getBelongsToClass(studentId, classId)` check in batch-save loop. Without this, a teacher with access to two classes could inject attendance records for students in a class they don't manage.
+
+### MEDIUM Issues
+
+#### N3: Helmet CSP Completely Disabled ✅ FIXED
+**File:** `server.ts`  
+Re-enabled CSP in production with strict directives (`defaultSrc: ['self']`, etc.). CSP remains off in dev because Vite injects inline scripts.
+
+#### N4: Seating Layout PUT Not Transactional ✅ FIXED
+**Files:** `services.ts`, `routes.ts`  
+Added `seatingService.saveLayout(classId, layout)` which uses a SQLite `_db.transaction()` to atomically clear + insert all seats. Without this, a mid-loop failure left the chart partially blank.
+
+#### N5: Class IDs Used `Date.now()` (Collision Risk) ✅ FIXED
+**File:** `src/store.ts`  
+Changed all 3 class ID generation points from `` `class_${Date.now()}` `` to `` `class_${crypto.randomUUID().replace(/-/g,'').slice(0,16)}` ``.
+
+#### N6: Teacher Registration Had No Admin Guard ✅ FIXED
+**Files:** `routes.ts`, `services.ts`, `db.ts`  
+Added `teacherService.isAdmin(teacherId)` check: only teachers with 'owner' role in any class can call `POST /teachers/register`. Added `isAdminTeacher` prepared statement in db.ts.
+
+#### N9: Default Credentials Shown in Login UI ✅ FIXED
+**File:** `src/App.tsx`  
+Removed the `<p>Default: username: admin, password: teacher123</p>` hint from the login screen. Credentials are in README.md and printed to console on first server start.
+
+#### N10: Prepared Statements Stale After `db.restore()` ✅ FIXED
+**File:** `db.ts`  
+After `db.restore()` replaces the SQLite connection with a new `Database` instance, all old prepared statements were stale. Now recompiles all statements using `Statement.source` against the new connection.
+
+#### N12: `adminPassword` Setting Was Dead Code ✅ FIXED
+**Files:** `routes.ts`, `services.ts`, `db.ts`  
+`POST /settings` with `key=adminPassword` now updates the admin teacher's `password_hash` in the `teachers` table (using `teacherService.updatePassword()`). Previously it stored a hash in `admin_settings` that was never used for auth. Added `updateTeacherPassword` prepared statement in db.ts.
+
+### LOW Issues
+
+#### N11: Duplicate Wrong PostgreSQL Index ✅ FIXED
+**File:** `src/repositories/schema.sql`  
+Removed duplicate `idx_records_class_date` index which was incorrectly defined on `(student_id, date)` — a duplicate of `idx_records_student_date`.
+
+#### N13: `clearAllData` Used Hardcoded `'class_default'` ID ✅ FIXED
+**File:** `src/store.ts`  
+Replaced hardcoded `DEFAULT_CLASS_ID_ON_CLEAR` with `crypto.randomUUID()`-based ID. The hardcoded ID would fail on a second reset attempt.
+
+#### N14: `useClassSync` Had Unstable Dependency Array ✅ FIXED
+**File:** `src/hooks/useData.ts`  
+`reloadClassData` removed from `useEffect` dependency array. Now stored in a `useRef` that's kept in sync, preventing interval recreation on re-renders.
+
+#### N15: `package-lock.json` Had Uncommitted Changes ✅ FIXED
+Committed as part of the fix session along with all other changes.
+
+### Session Notes (2026-04-08)
+- TypeScript compiles cleanly after all fixes (`tsc --noEmit` exits 0)
+- All 15 new issues fixed in a single session
+- No breaking changes to API contracts
+- All fixes pushed to origin/develop
+

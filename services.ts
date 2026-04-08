@@ -52,6 +52,28 @@ export const teacherService = {
     }
     return db.stmt.insertTeacher.run(id, username, hash, name);
   },
+
+  // N12: Updates the actual password_hash in the teachers table.
+  updatePassword(teacherId: string, passwordHash: string) {
+    if (isPostgres()) {
+      return pgQuery('UPDATE teachers SET password_hash = $1 WHERE id = $2', [passwordHash, teacherId]);
+    }
+    return db.stmt.updateTeacherPassword.run(passwordHash, teacherId);
+  },
+
+  // N6: Returns true if the teacher is an owner of at least one class.
+  // Owners are considered admins and can register new teachers.
+  async isAdmin(teacherId: string): Promise<boolean> {
+    if (isPostgres()) {
+      const result = await pgQueryOne<{ count: string }>(
+        `SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = $1 AND role = 'owner'`,
+        [teacherId]
+      );
+      return result ? Number(result.count) > 0 : false;
+    }
+    const result = db.stmt.isAdminTeacher.get(teacherId) as { count: number } | undefined;
+    return (result?.count || 0) > 0;
+  },
 };
 
 export const sessionService = {
@@ -302,6 +324,17 @@ export const studentService = {
     }
     return db.stmt.insertStudent.run(id, classId, name, rollNumber, parentName, parentPhone, isFlagged);
   },
+
+  // N8: Verify that a student belongs to a specific class.
+  getBelongsToClass(studentId: string, classId: string) {
+    if (isPostgres()) {
+      return pgQueryOne<{ id: string }>(
+        'SELECT id FROM students WHERE id = $1 AND class_id = $2',
+        [studentId, classId]
+      );
+    }
+    return db.stmt.getStudentByClassAndId.get(classId, studentId);
+  },
 };
 
 export const recordService = {
@@ -504,6 +537,33 @@ export const seatingService = {
       return pgQuery('DELETE FROM seating_layout WHERE class_id = $1', [classId]);
     }
     return db.stmt.clearSeatingByClass.run(classId);
+  },
+
+  // N4: Atomically replace the entire seating layout using a SQLite transaction.
+  // Without a transaction, a failure mid-loop leaves the chart partially cleared.
+  async saveLayout(classId: string, layout: Record<string, string>) {
+    if (isPostgres()) {
+      // PostgreSQL: run sequentially (pgQuery doesn't expose native transactions here)
+      await pgQuery('DELETE FROM seating_layout WHERE class_id = $1', [classId]);
+      for (const [seatId, studentId] of Object.entries(layout)) {
+        if (studentId) {
+          await pgQuery(
+            `INSERT INTO seating_layout (class_id, seat_id, student_id) VALUES ($1, $2, $3)
+             ON CONFLICT (class_id, seat_id) DO UPDATE SET student_id = $3, updated_at = NOW()`,
+            [classId, seatId, studentId]
+          );
+        }
+      }
+      return;
+    }
+    // SQLite: use a transaction so clear + inserts are atomic
+    const txn = (db as any).transaction((cls: string, lay: Record<string, string>) => {
+      db.stmt.clearSeatingByClass.run(cls);
+      for (const [seatId, studentId] of Object.entries(lay)) {
+        if (studentId) db.stmt.insertSeating.run(cls, seatId, studentId);
+      }
+    });
+    txn(classId, layout);
   },
 };
 

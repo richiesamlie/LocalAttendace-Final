@@ -159,7 +159,7 @@ export const useStore = create<AppState>()((set, get) => ({
       ]);
 
       if (classesData.length === 0) {
-        const defaultClassId = `class_${Date.now()}`;
+      const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
         await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
         classesData = await api.getClasses();
       }
@@ -267,7 +267,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addClass: async (name) => {
     try {
-      const newClassId = `class_${Date.now()}`;
+      const newClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
       await api.createClass({ id: newClassId, name });
       
       set((state) => {
@@ -713,7 +713,7 @@ export const useStore = create<AppState>()((set, get) => ({
         throw new Error('All deletions failed');
       }
       
-      const defaultClassId = DEFAULT_CLASS_ID_ON_CLEAR;
+      const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
       await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
 
       set(() => {

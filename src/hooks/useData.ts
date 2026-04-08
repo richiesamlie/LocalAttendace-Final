@@ -355,6 +355,10 @@ export function useClassSync(intervalMs: number = 30000) {
   const queryClient = useQueryClient();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastFingerprintRef = useRef<string>('');
+  // Store in a ref so the interval callback always has the latest version
+  // without causing the effect to re-run (and reset the interval) on every render.
+  const reloadClassDataRef = useRef(reloadClassData);
+  useEffect(() => { reloadClassDataRef.current = reloadClassData; }, [reloadClassData]);
 
   useEffect(() => {
     if (!currentClassId) return;
@@ -371,7 +375,7 @@ export function useClassSync(intervalMs: number = 30000) {
 
         const fingerprint = `${students.length}:${records.length}:${events.length}:${timetable.length}:${Object.keys(seating).length}`;
         if (fingerprint !== lastFingerprintRef.current && lastFingerprintRef.current !== '') {
-          await reloadClassData(currentClassId);
+          await reloadClassDataRef.current(currentClassId);
         }
         lastFingerprintRef.current = fingerprint;
       } catch {
@@ -385,5 +389,5 @@ export function useClassSync(intervalMs: number = 30000) {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [currentClassId, reloadClassData, intervalMs, queryClient]);
+  }, [currentClassId, intervalMs, queryClient]); // reloadClassData excluded — accessed via ref
 }
