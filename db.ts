@@ -366,7 +366,7 @@ const preparedStatements = {
   getDailyNotesByClass: _db.prepare('SELECT date, note FROM daily_notes WHERE class_id = ?'),
   getTimetableByClass: _db.prepare('SELECT id, class_id, day_of_week, start_time, end_time, subject, lesson FROM timetable_slots WHERE class_id = ? ORDER BY day_of_week, start_time'),
   getSeatingByClass: _db.prepare('SELECT seat_id, student_id FROM seating_layout WHERE class_id = ?'),
-  insertTeacher: _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)'),
+  insertTeacher: _db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, 0)'),
   insertClass: _db.prepare('INSERT INTO classes (id, teacher_id, name) VALUES (?, ?, ?)'),
   insertStudent: _db.prepare('INSERT INTO students (id, class_id, name, roll_number, parent_name, parent_phone, is_flagged) VALUES (?, ?, ?, ?, ?, ?, ?)'),
   insertAttendance: _db.prepare('INSERT OR REPLACE INTO attendance_records (student_id, class_id, date, status, reason) VALUES (?, ?, ?, ?, ?)'),

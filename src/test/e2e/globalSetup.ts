@@ -160,9 +160,9 @@ export default function globalSetup() {
     CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher_active ON user_sessions(teacher_id, is_revoked, expires_at);
   `);
 
-  // Create default admin teacher (password: teacher123)
+  // Create default admin teacher (password: teacher123) - also global admin
   const hash = bcrypt.hashSync('teacher123', 10);
-  db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
+  db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, 1)').run(
     'teacher_default', 'admin', hash, 'Administrator'
   );
 

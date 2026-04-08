@@ -99,7 +99,7 @@ async function seed() {
   for (const teacher of SAMPLE_TEACHERS) {
     const id = generateId('teacher');
     const hash = bcrypt.hashSync(teacher.password, 10);
-    db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)')
+    db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, 0)')
       .run(id, teacher.username, hash, teacher.name);
     console.log(`  ✓ ${teacher.name} (${teacher.username})`);
   }

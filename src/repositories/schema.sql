@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS teachers (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
+    is_admin INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

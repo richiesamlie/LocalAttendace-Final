@@ -55,7 +55,7 @@ export const teacherService = {
   insert(id: string, username: string, hash: string, name: string) {
     if (isPostgres()) {
       return pgQuery(
-        'INSERT INTO teachers (id, username, password_hash, name) VALUES ($1, $2, $3, $4)',
+        'INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES ($1, $2, $3, $4, 0)',
         [id, username, hash, name]
       );
     }
