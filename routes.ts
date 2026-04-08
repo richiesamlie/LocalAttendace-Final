@@ -374,9 +374,14 @@ router.post('/classes', postLimiter, validate(classSchema), withWriteQueue(async
 router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
   const { name } = req.body;
-  const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
-  if (!access || (access as any).role !== 'owner') {
-    return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
+  
+  // Global admin bypass
+  const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+  if (!isGlobalAdmin) {
+    const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
+    if (!access || (access as any).role !== 'owner') {
+      return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
+    }
   }
   await svc.classService.update(name, req.params.id, teacherId);
   res.json({ success: true });
@@ -384,9 +389,14 @@ router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
 
 router.delete('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
-  const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
-  if (!access || (access as any).role !== 'owner') {
-    return res.status(403).json({ error: 'Only the Homeroom Teacher can delete the class' });
+  
+  // Global admin bypass
+  const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+  if (!isGlobalAdmin) {
+    const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
+    if (!access || (access as any).role !== 'owner') {
+      return res.status(403).json({ error: 'Only the Homeroom Teacher can delete the class' });
+    }
   }
   await svc.classService.delete(req.params.id, teacherId);
   res.json({ success: true });
