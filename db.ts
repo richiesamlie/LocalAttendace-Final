@@ -422,7 +422,7 @@ const preparedStatements = {
   deleteExpiredSessions: _db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')"),
   updateTeacherLastLogin: _db.prepare("UPDATE teachers SET last_login = datetime('now') WHERE id = ?"),
   // N6: Check if a teacher owns at least one class (qualifies as admin for teacher registration)
-  isAdminTeacher: _db.prepare("SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = ? AND role = 'owner'"),
+  countOwnedClasses: _db.prepare("SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = ? AND role = 'owner'"),
   // N12: Update teacher password hash directly (used when admin password is changed via settings)
   updateTeacherPassword: _db.prepare('UPDATE teachers SET password_hash = ? WHERE id = ?'),
 };

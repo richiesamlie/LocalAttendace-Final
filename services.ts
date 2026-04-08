@@ -70,9 +70,9 @@ export const teacherService = {
     return db.stmt.updateTeacherPassword.run(passwordHash, teacherId);
   },
 
-  // N6: Returns true if the teacher is an owner of at least one class.
-  // Owners are considered admins and can register new teachers.
-  async isAdmin(teacherId: string): Promise<boolean> {
+  // Returns true if the teacher is an owner of at least one class.
+  // Used for: allowing teachers to register new teachers.
+  async isHomeroom(teacherId: string): Promise<boolean> {
     if (isPostgres()) {
       const result = await pgQueryOne<{ count: string }>(
         `SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = $1 AND role = 'owner'`,
@@ -80,7 +80,7 @@ export const teacherService = {
       );
       return result ? Number(result.count) > 0 : false;
     }
-    const result = db.stmt.isAdminTeacher.get(teacherId) as { count: number } | undefined;
+    const result = db.stmt.countOwnedClasses.get(teacherId) as { count: number } | undefined;
     return (result?.count || 0) > 0;
   },
 };
@@ -282,7 +282,7 @@ export const classService = {
       );
       return result ? Number(result.count) : 0;
     }
-    const result = db.stmt.isAdminTeacher.get(teacherId) as { count: number } | undefined;
+    const result = db.stmt.countOwnedClasses.get(teacherId) as { count: number } | undefined;
     return result?.count || 0;
   },
 
