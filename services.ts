@@ -9,8 +9,8 @@ function isPostgres(): boolean {
 export const teacherService = {
   getByUsername(username: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; username: string; password_hash: string; name: string }>(
-        'SELECT id, username, password_hash, name FROM teachers WHERE username = $1',
+      return pgQueryOne<{ id: string; username: string; password_hash: string; name: string; is_admin: number }>(
+        'SELECT id, username, password_hash, name, is_admin FROM teachers WHERE username = $1',
         [username]
       );
     }
@@ -19,12 +19,21 @@ export const teacherService = {
 
   getById(id: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; username: string; name: string }>(
-        'SELECT id, username, name FROM teachers WHERE id = $1',
+      return pgQueryOne<{ id: string; username: string; name: string; is_admin: number }>(
+        'SELECT id, username, name, is_admin FROM teachers WHERE id = $1',
         [id]
       );
     }
     return db.stmt.getTeacherById.get(id);
+  },
+
+  async getIsAdmin(id: string): Promise<boolean> {
+    if (isPostgres()) {
+      const r = await pgQueryOne<{ is_admin: number }>('SELECT is_admin FROM teachers WHERE id = $1', [id]);
+      return !!r?.is_admin;
+    }
+    const teacher = db.stmt.getTeacherById.get(id) as { is_admin?: number } | undefined;
+    return !!teacher?.is_admin;
   },
 
   updateLastLogin(id: string) {

@@ -13,6 +13,7 @@ function ClassSwitcher() {
   const removeClass = useStore((state) => state.removeClass);
   const updateClassName = useStore((state) => state.updateClassName);
   const teacherId = useStore((state) => state.teacherId);
+  const isAdmin = useStore((state) => state.isAdmin);
   
   const isHomeroomTeacher = classes.some(c => c.role === 'owner');
   const [isEditing, setIsEditing] = useState(false);
@@ -386,8 +387,22 @@ export default function Sidebar({
             <UserCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{useStore((state) => state.teacherName) || 'Teacher'}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Logged in</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{useStore((state) => state.teacherName) || 'Teacher'}</p>
+              {useStore((state) => state.isAdmin) && (
+                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                  Admin
+                </span>
+              )}
+              {!useStore((state) => state.isAdmin) && useStore.getState().classes.some((c: any) => c.role === 'owner') && (
+                <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
+                  Homeroom
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {useStore((state) => state.isAdmin) ? 'Administrator' : useStore.getState().classes.some((c: any) => c.role === 'owner') ? 'Homeroom Teacher' : 'Subject Teacher'}
+            </p>
           </div>
         </div>
 

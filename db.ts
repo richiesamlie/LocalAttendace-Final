@@ -75,6 +75,7 @@ const initSchema = () => {
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
+      is_admin INTEGER DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -317,6 +318,12 @@ const initSchema = () => {
     _db.exec('ALTER TABLE teachers ADD COLUMN last_login TEXT');
   }
 
+  // Migration: Add is_admin to teachers
+  const hasIsAdmin = teachersInfo.some(col => col.name === 'is_admin');
+  if (!hasIsAdmin) {
+    _db.exec('ALTER TABLE teachers ADD COLUMN is_admin INTEGER DEFAULT 0');
+  }
+
   // Create compound indexes for invite_codes and user_sessions tables (after tables exist)
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_invite_codes_class_active ON invite_codes (class_id, expires_at, used_by)`);
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher_active ON user_sessions (teacher_id, is_revoked, expires_at)`);
@@ -326,10 +333,10 @@ const initSchema = () => {
   if (teacherCount.count === 0) {
     const defaultPassword = getDefaultPassword();
     const hash = bcrypt.hashSync(defaultPassword, 10);
-    _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
-      DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME
+    _db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, ?)').run(
+      DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME, 1
     );
-    console.log(`[db] Default admin created. Password: ${defaultPassword} (change immediately!)`);
+    console.log(`[db] Default administrator created. Password: ${defaultPassword} (change immediately!)`);
 
     _db.exec(`UPDATE classes SET teacher_id = '${DEFAULTS.TEACHER_ID}' WHERE teacher_id IS NULL`);
     _db.exec("INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes");

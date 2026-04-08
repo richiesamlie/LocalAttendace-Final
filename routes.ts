@@ -98,8 +98,8 @@ const requireClassOwner = (paramName: string = 'classId') => {
   };
 };
 
-// Role hierarchy: owner > admin > teacher > assistant
-const ROLE_HIERARCHY: Record<string, number> = { owner: 4, admin: 3, teacher: 2, assistant: 1 };
+// Role hierarchy: administrator > owner > teacher > assistant
+const ROLE_HIERARCHY: Record<string, number> = { administrator: 5, owner: 4, teacher: 2, assistant: 1 };
 
 const requireRole = (paramName: string = 'classId', minRole: string = 'teacher') => {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -108,6 +108,13 @@ const requireRole = (paramName: string = 'classId', minRole: string = 'teacher')
     
     if (!classId) {
       return res.status(400).json({ error: 'Class ID is required' });
+    }
+
+    // Global administrators can access any class
+    const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+    if (isGlobalAdmin) {
+      (req as any).classRole = 'administrator';
+      return next();
     }
     
     const access = await svc.classService.isClassTeacher(classId, teacherId);
@@ -196,7 +203,7 @@ router.post('/auth/login', authLimiter, validate(loginSchema), async (req, res) 
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
-  res.json({ success: true, teacherId: (teacher as any).id, username: (teacher as any).username, name: (teacher as any).name });
+  res.json({ success: true, teacherId: (teacher as any).id, username: (teacher as any).username, name: (teacher as any).name, isAdmin: !!(teacher as any).is_admin });
 });
 
 router.post('/auth/logout', (req, res) => {
@@ -425,19 +432,15 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQue
 }));
 
 // --- INVITE SYSTEM (Phase 2.2) ---
-router.post('/classes/:classId/invites', requireRole('classId', 'admin'), postLimiter, withWriteQueue(async (req, res) => {
+router.post('/classes/:classId/invites', requireRole('classId', 'owner'), postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = (req as any).teacherId;
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
   
-  const validRoles = ['admin', 'teacher', 'assistant'];
+  const validRoles = ['teacher', 'assistant'];
   const inviteRole = role || 'teacher';
   if (!validRoles.includes(inviteRole)) {
-    return res.status(400).json({ error: 'Invalid role. Must be admin, teacher, or assistant' });
-  }
-  
-  if (inviteRole === 'admin' && (req as any).classRole !== 'owner') {
-    return res.status(403).json({ error: 'Only the Homeroom Teacher can create admin invites' });
+    return res.status(400).json({ error: 'Invalid role. Must be teacher or assistant' });
   }
   
   const expiryHours = Math.min(Math.max(Number(expiresInHours) || 48, 1), 720);
@@ -450,7 +453,7 @@ router.post('/classes/:classId/invites', requireRole('classId', 'admin'), postLi
   res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
 }));
 
-router.get('/classes/:classId/invites', requireRole('classId', 'admin'), async (req, res) => {
+router.get('/classes/:classId/invites', requireRole('classId', 'owner'), async (req, res) => {
   try {
     await svc.inviteService.deleteExpired();
     const codes = await svc.inviteService.getByClass(req.params.classId);
@@ -460,7 +463,7 @@ router.get('/classes/:classId/invites', requireRole('classId', 'admin'), async (
   }
 });
 
-router.delete('/classes/:classId/invites/:code', requireRole('classId', 'admin'), postLimiter, withWriteQueue(async (req, res) => {
+router.delete('/classes/:classId/invites/:code', requireRole('classId', 'owner'), postLimiter, withWriteQueue(async (req, res) => {
   await svc.inviteService.delete(req.params.code);
   res.json({ success: true });
 }));
@@ -539,7 +542,7 @@ router.put('/classes/:classId/teachers/:teacherId/role', requireClassOwner('clas
   const targetTeacherId = req.params.teacherId;
   const { role } = req.body;
   
-  const validRoles = ['owner', 'admin', 'teacher', 'assistant'];
+  const validRoles = ['owner', 'teacher', 'assistant'];
   if (!validRoles.includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
   }

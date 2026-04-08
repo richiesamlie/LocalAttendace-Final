@@ -49,7 +49,7 @@ export interface ClassData {
   name: string;
   teacher_id?: string;
   owner_name?: string;
-  role?: string; // 'owner' | 'admin' | 'teacher' | 'assistant' - current user's role in this class
+  role?: string; // 'administrator' | 'owner' | 'teacher' | 'assistant'
   students: Student[];
   records: AttendanceRecord[];
   dailyNotes: Record<string, string>;
@@ -64,6 +64,7 @@ interface AppState {
   isAuthenticated: boolean;
   teacherId: string | null;
   teacherName: string | null;
+  isAdmin: boolean;
   classes: ClassData[];
   currentClassId: string | null;
 
@@ -76,7 +77,7 @@ interface AppState {
   seatingLayout: Record<string, string>; 
   theme: 'light' | 'dark';
 
-  setAuth: (teacherId: string, teacherName: string) => void;
+  setAuth: (teacherId: string, teacherName: string, isAdmin?: boolean) => void;
   clearAuth: () => void;
 
   initializeStore: () => Promise<void>;
@@ -137,6 +138,7 @@ export const useStore = create<AppState>()((set, get) => ({
   isAuthenticated: false,
   teacherId: null,
   teacherName: null,
+  isAdmin: false,
   classes: [],
   currentClassId: null,
 
@@ -150,8 +152,8 @@ export const useStore = create<AppState>()((set, get) => ({
   theme: 'light',
   lastAttendanceChange: null,
 
-  setAuth: (teacherId, teacherName) => set({ isAuthenticated: true, teacherId, teacherName }),
-  clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
+  setAuth: (teacherId, teacherName, isAdmin = false) => set({ isAuthenticated: true, teacherId, teacherName, isAdmin }),
+  clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, isAdmin: false, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
 
   initializeStore: async () => {
     try {

@@ -51,7 +51,7 @@ export function useLogin() {
     mutationFn: ({ username, password }: { username: string; password: string }) => api.login(username, password),
     onSuccess: (data) => {
       if (data.success) {
-        setAuth(data.teacherId, data.name);
+        setAuth(data.teacherId, data.name, data.isAdmin);
         queryClient.invalidateQueries({ queryKey: queryKeys.auth });
       }
     },
