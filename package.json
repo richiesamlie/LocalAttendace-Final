@@ -1,7 +1,7 @@
 {
-  "name": "react-example",
+  "name": "teacher-assistant",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -16,6 +16,8 @@
     "db:restore": "tsx scripts/restore.ts",
     "db:restore:list": "tsx scripts/restore.ts --list",
     "db:seed": "tsx scripts/seed.ts",
+    "db:setup:postgres": "tsx scripts/setup-postgres.ts",
+    "db:migrate:to-postgres": "tsx src/repositories/migrate.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
