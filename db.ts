@@ -328,7 +328,7 @@ const initSchema = () => {
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_invite_codes_class_active ON invite_codes (class_id, expires_at, used_by)`);
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher_active ON user_sessions (teacher_id, is_revoked, expires_at)`);
 
-  // Ensure default admin teacher always exists
+  // Ensure default admin teacher always exists and stays admin
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
   if (teacherCount.count === 0) {
     const defaultPassword = getDefaultPassword();
@@ -340,6 +340,9 @@ const initSchema = () => {
 
     _db.exec(`UPDATE classes SET teacher_id = '${DEFAULTS.TEACHER_ID}' WHERE teacher_id IS NULL`);
     _db.exec("INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes");
+  } else {
+    // Ensure admin user always has is_admin=1
+    _db.prepare('UPDATE teachers SET is_admin = 1 WHERE username = ?').run(DEFAULTS.TEACHER_USERNAME);
   }
   // Migration: Heal any classes that are missing a class_teachers owner entry.
   // This was caused by class creation not inserting into class_teachers (pre-fix bug).
