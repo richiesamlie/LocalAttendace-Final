@@ -152,6 +152,18 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 - Created `postgres.ts` with connection pool
 - Created `schema.sql` with full database schema
 - Updated `.env.example` with `DATABASE_URL`
+
+#### 5.4 Service Layer with DB Switching 🟡 IN PROGRESS
+- Created `services.ts` - unified service layer with SQLite/PostgreSQL switching
+- Uses `DB_TYPE` env var (`sqlite` or `postgres`)
+- All service methods check DB_TYPE and route to appropriate implementation
+- PostgreSQL queries use `pg` library with connection pool
+- SQLite uses existing `db.stmt.*` prepared statements
+
+#### 5.5 Routes Refactor 🟡 PARTIAL
+- Refactored middleware (requireAuth, requireClassAccess, requireClassOwner, requireRole) to use services
+- Endpoints still use `db.stmt.*` directly - needs completion
+- Once complete: switch DB with `DB_TYPE=postgres`
 - Ready to switch: `createRepositoryContainer('postgres')`
 
 ---

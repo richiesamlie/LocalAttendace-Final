@@ -435,48 +435,28 @@ When SQLite limits are reached (50+ concurrent users), migrate to PostgreSQL:
 
 ## TODO: Tomorrow — PostgreSQL Implementation
 
-**Status:** PostgreSQL implementations DONE. Schema SQL file created. Ready to switch.
+**Status:** Service layer created. Routes partially refactored to use services. Full PostgreSQL switch available via `DB_TYPE=postgres`.
 
 ### What's Complete:
 - ✅ All 7 PostgreSQL repository implementations
 - ✅ `src/repositories/postgres.ts` (connection pool + query helpers)
 - ✅ `src/repositories/schema.sql` (PostgreSQL database schema)
 - ✅ `.env.example` updated with `DATABASE_URL`
-- ✅ Updated `container.ts` to return PostgreSQL repos
+- ✅ Service layer with SQLite/PostgreSQL switching (`services.ts`)
+- ✅ `src/repositories/migrate.ts` - full data migration script
+- ⚠️ Routes.ts partially refactored (middleware done, endpoints use db.stmt directly)
 
-### TODO Tomorrow: SQLite → PostgreSQL Data Migration
+### Current Switch Mechanism:
+```bash
+# SQLite (default)
+npm run dev
 
-**Not yet implemented** - Need to create a migration script.
+# PostgreSQL
+DB_TYPE=postgres DATABASE_URL=postgresql://user:pass@localhost:5432/db npm run dev
+```
 
 ### What's Needed:
-Create `src/repositories/migrate.ts` that:
-1. Opens SQLite database (`database.sqlite`)
-2. Opens PostgreSQL connection pool
-3. Exports all tables: teachers, classes, students, attendance_records, daily_notes, events, timetable_slots, seating_layout, admin_settings, class_teachers, invite_codes, user_sessions
-4. Transforms data (snake_case → camelCase where needed)
-5. Imports into PostgreSQL
-6. Verifies row counts match
-
-### Rough Implementation Plan:
-```typescript
-// src/repositories/migrate.ts
-import Database from 'better-sqlite3';
-import { pool } from './postgres';
-
-async function migrate() {
-  const sqlite = new Database('database.sqlite');
-  
-  // Export from SQLite
-  const teachers = sqlite.prepare('SELECT * FROM teachers').all();
-  const classes = sqlite.prepare('SELECT * FROM classes').all();
-  // ... other tables
-  
-  // Import to PostgreSQL (use transactions)
-  for (const t of teachers) {
-    await pool.query(
-      'INSERT INTO teachers (id, username, password_hash, name, created_at) VALUES ($1, $2, $3, $4, $5)',
-      [t.id, t.username, t.password_hash, t.name, t.created_at]
-    );
+Complete routes.ts refactor to use `services.ts` for all endpoints:
   }
   // ... repeat for other tables
   
