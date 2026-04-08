@@ -16,6 +16,7 @@ function ClassSwitcher() {
   const isAdmin = useStore((state) => state.isAdmin);
   
   const isHomeroomTeacher = classes.some(c => c.role === 'owner');
+  const canCreateClass = isAdmin || !isHomeroomTeacher;
   const [isEditing, setIsEditing] = useState(false);
   const [newClassName, setNewClassName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,14 +134,14 @@ function ClassSwitcher() {
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
               placeholder="New class name..."
-              disabled={isHomeroomTeacher}
+              disabled={!canCreateClass}
               className="flex-1 px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              onKeyDown={(e) => e.key === 'Enter' && !isHomeroomTeacher && handleAddClass()}
+              onKeyDown={(e) => e.key === 'Enter' && canCreateClass && handleAddClass()}
             />
             <button 
               onClick={handleAddClass}
-              disabled={!newClassName.trim() || isHomeroomTeacher}
-              title={isHomeroomTeacher ? "You already manage a Homeroom class." : "Add new class"}
+              disabled={!newClassName.trim() || !canCreateClass}
+              title={!canCreateClass ? "You already manage a Homeroom class." : "Add new class"}
               className="p-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
