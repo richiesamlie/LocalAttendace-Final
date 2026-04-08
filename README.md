@@ -72,10 +72,14 @@ npm install
 
 ### 3. Configure Environment
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (optional - works without it):
 
 ```env
+# Optional - a default is used if not set
 JWT_SECRET="your_secret_key_here_change_in_production"
+
+# Optional - leave empty to use SQLite
+# DATABASE_URL="postgresql://user:password@localhost:5432/teacher_assistant"
 ```
 
 Generate a strong secret: `openssl rand -hex 32`
@@ -181,6 +185,41 @@ npm run docker:logs    # View logs
 npm run docker:build   # Rebuild image
 ```
 
+## Database Options
+
+### SQLite (Default)
+Uses local file `database.sqlite`. No configuration needed.
+
+### PostgreSQL (Optional)
+For production or multi-user setups:
+
+1. **Create PostgreSQL database:**
+```bash
+createdb teacher_assistant
+```
+
+2. **Run schema:**
+```bash
+psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
+```
+
+3. **Migrate existing data (if upgrading):**
+```bash
+npx tsx src/repositories/migrate.ts
+```
+
+4. **Start with PostgreSQL:**
+```bash
+DATABASE_URL="postgresql://user:password@localhost:5432/teacher_assistant" npm run dev
+```
+
+Or set it in `.env`:
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/teacher_assistant"
+```
+
+The app auto-detects PostgreSQL on startup and switches automatically.
+
 ## Development Tools
 
 ### Sample Data Seeding
@@ -250,7 +289,7 @@ Move the entire project folder into your Google Drive/Dropbox folder for automat
 | **Styling** | Tailwind CSS |
 | **State** | Zustand, React Query |
 | **Backend** | Express.js |
-| **Database** | SQLite (better-sqlite3) |
+| **Database** | SQLite (default) or PostgreSQL (optional) |
 | **Auth** | JWT, bcrypt |
 | **Validation** | Zod |
 | **Security** | Helmet, express-rate-limit |

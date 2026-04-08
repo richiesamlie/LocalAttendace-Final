@@ -153,9 +153,9 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 - Created `schema.sql` with full database schema
 - Updated `.env.example` with `DATABASE_URL`
 
-#### 5.4 Service Layer with DB Switching 🟡 IN PROGRESS
+#### 5.4 Service Layer with DB Switching ✅ COMPLETE
 - Created `services.ts` - unified service layer with SQLite/PostgreSQL switching
-- Uses `DB_TYPE` env var (`sqlite` or `postgres`)
+- Uses `DB_TYPE` env var (`sqlite` or `postgres`) or auto-detects via `DATABASE_URL`
 - All service methods check DB_TYPE and route to appropriate implementation
 - PostgreSQL queries use `pg` library with connection pool
 - SQLite uses existing `db.stmt.*` prepared statements
@@ -164,8 +164,16 @@ AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)
 - Refactored middleware (requireAuth, requireClassAccess, requireClassOwner, requireRole) to use services
 - Refactored all endpoints (teachers, classes, students, records, events, timetable, seating, notes, settings, invites, sessions) to use services
 - All 69 db.stmt.* calls replaced with service layer calls
-- Full PostgreSQL support: switch with `DB_TYPE=postgres`
-- Ready to switch: `createRepositoryContainer('postgres')`
+
+#### 5.6 Auto-Detection ✅ COMPLETE
+- App auto-detects PostgreSQL on startup if DATABASE_URL is set
+- Falls back to SQLite if PostgreSQL unavailable
+- Health endpoint shows which DB is active
+
+#### 5.7 Fresh Install Defaults ✅ COMPLETE
+- Default admin: username=`admin`, password=`teacher123`
+- JWT_SECRET has fallback for fresh installs
+- No .env file required to start
 
 ---
 
