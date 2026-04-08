@@ -225,10 +225,15 @@ router.get('/auth/me', async (req, res) => {
   res.json(teacher);
 });
 
-router.get('/health', (_req, res) => {
+router.get('/health', async (_req, res) => {
   try {
-    db.prepare('SELECT 1').get();
-    res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+    const dbType = process.env.DB_TYPE || 'sqlite';
+    if (dbType === 'postgres') {
+      await svc.settingService.getAll(); // Test PG connection
+    } else {
+      db.prepare('SELECT 1').get();
+    }
+    res.json({ status: 'healthy', db: dbType, timestamp: new Date().toISOString() });
   } catch (error) {
     res.status(503).json({ status: 'unhealthy', error: 'Database unavailable' });
   }

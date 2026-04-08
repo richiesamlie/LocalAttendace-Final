@@ -9,6 +9,39 @@ import fs from "fs";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 
+// Auto-detect and configure database
+async function configureDatabase() {
+  const DATABASE_URL = process.env.DATABASE_URL;
+  const DB_TYPE = process.env.DB_TYPE;
+  
+  // If explicitly set to sqlite, use SQLite
+  if (DB_TYPE === 'sqlite') {
+    console.log('[db] Using SQLite (DB_TYPE=sqlite)');
+    return;
+  }
+  
+  // If DATABASE_URL is set, try PostgreSQL
+  if (DATABASE_URL) {
+    try {
+      const { Pool } = await import('pg');
+      const pool = new Pool({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2000 });
+      const result = await pool.query('SELECT 1');
+      await pool.end();
+      
+      process.env.DB_TYPE = 'postgres';
+      console.log('[db] PostgreSQL connected successfully - using PostgreSQL');
+      return;
+    } catch (err) {
+      console.warn('[db] PostgreSQL connection failed, falling back to SQLite:', (err as Error).message);
+      process.env.DB_TYPE = 'sqlite';
+      return;
+    }
+  }
+  
+  // Default to SQLite
+  console.log('[db] Using SQLite (no DATABASE_URL set)');
+}
+
 // Simple request logger middleware
 function requestLogger() {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -48,6 +81,9 @@ async function startServer() {
   const args = process.argv.slice(2);
   const isNetwork = args.includes('--network');
   const HOST = isNetwork ? '0.0.0.0' : '127.0.0.1';
+  
+  // Configure database (auto-detect PostgreSQL)
+  await configureDatabase();
   
   const app = express();
   const PORT = 3000;
