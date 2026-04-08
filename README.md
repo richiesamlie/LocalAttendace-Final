@@ -193,32 +193,40 @@ Uses local file `database.sqlite`. No configuration needed.
 ### PostgreSQL (Optional)
 For production or multi-user setups:
 
-1. **Create PostgreSQL database:**
+1. **Quick setup (recommended):**
+```bash
+npm run db:setup:postgres
+```
+
+This script will:
+- Create database `teacher_assistant`
+- Run the database schema
+- Ask to migrate existing SQLite data
+- Create `.env` file with connection string
+
+2. **Or manual setup:**
+
+**Create PostgreSQL database:**
 ```bash
 createdb teacher_assistant
 ```
 
-2. **Run schema:**
+**Run schema:**
 ```bash
 psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
 ```
 
-3. **Migrate existing data (if upgrading):**
+**Migrate existing data (if upgrading):**
 ```bash
-npx tsx src/repositories/migrate.ts
+npm run db:migrate:to-postgres
 ```
 
-4. **Start with PostgreSQL:**
+3. **Start the app:**
 ```bash
-DATABASE_URL="postgresql://user:password@localhost:5432/teacher_assistant" npm run dev
+npm run dev
 ```
 
-Or set it in `.env`:
-```env
-DATABASE_URL="postgresql://user:password@localhost:5432/teacher_assistant"
-```
-
-The app auto-detects PostgreSQL on startup and switches automatically.
+The app auto-detects PostgreSQL when `DATABASE_URL` is set in `.env`.
 
 ## Development Tools
 

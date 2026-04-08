@@ -15,9 +15,10 @@
 7. [Inviting Other Teachers](#7-inviting-other-teachers)
 8. [Viewing Reports](#8-viewing-reports)
 9. [Backup & Restore](#9-backup--restore)
-10. [Windows Auto-Start](#10-windows-auto-start)
-11. [Troubleshooting](#11-troubleshooting)
-12. [Keyboard Shortcuts](#12-keyboard-shortcuts)
+10. [Using PostgreSQL (Optional)](#10-using-postgresql-optional)
+11. [Windows Auto-Start](#11-windows-auto-start)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Keyboard Shortcuts](#13-keyboard-shortcuts)
 
 ---
 
@@ -323,7 +324,87 @@ Use these default credentials:
 
 ---
 
-## 10. Windows Auto-Start
+## 10. Using PostgreSQL (Optional)
+
+The app uses SQLite by default (no setup needed). You can switch to PostgreSQL for production or multi-user setups.
+
+### Why Use PostgreSQL?
+- Better for multiple users accessing simultaneously
+- More robust for large datasets
+- Standard for production environments
+
+### Quick Setup (Windows)
+
+1. **Install PostgreSQL:**
+   - Download from: https://www.postgresql.org/download/windows/
+   - During install, remember your password for user `postgres`
+
+2. **Run the setup script:**
+   ```cmd
+   npm run db:setup:postgres
+   ```
+
+   This will:
+   - Create database `teacher_assistant`
+   - Run the database schema
+   - Ask if you want to migrate existing data
+   - Create `.env` file with connection string
+
+3. **Start the app:**
+   ```cmd
+   npm run dev
+   ```
+
+   The app will automatically detect PostgreSQL and connect.
+
+### Quick Setup (macOS/Linux)
+
+```bash
+# Install PostgreSQL
+brew install postgresql
+brew services start postgresql
+
+# Run setup script
+npm run db:setup:postgres
+
+# Start app
+npm run db:setup:postgres
+npm run dev
+```
+
+### Manual PostgreSQL Setup
+
+If you prefer to set it up manually:
+
+1. Create database:
+   ```bash
+   createdb teacher_assistant
+   ```
+
+2. Run schema:
+   ```bash
+   psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
+   ```
+
+3. Create `.env` file:
+   ```env
+   DATABASE_URL=postgresql://postgres:your_password@localhost:5432/teacher_assistant
+   ```
+
+4. Start app: `npm run dev`
+
+### Switch Back to SQLite
+
+Simply remove or empty the `DATABASE_URL` in `.env`:
+```env
+# DATABASE_URL=postgresql://...
+```
+
+Or set: `DB_TYPE=sqlite`
+
+---
+
+## 11. Windows Auto-Start
 
 ### Set Up Auto-Start
 1. Open the app folder
@@ -338,7 +419,7 @@ Use these default credentials:
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 ### App Won't Start (Node.js Method)
 **Problem:** Black window closes immediately
@@ -406,7 +487,7 @@ Use these default credentials:
 
 ---
 
-## 12. Keyboard Shortcuts
+## 13. Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
