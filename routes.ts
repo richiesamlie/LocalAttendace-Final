@@ -891,7 +891,7 @@ router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLi
 }));
 
 // --- SETTINGS ---
-router.get('/settings', async (req, res) => {
+router.get('/settings', requireAuth, async (req, res) => {
   try {
     const settings = await svc.settingService.getAll();
     const response: Record<string, string> = {};
