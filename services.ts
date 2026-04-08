@@ -1,5 +1,5 @@
 import db from './db';
-import { query as pgQuery, queryOne as pgQueryOne } from './src/repositories/postgres';
+import { query as pgQuery, queryOne as pgQueryOne, pgTransaction } from './src/repositories/postgres';
 import type { ClassSummary } from './src/repositories/IClassRepository';
 
 function isPostgres(): boolean {
@@ -547,31 +547,35 @@ export const seatingService = {
     return db.stmt.clearSeatingByClass.run(classId);
   },
 
-  // N4: Atomically replace the entire seating layout using a SQLite transaction.
-  // Without a transaction, a failure mid-loop leaves the chart partially cleared.
+  // N4: Atomically replace the entire seating layout.
+  // Uses SQLite transactions locally, and PostgreSQL transactions (`pgTransaction`) when deployed,
+  // ensuring that a failure mid-loop correctly rolls back the operation instead of leaving partial state.
   async saveLayout(classId: string, layout: Record<string, string>) {
     if (isPostgres()) {
-      // PostgreSQL: run sequentially (pgQuery doesn't expose native transactions here)
-      await pgQuery('DELETE FROM seating_layout WHERE class_id = $1', [classId]);
+      return pgTransaction(async (client) => {
+        await client.query('DELETE FROM seating_layout WHERE class_id = $1', [classId]);
+        for (const [seatId, studentId] of Object.entries(layout)) {
+          if (studentId) {
+            await client.query(
+              `INSERT INTO seating_layout (class_id, seat_id, student_id) VALUES ($1, $2, $3)
+               ON CONFLICT (class_id, seat_id) DO UPDATE SET student_id = $3, updated_at = NOW()`,
+              [classId, seatId, studentId]
+            );
+          }
+        }
+      });
+    }
+
+    // SQLite: db.transaction ensures the loop is atomic
+    const tx = (db as any).transaction(() => {
+      db.stmt.clearSeatingByClass.run(classId);
       for (const [seatId, studentId] of Object.entries(layout)) {
         if (studentId) {
-          await pgQuery(
-            `INSERT INTO seating_layout (class_id, seat_id, student_id) VALUES ($1, $2, $3)
-             ON CONFLICT (class_id, seat_id) DO UPDATE SET student_id = $3, updated_at = NOW()`,
-            [classId, seatId, studentId]
-          );
+          db.stmt.insertSeating.run(classId, seatId, studentId);
         }
       }
-      return;
-    }
-    // SQLite: use a transaction so clear + inserts are atomic
-    const txn = (db as any).transaction((cls: string, lay: Record<string, string>) => {
-      db.stmt.clearSeatingByClass.run(cls);
-      for (const [seatId, studentId] of Object.entries(lay)) {
-        if (studentId) db.stmt.insertSeating.run(cls, seatId, studentId);
-      }
     });
-    txn(classId, layout);
+    tx();
   },
 };
 
