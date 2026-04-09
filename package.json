@@ -16,6 +16,7 @@
     "db:restore": "tsx scripts/restore.ts",
     "db:restore:list": "tsx scripts/restore.ts --list",
     "db:seed": "tsx scripts/seed.ts",
+    "db:fresh": "tsx scripts/fresh-start.ts",
     "db:setup:postgres": "tsx scripts/setup-postgres.ts",
     "db:migrate:to-postgres": "tsx src/repositories/migrate.ts",
     "docker:up": "docker-compose up -d",
