@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { validate, loginSchema, classSchema, studentSchema, attendanceRecordSchema, eventSchema, timetableSlotSchema, teacherSchema, settingSchema } from './src/lib/validation';
 import * as svc from './services';
+import { io } from './server';
 
 const router = express.Router();
 
@@ -629,6 +630,7 @@ router.post('/classes/:classId/students', requireClassAccess('classId'), postLim
   const { id, name, rollNumber, parentName, parentPhone, isFlagged } = req.body;
   await svc.studentService.insert(id, classId, name, rollNumber, parentName || null, parentPhone || null, isFlagged ? 1 : 0);
   res.json({ success: true });
+  io?.to(classId).emit('students_updated');
 }));
 
 router.put('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -650,7 +652,9 @@ router.put('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
   if (isArchived !== undefined) updateData.is_archived = isArchived ? 1 : 0;
   
   await svc.studentService.update(updateData, studentId, teacherId);
+  const updatedStudent = await svc.studentService.getById(studentId, teacherId);
   res.json({ success: true });
+  if (updatedStudent) io?.to((updatedStudent as any).class_id).emit('students_updated');
 }));
 
 router.delete('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -664,6 +668,7 @@ router.delete('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
 
   await svc.studentService.archive(studentId, teacherId);
   res.json({ success: true });
+  if (student) io?.to((student as any).class_id).emit('students_updated');
 }));
 
 router.post('/classes/:classId/students/sync', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
@@ -689,6 +694,7 @@ router.post('/classes/:classId/students/sync', requireClassAccess('classId'), po
   }
 
   res.json({ success: true, students: syncedStudents });
+  io?.to(classId).emit('students_updated');
 }));
 
 // --- ATTENDANCE RECORDS ---
@@ -730,6 +736,9 @@ router.post('/records', requireAuth, postLimiter, withWriteQueue(async (req, res
     await svc.recordService.insert(r.studentId, r.date, r.status, r.reason || null);
   }
   res.json({ success: true });
+  // Notify all unique class rooms that had records updated
+  const classIds = [...new Set(records.map((r: any) => r.classId))];
+  classIds.forEach((cid: any) => io?.to(cid).emit('records_updated'));
 }));
 
 // --- DAILY NOTES ---
@@ -754,6 +763,7 @@ router.post('/classes/:classId/daily-notes', requireClassAccess('classId'), post
   const { date, note } = req.body;
   await svc.noteService.upsert(classId, date, note);
   res.json({ success: true });
+  io?.to(classId).emit('notes_updated');
 }));
 
 // --- EVENTS ---
@@ -775,6 +785,7 @@ router.post('/classes/:classId/events', requireClassAccess('classId'), postLimit
     await svc.eventService.insert(e.id, classId, e.date, e.title, e.type, e.description || null);
   }
   res.json({ success: true });
+  io?.to(classId).emit('events_updated');
 }));
 
 router.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -789,6 +800,7 @@ router.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
   const { date, title, type, description } = req.body;
   await svc.eventService.update({ date, title, type, description }, eventId, teacherId);
   res.json({ success: true });
+  io?.to((event as any).class_id).emit('events_updated');
 }));
 
 router.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -802,6 +814,7 @@ router.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
 
   await svc.eventService.delete(eventId, teacherId);
   res.json({ success: true });
+  io?.to((event as any).class_id).emit('events_updated');
 }));
 
 // --- TIMETABLE SLOTS ---
@@ -830,6 +843,7 @@ router.post('/classes/:classId/timetable', requireClassAccess('classId'), postLi
   const { id, dayOfWeek, startTime, endTime, subject, lesson } = req.body;
   await svc.timetableService.insert(id, classId, dayOfWeek, startTime, endTime, subject, lesson);
   res.json({ success: true });
+  io?.to(classId).emit('timetable_updated');
 }));
 
 router.put('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -844,6 +858,7 @@ router.put('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
   const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;
   await svc.timetableService.update({ day_of_week: dayOfWeek, start_time: startTime, end_time: endTime, subject, lesson }, timetableId, teacherId);
   res.json({ success: true });
+  io?.to((slot as any).class_id).emit('timetable_updated');
 }));
 
 router.delete('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -857,6 +872,7 @@ router.delete('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => 
 
   await svc.timetableService.delete(timetableId, teacherId);
   res.json({ success: true });
+  io?.to((slot as any).class_id).emit('timetable_updated');
 }));
 
 // --- SEATING LAYOUT ---
@@ -886,6 +902,7 @@ router.post('/classes/:classId/seating', requireClassAccess('classId'), postLimi
     await svc.seatingService.insert(classId, seatId, studentId);
   }
   res.json({ success: true });
+  io?.to(classId).emit('seating_updated');
 }));
 
 router.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
@@ -896,6 +913,7 @@ router.put('/classes/:classId/seating', requireClassAccess('classId'), postLimit
   const layout = req.body as Record<string, string>;
   await svc.seatingService.saveLayout(classId, layout);
   res.json({ success: true });
+  io?.to(classId).emit('seating_updated');
 }));
 
 router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
@@ -903,6 +921,7 @@ router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLi
 
   await svc.seatingService.clear(classId);
   res.json({ success: true });
+  io?.to(classId).emit('seating_updated');
 }));
 
 // --- SETTINGS ---

@@ -4,10 +4,15 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { createServer as createViteServer } from "vite";
+import { createServer as createHttpServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import path from "path";
 import fs from "fs";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
+
+// Singleton Socket.io instance — exported so routes.ts can emit events
+export let io: SocketIOServer;
 
 // Auto-detect and configure database
 async function configureDatabase() {
@@ -88,7 +93,30 @@ async function startServer() {
   await configureDatabase();
   
   const app = express();
+  const httpServer = createHttpServer(app);
   const PORT = 3000;
+
+  // Initialise Socket.io on the same HTTP server
+  io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: '*',
+      credentials: true,
+    },
+    // Use path /ws to avoid conflicts with API routes
+    path: '/ws/socket.io',
+  });
+
+  // Class rooms — each classId is a separate Socket.io room
+  io.on('connection', (socket) => {
+    // Client joins the room for the class they are currently viewing
+    socket.on('join_class', (classId: string) => {
+      socket.join(classId);
+    });
+    // Client leaves the room when switching to another class
+    socket.on('leave_class', (classId: string) => {
+      socket.leave(classId);
+    });
+  });
 
   // Security headers
   app.use(helmet({
@@ -143,7 +171,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, HOST, () => {
+  httpServer.listen(PORT, HOST, () => {
     console.log(`\n========================================`);
     console.log(` Teacher Assistant Server Started`);
     console.log(`========================================`);

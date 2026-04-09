@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { cn } from './utils/cn';
 import { useStore } from './store';
 import { useAuth, useLogin, useLogout, useClassSync } from './hooks/useData';
+import { useSocket } from './hooks/useSocket';
 import Sidebar from './components/Sidebar';
 
 // Lazy load all major routes to enable code-splitting and drastically reduce initial JS payload
@@ -104,7 +105,8 @@ export default function App() {
   
   const authQuery = useAuth();
   const logoutMutation = useLogout();
-  useClassSync(30000);
+  useClassSync(120000); // Fallback polling every 2 min — WebSocket handles real-time sync
+  useSocket();           // Real-time sync via WebSocket
 
   useEffect(() => {
     // Only fetch full data if authenticated
