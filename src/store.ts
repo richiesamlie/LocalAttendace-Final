@@ -701,6 +701,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
   clearAllData: async () => {
     try {
+      const currentTeacherId = get().teacherId;
       const classes = get().classes;
       const failed: string[] = [];
       
@@ -721,6 +722,15 @@ export const useStore = create<AppState>()((set, get) => ({
       const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
       await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
 
+      // Re-fetch admin status from server to ensure correctness after reset
+      let currentIsAdmin = get().isAdmin;
+      try {
+        const me = await api.getMe();
+        currentIsAdmin = me.isAdmin;
+      } catch {
+        // Fall back to current state if fetch fails
+      }
+
       set(() => {
         const defaultClass: ClassData = {
           id: defaultClassId,
@@ -733,6 +743,9 @@ export const useStore = create<AppState>()((set, get) => ({
           seatingLayout: {},
         };
         return {
+          isAuthenticated: currentTeacherId !== null,
+          teacherId: currentTeacherId,
+          isAdmin: currentIsAdmin,
           classes: [defaultClass],
           currentClassId: defaultClass.id,
           students: [],

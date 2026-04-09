@@ -357,8 +357,8 @@ initSchema();
 
 // Pre-compile frequently used queries for performance (after schema is created)
 const preparedStatements = {
-  getTeacherByUsername: _db.prepare('SELECT id, username, password_hash, name FROM teachers WHERE username = ?'),
-  getTeacherById: _db.prepare('SELECT id, username, name FROM teachers WHERE id = ?'),
+  getTeacherByUsername: _db.prepare('SELECT id, username, password_hash, name, is_admin FROM teachers WHERE username = ?'),
+  getTeacherById: _db.prepare('SELECT id, username, name, is_admin FROM teachers WHERE id = ?'),
   getClassesByTeacher: _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)'),
   getStudentsByClass: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? AND is_archived = 0 ORDER BY name'),
   getStudentsByClassWithArchived: _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? ORDER BY name'),

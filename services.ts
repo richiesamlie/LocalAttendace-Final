@@ -24,7 +24,7 @@ export const teacherService = {
         [id]
       );
     }
-    return db.stmt.getTeacherById.get(id);
+    return db.stmt.getTeacherById.get(id) as { id: string; username: string; name: string; is_admin: number } | undefined;
   },
 
   async getIsAdmin(id: string): Promise<boolean> {
@@ -212,18 +212,32 @@ export const classService = {
   },
 
   async update(name: string, id: string, teacherId: string) {
+    const isAdmin = await teacherService.getIsAdmin(teacherId);
     if (isPostgres()) {
-      return pgQuery('UPDATE classes SET name = $1, updated_at = NOW() WHERE id = $2', [name, id]);
+      if (isAdmin) {
+        return pgQuery('UPDATE classes SET name = $1, updated_at = NOW() WHERE id = $2', [name, id]);
+      }
+      return pgQuery('UPDATE classes SET name = $1, updated_at = NOW() WHERE id = $2 AND id IN (SELECT class_id FROM class_teachers WHERE teacher_id = $3)', [name, id, teacherId]);
+    }
+    if (isAdmin) {
+      return db.prepare('UPDATE classes SET name = ? WHERE id = ?').run(name, id);
     }
     return db.stmt.updateClass.run(name, id, teacherId);
   },
 
   async delete(id: string, teacherId: string) {
+    const isAdmin = await teacherService.getIsAdmin(teacherId);
     if (isPostgres()) {
+      if (isAdmin) {
+        return pgQuery('DELETE FROM classes WHERE id = $1', [id]);
+      }
       return pgQuery(
         `DELETE FROM classes WHERE id = $1 AND id IN (SELECT class_id FROM class_teachers WHERE teacher_id = $2 AND role = 'owner')`,
         [id, teacherId]
       );
+    }
+    if (isAdmin) {
+      return db.prepare('DELETE FROM classes WHERE id = ?').run(id);
     }
     return db.stmt.deleteClass.run(id, teacherId);
   },

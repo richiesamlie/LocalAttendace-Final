@@ -239,7 +239,7 @@ router.get('/auth/me', async (req, res) => {
   if (!teacher) {
     return res.status(404).json({ error: 'Teacher not found' });
   }
-  res.json(teacher);
+  res.json({ id: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!(teacher as any).is_admin });
 });
 
 router.get('/health', async (_req, res) => {
@@ -347,6 +347,21 @@ router.use(requireAuth);
 router.get('/classes', async (req, res) => {
   try {
     const teacherId = (req as any).teacherId;
+    
+    // Global administrators see all classes in the system
+    const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+    if (isGlobalAdmin) {
+      const allClasses = await svc.classService.getAll();
+      const mapped = (allClasses as any[]).map((c: any) => ({
+        id: c.id,
+        teacher_id: c.teacher_id,
+        name: c.name,
+        owner_name: c.teacher_name,
+        role: 'administrator',
+      }));
+      return res.json(mapped);
+    }
+    
     const classes = await svc.classService.getByTeacher(teacherId);
     res.json(classes);
   } catch (error) {
