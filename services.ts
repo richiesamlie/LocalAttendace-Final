@@ -410,7 +410,7 @@ export const recordService = {
     return db.stmt.getRecordsByClass.all(classId);
   },
 
-  insert(studentId: string, date: string, status: string, reason: string | null) {
+  insert(classId: string, studentId: string, date: string, status: string, reason: string | null) {
     if (isPostgres()) {
       return pgQuery(
         `INSERT INTO attendance_records (student_id, date, status, reason) VALUES ($1, $2, $3, $4)
@@ -418,7 +418,7 @@ export const recordService = {
         [studentId, date, status, reason]
       );
     }
-    return db.stmt.insertAttendance.run(studentId, date, status, reason);
+    return db.stmt.insertAttendance.run(studentId, classId, date, status, reason);
   },
 };
 

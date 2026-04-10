@@ -733,7 +733,7 @@ router.post('/records', requireAuth, postLimiter, withWriteQueue(async (req, res
   }
 
   for (const r of records) {
-    await svc.recordService.insert(r.studentId, r.date, r.status, r.reason || null);
+    await svc.recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
   }
   res.json({ success: true });
   // Notify all unique class rooms that had records updated

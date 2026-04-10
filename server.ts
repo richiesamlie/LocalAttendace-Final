@@ -8,6 +8,7 @@ import { createServer as createHttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import path from "path";
 import fs from "fs";
+import os from "os";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 
@@ -176,10 +177,24 @@ async function startServer() {
     console.log(` Teacher Assistant Server Started`);
     console.log(`========================================`);
     if (isNetwork) {
+      const interfaces = os.networkInterfaces();
+      const ipList: string[] = [];
+      for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name] || []) {
+          if (iface.family === 'IPv4' && !iface.internal) {
+            ipList.push(`http://${iface.address}:${PORT} (${name})`);
+          }
+        }
+      }
       console.log(`\n 🌍 INTERNAL-SITE MODE ACTIVE`);
       console.log(` -> Local:   http://localhost:${PORT}`);
-      console.log(` -> Network: http://<YOUR_IP_ADDRESS>:${PORT}`);
-      console.log(`\n (To find your IP, open cmd and type 'ipconfig')`);
+      if (ipList.length > 0) {
+        console.log(` -> Network Interfaces:`);
+        ipList.forEach(ip => console.log(`      - ${ip}`));
+      } else {
+        console.log(` -> Network: http://<YOUR_IP_ADDRESS>:${PORT}`);
+      }
+      console.log(`\n (You can also type 'ipconfig' in cmd to verify your IP)`);
     } else {
       console.log(`\n 🔒 LOCAL MODE ACTIVE`);
       console.log(` -> Local:   http://127.0.0.1:${PORT}`);
