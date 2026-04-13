@@ -6,7 +6,12 @@ import toast from 'react-hot-toast';
 
 export default function SeatingChart() {
   const allStudents = useStore((state) => state.students);
-  const students = useMemo(() => allStudents.filter(s => !s.isArchived), [allStudents]);
+  const students = useMemo(() =>
+    allStudents
+      .filter(s => !s.isArchived)
+      .sort((a, b) => a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })),
+    [allStudents]
+  );
   const seatingLayout = useStore((state) => state.seatingLayout);
   const updateSeat = useStore((state) => state.updateSeat);
   const setSeatingLayout = useStore((state) => state.setSeatingLayout);

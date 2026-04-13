@@ -38,10 +38,14 @@ export default function Reports() {
   const monthEnd = endOfMonth(monthStart);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = students
+    .filter(student =>
+      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) =>
+      a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
   // Pre-index records by studentId for O(1) lookup
   const recordsByStudent = new Map<string, Map<string, { status: string }>>();
