@@ -67,36 +67,33 @@ export default function SeatingChart() {
   };
 
   const autoFillSeats = () => {
-    let unseated = [...unseatedStudents];
+    const unseated = [...unseatedStudents];
     if (unseated.length === 0) return;
 
     const newLayout = { ...seatingLayout };
-    
-    // Shuffle students to ensure different ones get picked first if there are constraints
+
+    // Separate flagged and unflagged (both shuffled for variety)
     const shuffledUnseated = [...unseated].sort(() => Math.random() - 0.5);
     const flagged = shuffledUnseated.filter(s => s.isFlagged);
     const unflagged = shuffledUnseated.filter(s => !s.isFlagged);
 
+    // Returns true if a seat position is directly adjacent (8-direction) to any flagged student
     const isAdjacentToFlagged = (r: number, c: number, layout: Record<string, string>) => {
       const adjacentOffsets = [
         [-1, -1], [-1, 0], [-1, 1],
         [0, -1],           [0, 1],
         [1, -1],  [1, 0],  [1, 1]
       ];
-      
       for (const [dr, dc] of adjacentOffsets) {
         const nr = r + dr;
         const nc = c + dc;
         if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
           const adjIndex = nr * cols + nc;
           if (adjIndex < totalSeats) {
-            const adjSeatId = `seat-${adjIndex}`;
-            const adjStudentId = layout[adjSeatId];
+            const adjStudentId = layout[`seat-${adjIndex}`];
             if (adjStudentId) {
               const adjStudent = students.find(s => s.id === adjStudentId);
-              if (adjStudent?.isFlagged) {
-                return true;
-              }
+              if (adjStudent?.isFlagged) return true;
             }
           }
         }
@@ -104,56 +101,90 @@ export default function SeatingChart() {
       return false;
     };
 
-    // Get all available seats
-    const availableSeats: {r: number, c: number, id: string}[] = [];
+    // Chebyshev (chessboard) distance to nearest flagged student already in layout
+    const minDistToFlagged = (r: number, c: number, layout: Record<string, string>) => {
+      let minDist = Infinity;
+      for (let i = 0; i < totalSeats; i++) {
+        const sr = Math.floor(i / cols);
+        const sc = i % cols;
+        const sid = layout[`seat-${i}`];
+        if (sid) {
+          const s = students.find(st => st.id === sid);
+          if (s?.isFlagged) {
+            const dist = Math.max(Math.abs(r - sr), Math.abs(c - sc));
+            if (dist < minDist) minDist = dist;
+          }
+        }
+      }
+      return minDist;
+    };
+
+    // Build available seat list
+    const availableSeats: { r: number; c: number; id: string }[] = [];
     for (let i = 0; i < totalSeats; i++) {
       const r = Math.floor(i / cols);
       const c = i % cols;
       const seatId = `seat-${i}`;
       if (!newLayout[seatId]) {
-        availableSeats.push({r, c, id: seatId});
+        availableSeats.push({ r, c, id: seatId });
       }
     }
 
-    // Shuffle available seats
+    // Shuffle for variety
     const shuffledSeats = availableSeats.sort(() => Math.random() - 0.5);
 
-    // Try to place flagged students first to ensure they are separated
+    let separated = 0;
+    let forcedAdjacent = 0;
+
+    // Place flagged students first, maximising distance from other flagged students
     for (const student of flagged) {
-      let placed = false;
-      // Find a random seat that is not adjacent to another flagged student
-      for (let i = 0; i < shuffledSeats.length; i++) {
-        const seat = shuffledSeats[i];
-        if (!newLayout[seat.id] && !isAdjacentToFlagged(seat.r, seat.c, newLayout)) {
-          newLayout[seat.id] = student.id;
-          placed = true;
-          break;
-        }
-      }
-      // If we couldn't find a safe seat, just put them in any available seat
-      if (!placed) {
-        for (let i = 0; i < shuffledSeats.length; i++) {
-          const seat = shuffledSeats[i];
-          if (!newLayout[seat.id]) {
-            newLayout[seat.id] = student.id;
-            break;
-          }
+      // Filter to non-adjacent seats
+      const safeSeat = shuffledSeats
+        .filter(seat => !newLayout[seat.id] && !isAdjacentToFlagged(seat.r, seat.c, newLayout))
+        // Among safe seats, pick the one furthest from any other flagged student
+        .sort((a, b) => minDistToFlagged(b.r, b.c, newLayout) - minDistToFlagged(a.r, a.c, newLayout))[0];
+
+      if (safeSeat) {
+        newLayout[safeSeat.id] = student.id;
+        separated++;
+      } else {
+        // No safe seat available — fall back to any empty seat, pick the one furthest away
+        const fallback = shuffledSeats
+          .filter(seat => !newLayout[seat.id])
+          .sort((a, b) => minDistToFlagged(b.r, b.c, newLayout) - minDistToFlagged(a.r, a.c, newLayout))[0];
+        if (fallback) {
+          newLayout[fallback.id] = student.id;
+          forcedAdjacent++;
         }
       }
     }
 
-    // Place unflagged students in remaining seats
+    // Place unflagged students in remaining seats (random order)
     for (const student of unflagged) {
-      for (let i = 0; i < shuffledSeats.length; i++) {
-        const seat = shuffledSeats[i];
-        if (!newLayout[seat.id]) {
-          newLayout[seat.id] = student.id;
-          break;
-        }
-      }
+      const seat = shuffledSeats.find(s => !newLayout[s.id]);
+      if (seat) newLayout[seat.id] = student.id;
     }
-    
+
     setSeatingLayout(newLayout);
+
+    // Toast feedback
+    const total = unseated.length;
+    if (flagged.length === 0) {
+      toast.success(`Auto-filled ${total} student${total !== 1 ? 's' : ''}.`);
+    } else if (forcedAdjacent === 0) {
+      toast.success(
+        `Auto-filled ${total} student${total !== 1 ? 's' : ''}. ` +
+        `All ${flagged.length} flagged student${flagged.length !== 1 ? 's' : ''} were separated.`,
+        { duration: 4000 }
+      );
+    } else {
+      toast(
+        `Auto-filled ${total} student${total !== 1 ? 's' : ''}. ` +
+        `${separated} flagged student${separated !== 1 ? 's' : ''} separated, ` +
+        `but ${forcedAdjacent} could not be separated due to space constraints.`,
+        { icon: '⚠️', duration: 5000 }
+      );
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, studentId: string) => {
