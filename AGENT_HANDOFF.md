@@ -1,18 +1,17 @@
 # Agent Handoff — Teacher Assistant Project
 
-**Last Session:** 2026-04-08 11:45 AM (WIB)
+**Last Session:** 2026-04-13 08:50 AM (WIB)
 **Current Branch:** `develop` — fully synced with `origin/develop`
 **Latest Commit:** (see section 6 for commit log)
 
-### Recent Changes (2026-04-08 Session)
-1. Implemented global Administrator role with `is_admin` column
-2. Renamed roles in UI: Owner → Homeroom, Teacher → Subject Teacher
-3. Removed "admin" as class-level role (now only global)
-4. Added global admin bypass to all class access checks
-5. Updated all DB insert operations to include `is_admin`
-6. Consolidated code: renamed `teacherService.isAdmin` → `teacherService.isHomeroom`
-7. Fixed remaining authorization gaps in backend
-8. Fixed GET /settings to require authentication
+### Recent Changes (2026-04-13 Session — Audit + Fixes)
+1. **Audit pass:** Full static code + visual browser walkthrough of all 15 pages
+2. **TypeScript:** `tsc --noEmit` exits 0 — no type errors
+3. **Flag toggle fix:** `services.ts` — replaced fixed-parameter `updateStudent` prepared statement with dynamic SQL builder (prevents partial updates from NULL-ing other fields)
+4. **Attendance tick fix:** Resolved `PUT /students/:id` not mapping boolean `isFlagged` → integer 1/0 for SQLite
+5. **Roster edit UI:** Replaced multi-`<td>` edit row with a `colSpan={6}` full-width flex form (spacious, labeled fields)
+6. **Roster sort:** `Roster.tsx` — numeric-aware `localeCompare({ numeric: true })` sort for roll numbers
+7. **Sort consistency audit:** Found Attendance, Reports, and SeatingChart were still lexicographic — **fixed all three** in commit `3b459d0`
 **Repo:** https://github.com/richiesamlie/LocalAttendace-Final/tree/develop
 **Local Path:** `c:/repo`
 
@@ -107,16 +106,17 @@ Teacher Assistant is a **local-first classroom management web app** for teachers
 ## 3. FILE MAP WITH LINE COUNTS
 
 ```
-├── db.ts (533 lines)              — Database: schema, prepared statements, write queue, cache, migrations
-├── routes.ts (986 lines)          — All API endpoints + auth/rate-limit middleware
-├── server.ts (129 lines)          — Express setup, Vite integration, request logger, error handling
+├── db.ts (~575 lines)             — Database: schema, prepared statements, write queue, cache, migrations
+├── routes.ts (~962 lines)         — All API endpoints + auth/rate-limit middleware
+├── services.ts (~716 lines)       — Service layer: all DB access (dynamic SQL for partial updates)
+├── server.ts (~129 lines)         — Express setup, Vite integration, request logger, error handling
 ├── package.json (75 lines)        — Dependencies + npm scripts
 ├── MIGRATION_PLAN.md              — Original migration plan, all 37 items complete
 ├── AUDIT_LOG.md                   — Architecture audit, all fixes complete
 ├── AGENT_HANDOFF.md               — This file
 │
 ├── src/
-│   ├── store.ts (776 lines)       — Zustand state: all data types + CRUD actions + sync
+│   ├── store.ts (~815 lines)      — Zustand state: all data types + CRUD actions + sync
 │   ├── App.tsx (205 lines)        — Main app: auth routing, layout, class sync
 │   ├── main.tsx                   — React entry point
 │   ├── index.css                  — Tailwind directives + global styles
@@ -792,10 +792,34 @@ See `.env.example`:
 ### CRITICAL — Read These First
 1. **Local path is `c:/repo`** — Already cloned and on `develop` branch, synced with origin
 2. **Git config is set** — `user.email` and `user.name` configured locally
-3. **All 56 audit items are DONE** (37 original + 4 CC + 15 new)
-4. **TypeScript compiles cleanly** — `tsc --noEmit` exits 0 (verified 2026-04-08)
+3. **All 56+ audit items are DONE** (37 original + 4 CC + 15 new + 2026-04-13 fixes)
+4. **TypeScript compiles cleanly** — `tsc --noEmit` exits 0 (verified 2026-04-13)
 5. **Dependencies are installed** — `npm install` already ran, `node_modules/` exists
 6. **The database file exists** — `database.sqlite` is present (may have test data from seed)
+7. **All 15 app pages load cleanly** — verified via browser walkthrough 2026-04-13, no console errors
+
+### What Was Fixed in the 2026-04-13 Session
+- **`services.ts`:** `studentService.update()` now uses dynamic SQL builder (prevents flag toggle from NULL-ing name/phone)
+- **`routes.ts`:** `PUT /students/:id` properly maps `isFlagged: boolean → is_flagged: 0/1` for SQLite
+- **`Roster.tsx`:** Edit row uses `colSpan={6}` + flex layout — no longer cramped; roll number sort is numeric
+- **`TakeAttendance.tsx`:** `filteredStudents` now sorted numerically by roll number
+- **`Reports.tsx`:** `filteredStudents` now sorted numerically by roll number  
+- **`SeatingChart.tsx`:** `students` memo now sorted numerically by roll number
+
+### Audit Status as of 2026-04-13
+| Check | Status |
+|-------|--------|
+| TypeScript (`tsc --noEmit`) | ✅ Clean |
+| No `window.alert` / `window.confirm` | ✅ None found |
+| No `db.stmt.*` in routes.ts | ✅ All via services |
+| All write routes use `withWriteQueue()` | ✅ Confirmed |
+| Middleware chain correct | ✅ Confirmed |
+| JWT cookie: httpOnly, sameSite | ✅ Confirmed |
+| Rate limiting active | ✅ Confirmed |
+| GET /teachers requires auth | ✅ Auth middleware at line 345 |
+| Backup download requires auth | ✅ requireAuth at line 261 |
+| All 15 pages load without error | ✅ Visual walkthrough done |
+| Roll number sort consistent across all pages | ✅ Fixed 2026-04-13 |
 
 ### When Committing
 - Always run `npx tsc --noEmit` first to confirm no type errors
@@ -804,12 +828,14 @@ See `.env.example`:
 - Follow the existing commit message pattern: `fix(label): description` or `feat(label): description`
 
 ### When Modifying Specific Files
-- **db.ts:** Always add migrations for schema changes. Check if column/index/trigger exists before creating. Use `db.stmt` for all queries.
+- **db.ts:** Always add migrations for schema changes. Check if column/index/trigger exists before creating. Use `db.stmt` for prepared statements (reads/inserts/deletes). For partial updates, use dynamic SQL in `services.ts` instead.
 - **routes.ts:** Write endpoints MUST use `withWriteQueue()`. All class-scoped endpoints MUST verify access. Use `requireClassAccess` or `requireClassOwner` middleware.
+- **services.ts:** The `studentService.update()` uses dynamic SQL (ONLY add to SET clause what is defined). Follow this pattern for any new partial-update service methods.
 - **store.ts:** All async actions: API call first, then set state in try block, catch shows toast.
 - **src/lib/api.ts:** All fetch calls go through this file. Currently throws generic errors.
 - **Any new dropdown:** Use `useClickOutside` hook from `src/hooks/useClickOutside.ts`
 - **Any user notification:** Use `react-hot-toast` — NO alert/confirm anywhere
+- **Any new page with student list:** Sort by `localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })`
 
 ### Cross-Cutting Concern Priority
 If asked to continue improving the codebase, work through them in this order:
@@ -830,7 +856,8 @@ If asked to continue improving the codebase, work through them in this order:
 - Only teachers with 'owner' role in at least one class can register new teachers (N6)
 - `adminPassword` in settings now actually updates the admin teacher's password (N12)
 - Production deploys must use `npm start` or `npm run start:network` (tsx, not node) (N2)
+- `Sidebar.tsx` uses `useStore.getState()` inside JSX render for badge label — this is a known anti-pattern but harmless (low reactivity risk since classes rarely changes mid-render)
 
 ---
 
-*Last updated: 2026-04-08 by Antigravity AI — second architecture audit, 15 new findings fixed.*
+*Last updated: 2026-04-13 by Antigravity AI — full audit pass, 4 bug fixes applied (flag toggle, dynamic SQL, roster UI/sort, sort consistency across Attendance/Reports/SeatingChart), all 15 pages verified clean.*
