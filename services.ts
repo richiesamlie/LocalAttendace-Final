@@ -357,7 +357,20 @@ export const studentService = {
       vals.push(studentId, teacherId);
       return pgQuery(`UPDATE students s SET ${sets.join(', ')} WHERE s.id = $${i} AND s.class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = $${i + 1})`, vals);
     }
-    return db.stmt.updateStudent.run(data.name, data.roll_number, data.parent_name, data.parent_phone, data.is_flagged, data.is_archived, studentId, teacherId);
+    // SQLite: build a dynamic SET clause to avoid NULLing fields not included in the partial update
+    const setClauses: string[] = [];
+    const vals: unknown[] = [];
+    if (data.name !== undefined) { setClauses.push('name = ?'); vals.push(data.name); }
+    if (data.roll_number !== undefined) { setClauses.push('roll_number = ?'); vals.push(data.roll_number); }
+    if (data.parent_name !== undefined) { setClauses.push('parent_name = ?'); vals.push(data.parent_name); }
+    if (data.parent_phone !== undefined) { setClauses.push('parent_phone = ?'); vals.push(data.parent_phone); }
+    if (data.is_flagged !== undefined) { setClauses.push('is_flagged = ?'); vals.push(data.is_flagged); }
+    if (data.is_archived !== undefined) { setClauses.push('is_archived = ?'); vals.push(data.is_archived); }
+    if (setClauses.length === 0) return;
+    vals.push(studentId, teacherId);
+    return db.prepare(
+      `UPDATE students SET ${setClauses.join(', ')} WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)`
+    ).run(...vals);
   },
 
   archive(studentId: string, teacherId: string) {

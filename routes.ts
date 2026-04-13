@@ -615,8 +615,8 @@ router.get('/classes/:classId/students', requireClassAccess('classId'), async (r
       rollNumber: s.roll_number,
       parentName: s.parent_name,
       parentPhone: s.parent_phone,
-      isFlagged: s.is_flagged === 1,
-      isArchived: s.is_archived === 1
+      isFlagged: !!s.is_flagged,
+      isArchived: !!s.is_archived
     }));
     res.json(mapped);
   } catch (error) {
