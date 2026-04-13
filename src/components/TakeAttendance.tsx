@@ -92,11 +92,15 @@ export default function TakeAttendance() {
   };
 
   const filteredStudents = useMemo(() =>
-    students.filter(student =>
-      !student.isArchived &&
-      (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
-    ),
+    students
+      .filter(student =>
+        !student.isArchived &&
+        (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+      .sort((a, b) =>
+        a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
+      ),
     [students, searchQuery]
   );
 
