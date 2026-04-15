@@ -194,8 +194,14 @@ const initSchema = () => {
     _db.exec(`INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes`);
   }
 
-  // Migration: Add is_archived to students if not exists
+  // Migration: Add is_flagged to students if not exists
   const studentsInfo = _db.pragma('table_info(students)') as Array<{ name: string }>;
+  const hasFlaggedColumn = studentsInfo.some(col => col.name === 'is_flagged');
+  if (!hasFlaggedColumn) {
+    _db.exec('ALTER TABLE students ADD COLUMN is_flagged INTEGER DEFAULT 0');
+  }
+
+  // Migration: Add is_archived to students if not exists
   const hasArchivedColumn = studentsInfo.some(col => col.name === 'is_archived');
   if (!hasArchivedColumn) {
     _db.exec('ALTER TABLE students ADD COLUMN is_archived INTEGER DEFAULT 0');
