@@ -152,7 +152,7 @@ export const useStore = create<AppState>()((set, get) => ({
   lastAttendanceChange: null,
 
   setAuth: (teacherId, teacherName, isAdmin = false) => set({ isAuthenticated: true, teacherId, teacherName, isAdmin }),
-  clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, isAdmin: false, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
+  clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, isAdmin: false, isInitialized: false, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
 
   initializeStore: async () => {
     try {
