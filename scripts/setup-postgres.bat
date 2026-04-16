@@ -56,13 +56,18 @@ REM Create .env file if it doesn't exist
 if not exist ".env" (
     echo Creating .env file...
     (
-        echo # Database
+        echo # Database - PostgreSQL connection string
         echo DATABASE_URL=postgresql://%DB_USER%@%DB_HOST%:%DB_PORT%/%DB_NAME%
         echo.
-        echo # Optional: JWT Secret
-        echo # JWT_SECRET=your_secret_key_here
+        echo # REQUIRED - generate with: openssl rand -hex 32
+        echo JWT_SECRET=change_this_to_a_secure_random_string
+        echo.
+        echo # REQUIRED - app will not start without this
+        echo DEFAULT_ADMIN_PASSWORD=change_this_to_a_secure_password
     ) > .env
     echo .env file created.
+    echo IMPORTANT: Edit .env and set secure values for JWT_SECRET and DEFAULT_ADMIN_PASSWORD!
+    echo Or run .\setup-env.ps1 to generate them automatically.
     echo.
 )
 

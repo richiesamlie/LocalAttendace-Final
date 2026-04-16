@@ -12,15 +12,28 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-# Check if .env file exists
+# Check if .env file exists - required before the server can start
 if [ ! -f ".env" ]; then
     echo ""
-    echo "WARNING: .env file not found!"
-    echo "Creating .env with default settings..."
-    echo "JWT_SECRET=localattendance_secret_key_change_in_production" > .env
+    echo "ERROR: .env file not found!"
     echo ""
-    echo "IMPORTANT: Change the JWT_SECRET in .env for production use!"
+    echo "The app requires JWT_SECRET and DEFAULT_ADMIN_PASSWORD to be set."
+    echo "Run the setup script to generate secure values automatically:"
     echo ""
+    echo "  bash setup-env.sh"
+    echo ""
+    echo "Then re-run this script."
+    exit 1
+fi
+
+# Check that DEFAULT_ADMIN_PASSWORD is present in .env
+if ! grep -q "DEFAULT_ADMIN_PASSWORD" .env; then
+    echo ""
+    echo "ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!"
+    echo "The server will not start without it."
+    echo ""
+    echo "Run: bash setup-env.sh   (to add it automatically)"
+    exit 1
 fi
 
 # Function to open browser (cross-platform)
