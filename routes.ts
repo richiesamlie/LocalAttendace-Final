@@ -943,15 +943,28 @@ router.get('/settings', requireAuth, async (req, res) => {
 router.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
   const { key, value } = req.body;
   if (key === 'adminPassword') {
+    // Only the global admin can change the admin password
+    const callerId = getTeacherId(req);
+    const caller = callerId ? await svc.teacherService.getById(callerId) : null;
+    if (!caller || !(caller as any).is_admin) {
+      return res.status(403).json({ error: 'Only administrators can change the admin password' });
+    }
+
+    // Enforce minimum password length
+    if (value.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+
     // N12: Wire adminPassword to actually update the admin teacher's password_hash.
     // Previously this wrote a hash to admin_settings that was never used for auth.
     const hash = bcrypt.hashSync(value, 10);
     const adminTeacher = await svc.teacherService.getByUsername('admin');
     if (adminTeacher) {
       await svc.teacherService.updatePassword((adminTeacher as any).id, hash);
+      // Revoke all existing sessions so stale JWT cookies are rejected immediately on next request.
+      // This prevents the race where an old cookie's sessionId passes requireAuth after a password change.
+      await svc.sessionService.revokeAll((adminTeacher as any).id);
     }
-    // Also allow any logged-in teacher to change their own password via this endpoint
-    // if they are the requester (future improvement: add current-password verification)
   } else {
     await svc.settingService.set(key, value);
   }

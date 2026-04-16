@@ -3,9 +3,8 @@ import { shallow } from 'zustand/shallow';
 import { api } from './lib/api';
 import toast from 'react-hot-toast';
 
-// Default class constants — must match db.ts DEFAULTS
+// Default class constant — must match db.ts DEFAULTS
 const DEFAULT_CLASS_NAME = 'My First Class';
-const DEFAULT_CLASS_ID_ON_CLEAR = 'class_default';
 
 export type AttendanceStatus = 'Present' | 'Absent' | 'Sick' | 'Late';
 export type EventType = 'Classwork' | 'Test' | 'Exam' | 'Holiday' | 'Other';
@@ -158,16 +157,16 @@ export const useStore = create<AppState>()((set, get) => ({
   initializeStore: async () => {
     try {
       set({ isLoading: true });
-      let [classesData, settings] = await Promise.all([
+      const [classesData, settings] = await Promise.all([
         api.getClasses(),
         api.getSettings(),
       ]);
 
-      if (classesData.length === 0) {
-      const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-        await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
-        classesData = await api.getClasses();
-      }
+      // Never auto-create a default class here.
+      // If classesData is genuinely empty (new user), the UI will show an empty state
+      // with a "Create your first class" prompt. Auto-creating here was dangerous because
+      // a temporary auth failure (401) could also return an empty array, causing a new
+      // empty class to be created and making all existing data appear to vanish.
 
       // Eagerly load only the first/default class; other classes are lazy-loaded on switch
       if (classesData.length > 0) {
