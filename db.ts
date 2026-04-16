@@ -15,7 +15,10 @@ export const DEFAULTS = {
 } as const;
 
 function getDefaultPassword(): string {
-  return process.env.DEFAULT_ADMIN_PASSWORD || 'teacher123';
+  if (!process.env.DEFAULT_ADMIN_PASSWORD) {
+    throw new Error('DEFAULT_ADMIN_PASSWORD environment variable is required');
+  }
+  return process.env.DEFAULT_ADMIN_PASSWORD;
 }
 
 // Backup database before migrations
@@ -28,23 +31,21 @@ function createBackup(): void {
       fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const backupPath = path.join(backupDir, `database-backup-${timestamp}.sqlite`);
-    fs.copyFileSync(DB_FILE, backupPath);
+    const backupFile = path.join(backupDir, `db-${new Date().toISOString().slice(0, 10)}.sqlite`);
+    fs.copyFileSync(DB_FILE, backupFile);
+    console.log(`[db] Backup created: ${backupFile}`);
 
-    // Keep only last 10 backups
+    // Keep only the last 10 backups to prevent disk fill-up
     const backups = fs.readdirSync(backupDir)
-      .filter(f => f.startsWith('database-backup-'))
-      .map(f => ({ name: f, path: path.join(backupDir, f) }))
-      .sort((a, b) => fs.statSync(b.path).mtime.getTime() - fs.statSync(a.path).mtime.getTime());
-
-    for (let i = 10; i < backups.length; i++) {
-      fs.unlinkSync(backups[i].path);
+      .filter(f => f.startsWith('db-') && f.endsWith('.sqlite'))
+      .map(f => ({ name: f, fullPath: path.join(backupDir, f) }))
+      .sort((a, b) => b.name.localeCompare(a.name)); // newest first (ISO date strings sort correctly)
+    for (const old of backups.slice(10)) {
+      fs.unlinkSync(old.fullPath);
+      console.log(`[db] Old backup deleted: ${old.name}`);
     }
-
-    console.log(`[db] Backup created: ${backupPath}`);
-  } catch (err) {
-    console.warn('[db] Failed to create backup:', (err as Error).message);
+  } catch (error) {
+    console.error('[db] Backup failed:', error);
   }
 }
 
@@ -219,7 +220,7 @@ const initSchema = () => {
       _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
         DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME
       );
-      console.log(`[db] Default admin created. Password: ${defaultPassword} (change immediately!)`);
+      console.log('[db] Default admin created. Change password immediately.');
     } else {
       const teacher = _db.prepare('SELECT id FROM teachers LIMIT 1').get() as { id: string };
       defaultTeacherId = teacher?.id || defaultTeacherId;

@@ -21,12 +21,19 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
-# Copy built files from builder
-COPY --from=builder /app/dist ./dist
+# Copy built frontend from builder
+COPY --from=builder /app/dist ./
+
+# Copy server-side TypeScript source files (run via tsx in production)
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/db.ts ./
 COPY --from=builder /app/routes.ts ./
+COPY --from=builder /app/services.ts ./
 COPY --from=builder /app/tsconfig.json ./
+
+# Copy server-side lib modules required by routes.ts and server.ts
+COPY --from=builder /app/src/lib/validation.ts ./src/lib/
+COPY --from=builder /app/src/lib/errorHandler.ts ./src/lib/
 
 # Create volume for persistent database
 VOLUME ["/app/data"]
@@ -34,6 +41,5 @@ VOLUME ["/app/data"]
 EXPOSE 3000
 
 ENV NODE_ENV=production
-ENV JWT_SECRET=change_this_in_production
 
 CMD ["npx", "tsx", "server.ts"]
