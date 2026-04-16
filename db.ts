@@ -441,7 +441,7 @@ const preparedStatements = {
 // better-sqlite3 is synchronous, so we queue writes to prevent "database is locked" errors
 // while allowing concurrent reads to proceed directly
 interface WriteTask {
-  fn: () => void;
+  fn: () => void | Promise<void>;
   resolve: () => void;
   reject: (error: Error) => void;
 }
@@ -456,7 +456,7 @@ async function processWriteQueue(): Promise<void> {
   while (writeQueue.length > 0) {
     const task = writeQueue.shift()!;
     try {
-      task.fn();
+      await task.fn(); // Await async handlers so DB writes are serialized and errors are caught
       task.resolve();
     } catch (error) {
       task.reject(error as Error);

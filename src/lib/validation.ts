@@ -60,7 +60,7 @@ export const teacherSchema = z.object({
 
 export const settingSchema = z.object({
   key: safeString({ min: 1, max: 100 }),
-  value: safeString({ max: 10000 }),
+  value: safeString({ min: 1, max: 10000 }),
 });
 
 export function validate(schema: z.ZodSchema) {
