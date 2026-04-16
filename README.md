@@ -72,17 +72,28 @@ npm install
 
 ### 3. Configure Environment
 
-Create a `.env` file in the root directory (optional - works without it):
+The app requires two environment variables before it will start. Use the provided setup script to generate them automatically:
 
-```env
-# Optional - a default is used if not set
-JWT_SECRET="your_secret_key_here_change_in_production"
-
-# Optional - leave empty to use SQLite
-# DATABASE_URL="postgresql://user:password@localhost:5432/teacher_assistant"
+**Windows (PowerShell):**
+```powershell
+.\setup-env.ps1
 ```
 
-Generate a strong secret: `openssl rand -hex 32`
+**Linux / macOS:**
+```bash
+bash setup-env.sh
+```
+
+Or create a `.env` file manually:
+
+```env
+# REQUIRED — app throws on startup if these are missing
+JWT_SECRET=your_64_char_hex_secret        # openssl rand -hex 32
+DEFAULT_ADMIN_PASSWORD=your_admin_password
+
+# OPTIONAL — leave empty to use SQLite (default)
+# DATABASE_URL=postgresql://user:password@localhost:5432/teacher_assistant
+```
 
 ### 4. Start the Server
 
@@ -112,9 +123,10 @@ Open the displayed IP address (e.g., `http://192.168.1.50:3000`) on other device
 
 **Default credentials:**
 - **Username:** `admin`
-- **Password:** `teacher123`
+- **Password:** The value you set for `DEFAULT_ADMIN_PASSWORD` in your `.env` file
 
-⚠️ **Change the default password immediately in production!**
+> [!IMPORTANT]
+> The app **will not start** if `DEFAULT_ADMIN_PASSWORD` is not set. Run `setup-env.ps1` (Windows) or `setup-env.sh` (Linux/macOS) to generate it automatically. Change the password after first login via **Admin Dashboard → Settings**.
 
 ## Multi-Teacher Setup
 
@@ -148,8 +160,9 @@ Open the displayed IP address (e.g., `http://192.168.1.50:3000`) on other device
 
 The default `admin` account is a global **Administrator** (can manage all classes). Class owners are called **Homeroom**.
 
-## Windows Automation
+## Windows Scripts
 
+- **`setup-env.ps1`**: Run once to generate secure `.env` secrets (required before first run)
 - **`start-app.bat`**: Double-click to start the server and open the app
 - **`setup-windows-startup.bat`**: Run once to auto-start on Windows login
 
@@ -165,12 +178,24 @@ Generates optimized static files in `dist/` for deployment.
 
 ### Quick Start
 
+**Step 1** — Generate your `.env` file (do this once):
 ```bash
-# Edit the JWT_SECRET in docker-compose.yml first
+# Linux/macOS
+bash setup-env.sh
+
+# Windows PowerShell
+.\setup-env.ps1
+```
+
+**Step 2** — Build and start:
+```bash
 docker-compose up -d
 ```
 
 The app will be available at `http://localhost:3000`.
+
+> [!NOTE]
+> `docker-compose.yml` reads secrets from your `.env` file via `env_file`. Never hard-code `JWT_SECRET` or `DEFAULT_ADMIN_PASSWORD` directly in the compose file.
 
 ### Manual Docker Build
 
@@ -178,7 +203,7 @@ The app will be available at `http://localhost:3000`.
 docker build -t teacher-assistant .
 docker run -d -p 3000:3000 \
   -v $(pwd)/data:/app/data \
-  -e JWT_SECRET=your_secret_key \
+  --env-file .env \
   --name teacher-assistant \
   teacher-assistant
 ```
@@ -188,6 +213,7 @@ docker run -d -p 3000:3000 \
 - **Persistent volume** for database storage
 - **Health checks** for monitoring
 - **Auto-restart** on failure
+- **Secrets via `.env`** — no secrets in compose or image layers
 
 ### Docker Commands
 ```bash
@@ -252,7 +278,7 @@ npm run db:seed
 ```
 Login credentials after seeding:
 - **Username:** `demo`
-- **Password:** `demo123`
+- **Password:** Value of `DEMO_TEACHER_PASSWORD` in `.env` (defaults to `demo_placeholder` if not set)
 
 ### Database Backup & Restore
 
@@ -289,14 +315,16 @@ setup-windows-startup.bat  # Auto-start on Windows login
 ./start-internal-site.sh # Share on local network (production module)
 ```
 
-## Windows Automation
+## Data Storage
 
 Data is stored in a local SQLite database (`database.sqlite`) in the project root. This ensures:
 - Data persists across browser sessions
 - No cloud dependency
 - Easy backup and restore
 
-### Backup & Restore
+Automatic backups (up to 10) are created in the `backups/` folder on every server start. Older backups are pruned automatically.
+
+### In-App Backup & Restore
 
 1. Go to **Settings** → **Manual Database Backup**
 2. Download a `.sqlite` backup file
@@ -310,7 +338,7 @@ Move the entire project folder into your Google Drive/Dropbox folder for automat
 
 | Category | Technology |
 |----------|-----------|
-| **Frontend** | React 18, TypeScript, Vite |
+| **Frontend** | React 19, TypeScript, Vite |
 | **Styling** | Tailwind CSS |
 | **State** | Zustand, React Query |
 | **Backend** | Express.js |

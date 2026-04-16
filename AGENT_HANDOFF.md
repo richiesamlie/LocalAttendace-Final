@@ -12,6 +12,7 @@
 5. **setup-env.sh / setup-env.ps1:** New scripts to auto-generate secure `DEFAULT_ADMIN_PASSWORD` + `JWT_SECRET` via `openssl rand` (bash) or `[System.Security.Cryptography]` (PowerShell).
 6. **Dead code removed:** `initDefaultAdmin()` in `db.ts` — was never called and referenced `_db` before declaration. Real admin init is in `initSchema()` at the "Ensure default admin" block.
 7. **Backup rotation restored:** `createBackup()` now prunes backups older than the last 10 (was accidentally removed in simplification).
+8. **README.md updated:** Fixed 7 stale sections — required env vars, Docker secrets via `env_file`, setup-env script references, correct seed credentials, React 19, removed duplicate Windows Automation section.
 
 ### Recent Changes (2026-04-13 Session — Audit + Fixes)
 1. **Audit pass:** Full static code + visual browser walkthrough of all 15 pages
