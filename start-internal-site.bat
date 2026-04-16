@@ -13,15 +13,31 @@ IF NOT EXIST "node_modules\" (
     call npm install
 )
 
-:: Check if .env file exists
+:: Check if .env file exists - required before the server can start
 IF NOT EXIST ".env" (
     echo.
-    echo WARNING: .env file not found!
-    echo Creating .env with default settings...
-    echo JWT_SECRET=localattendance_secret_key_change_in_production > .env
+    echo ERROR: .env file not found!
     echo.
-    echo IMPORTANT: Change the JWT_SECRET in .env for production use!
+    echo The app requires JWT_SECRET and DEFAULT_ADMIN_PASSWORD to be set.
+    echo Run the setup script to generate secure values automatically:
     echo.
+    echo   .\setup-env.ps1
+    echo.
+    echo Then re-run this script.
+    pause
+    exit /b 1
+)
+
+:: Check that DEFAULT_ADMIN_PASSWORD is present in .env
+findstr /i "DEFAULT_ADMIN_PASSWORD" ".env" >nul 2>&1
+IF %errorlevel% NEQ 0 (
+    echo.
+    echo ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!
+    echo The server will not start without it.
+    echo.
+    echo Run .\setup-env.ps1 to add it, then re-run this script.
+    pause
+    exit /b 1
 )
 
 :: Check for debug flag

@@ -60,13 +60,17 @@ fi
 if [ ! -f ".env" ]; then
     echo "Creating .env file..."
     cat > .env << EOF
-# Database
+# Database - PostgreSQL connection string
 DATABASE_URL=postgresql://${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}
 
-# Optional: JWT Secret (a default is used if not set)
-# JWT_SECRET=your_secret_key_here
+# REQUIRED - generate with: openssl rand -hex 32
+JWT_SECRET=change_this_to_a_secure_random_string
+
+# REQUIRED - app will not start without this
+DEFAULT_ADMIN_PASSWORD=change_this_to_a_secure_password
 EOF
     echo ".env file created."
+    echo "IMPORTANT: Edit .env and set secure values, or run: bash setup-env.sh"
     echo ""
 fi
 

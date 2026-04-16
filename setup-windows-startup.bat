@@ -23,6 +23,8 @@ echo.
 echo Success! A silent startup script has been added to your Windows Startup folder.
 echo The app will now start automatically and silently every time you log into Windows.
 echo.
-echo Default login: username=admin, password=teacher123
+echo Default login: username=admin
+echo Password: see DEFAULT_ADMIN_PASSWORD in your .env file
+echo (Run .\setup-env.ps1 first if you have not set up .env yet)
 echo.
 pause
