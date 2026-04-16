@@ -1,8 +1,17 @@
 # Agent Handoff — Teacher Assistant Project
 
-**Last Session:** 2026-04-13 08:50 AM (WIB)
+**Last Session:** 2026-04-16 07:30 AM (WIB)
 **Current Branch:** `develop` — fully synced with `origin/develop`
 **Latest Commit:** (see section 6 for commit log)
+
+### Recent Changes (2026-04-16 Session — Secrets Hardening + Infra Fixes)
+1. **`DEFAULT_ADMIN_PASSWORD` now required:** `db.ts` throws on startup if env var is missing (no more plaintext fallback). Update your `.env` before running.
+2. **Dockerfile path fix:** `COPY --from=builder /app/dist ./dist` → `./` — was copying to wrong subdirectory, causing 404s in Docker.
+3. **docker-compose.yml:** Replaced hardcoded `JWT_SECRET` env block with `env_file: .env` — secrets no longer live in the compose file.
+4. **seed.ts:** Hardcoded `demo123`/`teacher123` passwords replaced with env vars (`DEMO_TEACHER_PASSWORD`, `JOHN_DOE_PASSWORD`).
+5. **setup-env.sh / setup-env.ps1:** New scripts to auto-generate secure `DEFAULT_ADMIN_PASSWORD` + `JWT_SECRET` via `openssl rand` (bash) or `[System.Security.Cryptography]` (PowerShell).
+6. **Dead code removed:** `initDefaultAdmin()` in `db.ts` — was never called and referenced `_db` before declaration. Real admin init is in `initSchema()` at the "Ensure default admin" block.
+7. **Backup rotation restored:** `createBackup()` now prunes backups older than the last 10 (was accidentally removed in simplification).
 
 ### Recent Changes (2026-04-13 Session — Audit + Fixes)
 1. **Audit pass:** Full static code + visual browser walkthrough of all 15 pages
@@ -780,10 +789,16 @@ NODE_ENV=production npm start    # Serve with Express
 ```
 
 ### Environment Variables
-See `.env.example`:
-- `JWT_SECRET` (required) — for JWT signing
-- `DEFAULT_ADMIN_PASSWORD` (optional) — override default admin password
-- `NODE_ENV` — 'production' for prod mode
+See `.env.example`. For first-time setup, run `setup-env.sh` (Linux/macOS) or `setup-env.ps1` (Windows) to auto-generate secure values.
+
+| Variable | Required | Description |
+|---|---|---|
+| `JWT_SECRET` | **Required** | Secret key for JWT signing. Generate with `openssl rand -hex 32`. |
+| `DEFAULT_ADMIN_PASSWORD` | **Required** | Initial admin password. App will **throw on startup** if missing. |
+| `NODE_ENV` | Optional | Set to `production` for production mode. Enables Helmet CSP, disables Vite HMR. |
+| `DATABASE_URL` | Optional | PostgreSQL connection string. If set and reachable, app uses PostgreSQL instead of SQLite. |
+| `DEMO_TEACHER_PASSWORD` | Optional | Password for demo seed user (seed script only). Defaults to `demo_placeholder` if unset. |
+| `JOHN_DOE_PASSWORD` | Optional | Password for john.doe seed user (seed script only). Defaults to `john_placeholder` if unset. |
 
 ---
 
@@ -806,7 +821,7 @@ See `.env.example`:
 - **`Reports.tsx`:** `filteredStudents` now sorted numerically by roll number  
 - **`SeatingChart.tsx`:** `students` memo now sorted numerically by roll number
 
-### Audit Status as of 2026-04-13
+### Audit Status as of 2026-04-16
 | Check | Status |
 |-------|--------|
 | TypeScript (`tsc --noEmit`) | ✅ Clean |
@@ -820,6 +835,10 @@ See `.env.example`:
 | Backup download requires auth | ✅ requireAuth at line 261 |
 | All 15 pages load without error | ✅ Visual walkthrough done |
 | Roll number sort consistent across all pages | ✅ Fixed 2026-04-13 |
+| No hardcoded secrets in Dockerfile/compose | ✅ Fixed 2026-04-16 |
+| DEFAULT_ADMIN_PASSWORD enforced (no fallback) | ✅ Fixed 2026-04-16 |
+| Backup rotation (keep last 10) | ✅ Fixed 2026-04-16 |
+| Dead code (`initDefaultAdmin`) removed | ✅ Fixed 2026-04-16 |
 
 ### When Committing
 - Always run `npx tsc --noEmit` first to confirm no type errors
@@ -860,4 +879,4 @@ If asked to continue improving the codebase, work through them in this order:
 
 ---
 
-*Last updated: 2026-04-13 by Antigravity AI — full audit pass, 4 bug fixes applied (flag toggle, dynamic SQL, roster UI/sort, sort consistency across Attendance/Reports/SeatingChart), all 15 pages verified clean.*
+*Last updated: 2026-04-16 by Antigravity AI — secrets hardening (required DEFAULT_ADMIN_PASSWORD, Dockerfile path fix, docker-compose env_file), dead code removal (initDefaultAdmin), backup rotation restored, setup-env.ps1 added for Windows.*

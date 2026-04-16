@@ -7,8 +7,8 @@ const DB_FILE = path.join(process.cwd(), 'database.sqlite');
 
 // Sample data
 const SAMPLE_TEACHERS = [
-  { username: 'demo', password: 'demo123', name: 'Demo Teacher' },
-  { username: 'john.doe', password: 'teacher123', name: 'John Doe' },
+  { username: 'demo', password: process.env.DEMO_TEACHER_PASSWORD || 'demo_placeholder', name: 'Demo Teacher' },
+  { username: 'john.doe', password: process.env.JOHN_DOE_PASSWORD || 'john_placeholder', name: 'John Doe' },
 ];
 
 const SAMPLE_CLASSES = [

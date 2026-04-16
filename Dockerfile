@@ -22,7 +22,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
 # Copy built files from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist ./
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/db.ts ./
 COPY --from=builder /app/routes.ts ./
@@ -34,6 +34,5 @@ VOLUME ["/app/data"]
 EXPOSE 3000
 
 ENV NODE_ENV=production
-ENV JWT_SECRET=change_this_in_production
 
 CMD ["npx", "tsx", "server.ts"]
