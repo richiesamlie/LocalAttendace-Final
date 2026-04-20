@@ -8,6 +8,7 @@ import fs from 'fs';
 import { validate, loginSchema, classSchema, studentSchema, attendanceRecordSchema, eventSchema, timetableSlotSchema, teacherSchema, settingSchema } from './src/lib/validation';
 import * as svc from './services';
 import { io } from './server';
+import type { Session, ClassTeacher, Teacher, Invite, CalendarEvent, TimetableSlot, ClassWithRole, DailyNote, SeatingLayoutRow, SettingRow, ClassInfo, StudentRow } from './src/types/db';
 
 const router = express.Router();
 
@@ -18,6 +19,18 @@ const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'producti
 interface JwtPayload {
   teacherId: string;
   username: string;
+  sessionId?: string;
+}
+
+type ClassRole = 'administrator' | 'owner' | 'teacher' | 'assistant';
+
+declare global {
+  namespace Express {
+    interface Request {
+      teacherId: string;
+      classRole?: ClassRole;
+    }
+  }
 }
 
 const getTeacherId = (req: express.Request): string | null => {
@@ -42,8 +55,8 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { sessionId?: string };
       if (decoded.sessionId) {
-        const session = await svc.sessionService.get(decoded.sessionId);
-        if (!session || (session as any).is_revoked === 1 || new Date((session as any).expires_at) < new Date()) {
+        const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
+        if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
           res.clearCookie('auth_token');
           return res.status(401).json({ error: 'Session expired or revoked' });
         }
@@ -60,13 +73,13 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
     }
   }
   
-  (req as any).teacherId = teacherId;
+  req.teacherId = teacherId;
   next();
 };
 
 const requireClassAccess = (paramName: string = 'classId') => {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const teacherId = (req as any).teacherId;
+    const teacherId = req.teacherId;
     const classId = req.params[paramName];
     
     if (!classId) {
@@ -76,23 +89,23 @@ const requireClassAccess = (paramName: string = 'classId') => {
     // Global administrators can access any class
     const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
-      (req as any).classRole = 'administrator';
+      req.classRole = 'administrator';
       return next();
     }
     
-    const access = await svc.classService.isClassTeacher(classId, teacherId);
+    const access = await svc.classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
     if (!access) {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
     
-    (req as any).classRole = (access as any).role;
+    req.classRole = access.role as ClassRole;
     next();
   };
 };
 
 const requireClassOwner = (paramName: string = 'classId') => {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const teacherId = (req as any).teacherId;
+    const teacherId = req.teacherId;
     const classId = req.params[paramName];
     
     if (!classId) {
@@ -105,8 +118,8 @@ const requireClassOwner = (paramName: string = 'classId') => {
       return next();
     }
     
-    const access = await svc.classService.isClassTeacher(classId, teacherId);
-    if (!access || (access as any).role !== 'owner') {
+    const access = await svc.classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
+    if (!access || access.role !== 'owner') {
       return res.status(403).json({ error: 'Only the Homeroom Teacher can perform this action' });
     }
     
@@ -119,7 +132,7 @@ const ROLE_HIERARCHY: Record<string, number> = { administrator: 5, owner: 4, tea
 
 const requireRole = (paramName: string = 'classId', minRole: string = 'teacher') => {
   return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const teacherId = (req as any).teacherId;
+    const teacherId = req.teacherId;
     const classId = req.params[paramName];
     
     if (!classId) {
@@ -129,23 +142,23 @@ const requireRole = (paramName: string = 'classId', minRole: string = 'teacher')
     // Global administrators can access any class
     const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
-      (req as any).classRole = 'administrator';
+      req.classRole = 'administrator';
       return next();
     }
     
-    const access = await svc.classService.isClassTeacher(classId, teacherId);
+    const access = await svc.classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
     if (!access) {
       return res.status(404).json({ error: 'Class not found or access denied' });
     }
-    
-    const userLevel = ROLE_HIERARCHY[(access as any).role] || 0;
+
+    const userLevel = ROLE_HIERARCHY[access.role] || 0;
     const requiredLevel = ROLE_HIERARCHY[minRole] || 0;
     
     if (userLevel < requiredLevel) {
       return res.status(403).json({ error: `Role '${minRole}' or higher required` });
     }
     
-    (req as any).classRole = (access as any).role;
+    req.classRole = access.role as ClassRole;
     next();
   };
 };
@@ -191,12 +204,12 @@ router.post('/auth/login', authLimiter, validate(loginSchema), async (req, res) 
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   
-  const teacher = await svc.teacherService.getByUsername(username);
+  const teacher = await svc.teacherService.getByUsername(username) as Teacher | null;
   if (!teacher) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const isValid = bcrypt.compareSync(password, (teacher as any).password_hash);
+  const isValid = bcrypt.compareSync(password, teacher.password_hash);
   if (!isValid) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
@@ -204,13 +217,13 @@ router.post('/auth/login', authLimiter, validate(loginSchema), async (req, res) 
   const sessionId = `sess-${crypto.randomUUID()}`;
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
-    await svc.teacherService.updateLastLogin((teacher as any).id);
-    await svc.sessionService.insert(sessionId, (teacher as any).id, req.headers['user-agent']?.slice(0, 100) || 'unknown', req.ip || 'unknown', expiresAt);
+    await svc.teacherService.updateLastLogin(teacher.id);
+    await svc.sessionService.insert(sessionId, teacher.id, req.headers['user-agent']?.slice(0, 100) || 'unknown', req.ip || 'unknown', expiresAt);
   } catch (e) {
     console.warn('[auth] Failed to create session record:', (e as Error).message);
   }
 
-  const token = jwt.sign({ teacherId: (teacher as any).id, username: (teacher as any).username, sessionId }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ teacherId: teacher.id, username: teacher.username, sessionId }, JWT_SECRET, { expiresIn: '7d' });
   const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('auth_token', token, {
     httpOnly: true,
@@ -219,7 +232,7 @@ router.post('/auth/login', authLimiter, validate(loginSchema), async (req, res) 
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
-  res.json({ success: true, teacherId: (teacher as any).id, username: (teacher as any).username, name: (teacher as any).name, isAdmin: !!(teacher as any).is_admin });
+  res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
 });
 
 router.post('/auth/logout', (req, res) => {
@@ -232,7 +245,7 @@ router.get('/auth/verify', async (req, res) => {
   if (!teacherId) return res.status(401).json({ authenticated: false });
   const teacher = await svc.teacherService.getById(teacherId);
   if (!teacher) return res.status(401).json({ authenticated: false });
-  res.json({ authenticated: true, teacherId, name: (teacher as any).name });
+  res.json({ authenticated: true, teacherId, name: teacher.name });
 });
 
 router.get('/auth/me', async (req, res) => {
@@ -242,7 +255,7 @@ router.get('/auth/me', async (req, res) => {
   if (!teacher) {
     return res.status(404).json({ error: 'Teacher not found' });
   }
-  res.json({ id: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!(teacher as any).is_admin });
+  res.json({ id: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
 });
 
 router.get('/health', async (_req, res) => {
@@ -309,7 +322,7 @@ router.post('/database/restore', requireAuth, async (req, res) => {
 
 // --- TEACHER MANAGEMENT ---
 router.post('/teachers/register', requireAuth, postLimiter, validate(teacherSchema), withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const { username, password, name } = req.body;
   if (!username || !password || !name) {
     return res.status(400).json({ error: 'Username, password, and name are required' });
@@ -349,18 +362,18 @@ router.use(requireAuth);
 // --- CLASSES ---
 router.get('/classes', async (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
+    const teacherId = req.teacherId;
     
     // Global administrators see all classes in the system
     const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
-      const allClasses = await svc.classService.getAll();
-      const mapped = (allClasses as any[]).map((c: any) => ({
+      const allClasses = await svc.classService.getAll() as ClassWithRole[];
+      const mapped = allClasses.map((c) => ({
         id: c.id,
         teacher_id: c.teacher_id,
         name: c.name,
-        owner_name: c.teacher_name,
-        role: 'administrator',
+        owner_name: c.owner_name || c.teacher_name,
+        role: 'administrator' as const,
       }));
       return res.json(mapped);
     }
@@ -373,7 +386,7 @@ router.get('/classes', async (req, res) => {
 });
 
 router.post('/classes', postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   
   // Global administrators can create unlimited classes
   const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
@@ -390,7 +403,7 @@ router.post('/classes', postLimiter, validate(classSchema), withWriteQueue(async
 }));
 
 router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
- const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
  const { name } = req.body;
 
  // Validate name is present and non-empty
@@ -404,8 +417,8 @@ router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
  // Global admin bypass
  const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
  if (!isGlobalAdmin) {
-  const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
-  if (!access || (access as any).role !== 'owner') {
+   const access = await svc.classService.isClassTeacher(req.params.id, teacherId) as ClassTeacher | null | undefined;
+   if (!access || access.role !== 'owner') {
    return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
   }
  }
@@ -414,13 +427,13 @@ router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
 }));
 
 router.delete('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   
   // Global admin bypass
   const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
   if (!isGlobalAdmin) {
-    const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
-    if (!access || (access as any).role !== 'owner') {
+    const access = await svc.classService.isClassTeacher(req.params.id, teacherId) as ClassTeacher | null | undefined;
+    if (!access || access.role !== 'owner') {
       return res.status(403).json({ error: 'Only the Homeroom Teacher can delete the class' });
     }
   }
@@ -431,7 +444,7 @@ router.delete('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
 // --- CLASS TEACHERS ---
 router.get('/classes/:classId/teachers', async (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
+    const teacherId = req.teacherId;
     const classId = req.params.classId;
     
     const access = await svc.classService.isClassTeacher(classId, teacherId);
@@ -447,11 +460,11 @@ router.get('/classes/:classId/teachers', async (req, res) => {
 });
 
 router.post('/classes/:classId/teachers', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const classId = req.params.classId;
-  
-  const access = await svc.classService.isClassTeacher(classId, teacherId);
-  if (!access || (access as any).role !== 'owner') {
+
+  const access = await svc.classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
+  if (!access || access.role !== 'owner') {
     return res.status(403).json({ error: 'Only the Homeroom Teacher can add other teachers' });
   }
 
@@ -470,12 +483,12 @@ router.post('/classes/:classId/teachers', postLimiter, withWriteQueue(async (req
 }));
 
 router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
   
-  const access = await svc.classService.isClassTeacher(classId, teacherId);
-  if (!access || (access as any).role !== 'owner') {
+  const access = await svc.classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
+  if (!access || access.role !== 'owner') {
     return res.status(403).json({ error: 'Only the Homeroom Teacher can remove other teachers' });
   }
 
@@ -489,7 +502,7 @@ router.delete('/classes/:classId/teachers/:teacherId', postLimiter, withWriteQue
 
 // --- INVITE SYSTEM (Phase 2.2) ---
 router.post('/classes/:classId/invites', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
   
@@ -525,47 +538,47 @@ router.delete('/classes/:classId/invites/:code', requireRole('classId', 'teacher
 }));
 
 router.post('/invites/redeem', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const { code } = req.body;
   
   if (!code) {
     return res.status(400).json({ error: 'Invite code is required' });
   }
   
-  const invite = await svc.inviteService.getByCode(code);
+  const invite = await svc.inviteService.getByCode(code) as Invite | null | undefined;
   if (!invite) {
     return res.status(404).json({ error: 'Invalid invite code' });
   }
-  
-  if ((invite as any).used_by) {
+
+  if (invite.used_by) {
     return res.status(400).json({ error: 'This invite code has already been used' });
   }
-  
-  if (new Date((invite as any).expires_at) < new Date()) {
+
+  if (new Date(invite.expires_at) < new Date()) {
     return res.status(400).json({ error: 'This invite code has expired' });
   }
-  
-  const classExists = await svc.classService.getById((invite as any).class_id, teacherId);
+
+  const classExists = await svc.classService.getById(invite.class_id, teacherId) as ClassInfo | null;
   if (!classExists) {
     return res.status(404).json({ error: 'This class no longer exists' });
   }
-  
-  const existing = await svc.classService.isClassTeacher((invite as any).class_id, teacherId);
+
+  const existing = await svc.classService.isClassTeacher(invite.class_id, teacherId);
   if (existing) {
     return res.status(400).json({ error: 'You already have access to this class' });
   }
-  
+
   await svc.inviteService.use(teacherId, code);
-  await svc.classService.addTeacher((invite as any).class_id, teacherId, (invite as any).role);
-  
+  await svc.classService.addTeacher(invite.class_id, teacherId, invite.role);
+
   const className = classExists;
-  res.json({ success: true, className: (className as any)?.name, role: (invite as any).role });
+  res.json({ success: true, className: className?.name, role: invite.role });
 }));
 
 // --- SESSION MANAGEMENT (Phase 2.3) ---
 router.get('/sessions', async (req, res) => {
   try {
-    const teacherId = (req as any).teacherId;
+    const teacherId = req.teacherId;
     await svc.sessionService.deleteExpired();
     const sessions = await svc.sessionService.getByTeacher(teacherId);
     res.json(sessions);
@@ -575,7 +588,7 @@ router.get('/sessions', async (req, res) => {
 });
 
 router.post('/sessions/revoke', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const { sessionId } = req.body;
   
   if (sessionId === 'all') {
@@ -583,8 +596,8 @@ router.post('/sessions/revoke', postLimiter, withWriteQueue(async (req, res) => 
     return res.json({ success: true, message: 'All sessions revoked' });
   }
   
-  const session = await svc.sessionService.get(sessionId);
-  if (!session || (session as any).teacher_id !== teacherId) {
+  const session = await svc.sessionService.get(sessionId) as (Session & { teacher_id?: string }) | null | undefined;
+  if (!session || session.teacher_id !== teacherId) {
     return res.status(404).json({ error: 'Session not found' });
   }
   
@@ -644,7 +657,7 @@ router.post('/classes/:classId/students', requireClassAccess('classId'), postLim
 }));
 
 router.put('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const studentId = req.params.id;
   
   const student = await svc.studentService.getById(studentId, teacherId);
@@ -662,28 +675,28 @@ router.put('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
   if (isArchived !== undefined) updateData.is_archived = isArchived ? 1 : 0;
   
   await svc.studentService.update(updateData, studentId, teacherId);
-  const updatedStudent = await svc.studentService.getById(studentId, teacherId);
+  const updatedStudent = await svc.studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   res.json({ success: true });
-  if (updatedStudent) io?.to((updatedStudent as any).class_id).emit('students_updated');
+  if (updatedStudent) io?.to(updatedStudent.class_id!).emit('students_updated');
 }));
 
 router.delete('/students/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const studentId = req.params.id;
   
-  const student = await svc.studentService.getById(studentId, teacherId);
+  const student = await svc.studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   if (!student) {
     return res.status(404).json({ error: 'Student not found or access denied' });
   }
 
   await svc.studentService.archive(studentId, teacherId);
   res.json({ success: true });
-  if (student) io?.to((student as any).class_id).emit('students_updated');
+  if (student) io?.to(student.class_id!).emit('students_updated');
 }));
 
 router.post('/classes/:classId/students/sync', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   
   const importedStudents = Array.isArray(req.body) ? req.body : [];
   const syncedStudents: any[] = [];
@@ -726,7 +739,7 @@ router.get('/classes/:classId/records', requireClassAccess('classId'), async (re
 });
 
 router.post('/records', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const records = Array.isArray(req.body) ? req.body : [req.body];
   
   // N8: Verify both class access AND that each studentId belongs to that class.
@@ -756,9 +769,9 @@ router.get('/classes/:classId/daily-notes', requireClassAccess('classId'), async
   try {
     const classId = req.params.classId;
 
-    const notes = await svc.noteService.getByClass(classId);
+    const notes = await svc.noteService.getByClass(classId) as DailyNote[];
     const response: Record<string, string> = {};
-    for (const row of notes as any) {
+    for (const row of notes) {
       response[row.date] = row.note;
     }
     res.json(response);
@@ -799,7 +812,7 @@ router.post('/classes/:classId/events', requireClassAccess('classId'), postLimit
 }));
 
 router.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const eventId = req.params.id;
   
   const event = await svc.eventService.getById(eventId, teacherId);
@@ -810,11 +823,11 @@ router.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
   const { date, title, type, description } = req.body;
   await svc.eventService.update({ date, title, type, description }, eventId, teacherId);
   res.json({ success: true });
-  io?.to((event as any).class_id).emit('events_updated');
+  io?.to((event as CalendarEvent).class_id).emit('events_updated');
 }));
 
 router.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const eventId = req.params.id;
   
   const event = await svc.eventService.getById(eventId, teacherId);
@@ -824,7 +837,7 @@ router.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
 
   await svc.eventService.delete(eventId, teacherId);
   res.json({ success: true });
-  io?.to((event as any).class_id).emit('events_updated');
+  io?.to((event as CalendarEvent).class_id).emit('events_updated');
 }));
 
 // --- TIMETABLE SLOTS ---
@@ -857,7 +870,7 @@ router.post('/classes/:classId/timetable', requireClassAccess('classId'), postLi
 }));
 
 router.put('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const timetableId = req.params.id;
   
   const slot = await svc.timetableService.getById(timetableId, teacherId);
@@ -868,11 +881,11 @@ router.put('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
   const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;
   await svc.timetableService.update({ day_of_week: dayOfWeek, start_time: startTime, end_time: endTime, subject, lesson }, timetableId, teacherId);
   res.json({ success: true });
-  io?.to((slot as any).class_id).emit('timetable_updated');
+  io?.to((slot as TimetableSlot).class_id).emit('timetable_updated');
 }));
 
 router.delete('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
+  const teacherId = req.teacherId;
   const timetableId = req.params.id;
   
   const slot = await svc.timetableService.getById(timetableId, teacherId);
@@ -882,7 +895,7 @@ router.delete('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => 
 
   await svc.timetableService.delete(timetableId, teacherId);
   res.json({ success: true });
-  io?.to((slot as any).class_id).emit('timetable_updated');
+  io?.to((slot as TimetableSlot).class_id).emit('timetable_updated');
 }));
 
 // --- SEATING LAYOUT ---
@@ -890,10 +903,10 @@ router.get('/classes/:classId/seating', requireClassAccess('classId'), async (re
   try {
     const classId = req.params.classId;
 
-    const layout = await svc.seatingService.getByClass(classId);
+    const layout = await svc.seatingService.getByClass(classId) as SeatingLayoutRow[];
     const response: Record<string, string> = {};
-    for (const row of layout as any) {
-      response[row.seat_id] = row.student_id;
+    for (const row of layout) {
+      response[row.seat_id] = row.student_id ?? '';
     }
     res.json(response);
   } catch (error) {
@@ -937,9 +950,9 @@ router.delete('/classes/:classId/seating', requireClassAccess('classId'), postLi
 // --- SETTINGS ---
 router.get('/settings', requireAuth, async (req, res) => {
   try {
-    const settings = await svc.settingService.getAll();
+    const settings = await svc.settingService.getAll() as SettingRow[];
     const response: Record<string, string> = {};
-    for (const row of settings as any) {
+    for (const row of settings) {
       if (row.key !== 'adminPassword') {
         response[row.key] = row.value;
       }
@@ -955,8 +968,8 @@ router.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(as
   if (key === 'adminPassword') {
     // Only the global admin can change the admin password
     const callerId = getTeacherId(req);
-    const caller = callerId ? await svc.teacherService.getById(callerId) : null;
-    if (!caller || !(caller as any).is_admin) {
+    const caller = callerId ? await svc.teacherService.getById(callerId) as Teacher | null : null;
+    if (!caller || !caller.is_admin) {
       return res.status(403).json({ error: 'Only administrators can change the admin password' });
     }
 
@@ -968,12 +981,12 @@ router.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(as
     // N12: Wire adminPassword to actually update the admin teacher's password_hash.
     // Previously this wrote a hash to admin_settings that was never used for auth.
     const hash = bcrypt.hashSync(value, 10);
-    const adminTeacher = await svc.teacherService.getByUsername('admin');
+    const adminTeacher = await svc.teacherService.getByUsername('admin') as Teacher | null;
     if (adminTeacher) {
-      await svc.teacherService.updatePassword((adminTeacher as any).id, hash);
+      await svc.teacherService.updatePassword(adminTeacher.id, hash);
       // Revoke all existing sessions so stale JWT cookies are rejected immediately on next request.
       // This prevents the race where an old cookie's sessionId passes requireAuth after a password change.
-      await svc.sessionService.revokeAll((adminTeacher as any).id);
+      await svc.sessionService.revokeAll(adminTeacher.id);
     }
   } else {
     await svc.settingService.set(key, value);

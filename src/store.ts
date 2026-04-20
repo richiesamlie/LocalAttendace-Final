@@ -3,6 +3,8 @@ import { shallow } from 'zustand/shallow';
 import { api } from './lib/api';
 import toast from 'react-hot-toast';
 
+type AttendanceRecordWithClassId = AttendanceRecord & { classId: string };
+
 // Default class constant — must match db.ts DEFAULTS
 const DEFAULT_CLASS_NAME = 'My First Class';
 
@@ -451,7 +453,7 @@ export const useStore = create<AppState>()((set, get) => ({
         (r) => r.studentId === record.studentId && r.date === record.date
       );
       
-      await api.saveRecords([{ ...record, classId } as any]);
+      await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
       
       set((state) => {
         const existingIndex = state.records.findIndex(
@@ -484,10 +486,10 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       // Restore the previous state or remove the record
       if (lastChange.status) {
-        await api.saveRecords([{ ...lastChange, classId } as any]);
+        await api.saveRecords([{ ...lastChange, classId }] as AttendanceRecordWithClassId[]);
       } else {
         // If there was no previous record, delete it
-        await api.saveRecords([{ ...lastChange, classId, status: 'Present' as AttendanceStatus, reason: null } as any]);
+        await api.saveRecords([{ ...lastChange, classId, status: 'Present', reason: null }] as AttendanceRecordWithClassId[]);
       }
       
       set((state) => {
@@ -776,7 +778,7 @@ export const useStore = create<AppState>()((set, get) => ({
   
   setRecordForClass: async (classId, record) => {
     try {
-      await api.saveRecords([{ ...record, classId } as any]);
+      await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
       
       set((state) => {
         const newClasses = state.classes.map(c => {
