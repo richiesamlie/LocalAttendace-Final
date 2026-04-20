@@ -11,7 +11,9 @@ import { io } from './server';
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
+ ? (() => { throw new Error('JWT_SECRET must be set in production'); })()
+ : 'dev-secret-change-in-production');
 
 interface JwtPayload {
   teacherId: string;
@@ -388,19 +390,27 @@ router.post('/classes', postLimiter, validate(classSchema), withWriteQueue(async
 }));
 
 router.put('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {
-  const teacherId = (req as any).teacherId;
-  const { name } = req.body;
-  
-  // Global admin bypass
-  const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
-  if (!isGlobalAdmin) {
-    const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
-    if (!access || (access as any).role !== 'owner') {
-      return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
-    }
+ const teacherId = (req as any).teacherId;
+ const { name } = req.body;
+
+ // Validate name is present and non-empty
+ if (!name || typeof name !== 'string' || name.trim().length === 0) {
+  return res.status(400).json({ error: 'Class name is required' });
+ }
+ if (name.trim().length > 200) {
+  return res.status(400).json({ error: 'Class name must be 200 characters or less' });
+ }
+
+ // Global admin bypass
+ const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
+ if (!isGlobalAdmin) {
+  const access = await svc.classService.isClassTeacher(req.params.id, teacherId);
+  if (!access || (access as any).role !== 'owner') {
+   return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
   }
-  await svc.classService.update(name, req.params.id, teacherId);
-  res.json({ success: true });
+ }
+ await svc.classService.update(name.trim(), req.params.id, teacherId);
+ res.json({ success: true });
 }));
 
 router.delete('/classes/:id', postLimiter, withWriteQueue(async (req, res) => {

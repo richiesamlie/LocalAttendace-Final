@@ -449,6 +449,13 @@ interface WriteTask {
 const writeQueue: WriteTask[] = [];
 let isProcessingWriteQueue = false;
 
+// NOTE: better-sqlite3 is synchronous, so task.fn() runs synchronously.
+// The async keyword and Promise<void> return type exist to:
+//   1. Allow the queue to be awaited by callers (future-proofing for if a
+//      truly async storage backend is added, e.g. Postgres via pg-promise).
+//   2. Expose a Promise-based API so callers can await write completion.
+// The await on task.fn() below is therefore a no-op for SQLite but enables
+// future async storage backends without API changes.
 async function processWriteQueue(): Promise<void> {
   if (isProcessingWriteQueue || writeQueue.length === 0) return;
   isProcessingWriteQueue = true;

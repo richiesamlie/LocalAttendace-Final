@@ -1,6 +1,13 @@
 import db from './db';
-import { query as pgQuery, queryOne as pgQueryOne, pgTransaction } from './src/repositories/postgres';
-import type { ClassSummary } from './src/repositories/IClassRepository';
+import { query as pgQuery, queryOne as pgQueryOne, pgTransaction } from './src/lib/postgres';
+
+interface ClassSummary {
+ id: string;
+ teacher_id: string;
+ name: string;
+ owner_name: string;
+ role?: string;
+}
 
 function isPostgres(): boolean {
   return (process.env.DB_TYPE || 'sqlite') === 'postgres';
