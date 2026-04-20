@@ -380,6 +380,44 @@ This is important to acknowledge — don't fix what isn't broken:
 - [ ] **H2a:** Split `routes.ts` into `src/routes/` module
 - [ ] **H2c:** Split `db.ts` into `src/db/` module
 
+**Detailed Implementation Plan for H2a:**
+
+**Step 1: Create src/routes/middleware.ts** (extract shared middleware)
+- JWT_SECRET constant
+- requireAuth handler
+- requireClassAccess handler
+- requireClassOwner handler
+- requireRole handler
+- withWriteQueue wrapper
+
+**Step 2: Create individual route files** (each module imports middleware)
+- src/routes/auth.routes.ts — /auth/* (4 routes)
+- src/routes/class.routes.ts — /classes/* (9 routes)
+- src/routes/student.routes.ts — /students/* (4 routes)
+- src/routes/record.routes.ts — /records/* (2 routes)
+- src/routes/event.routes.ts — /events/* (4 routes)
+- src/routes/timetable.routes.ts — /timetable/* (4 routes)
+- src/routes/seating.routes.ts — /seating/* (4 routes)
+- src/routes/invite.routes.ts — /invites/* (4 routes)
+- src/routes/session.routes.ts — /sessions/* (2 routes)
+- src/routes/teacher.routes.ts — /teachers/* (2 routes)
+- src/routes/admin.routes.ts — /settings, /database/* (6 routes)
+- src/routes/health.routes.ts — /health (1 route)
+
+**Step 3: Create src/routes/index.ts**
+- Re-exports all route routers
+
+**Step 4: Update routes.ts**
+- Import all route routers from src/routes/
+- Mount them using router.use('/path', routeRouter)
+
+**Critical Notes:**
+- DO NOT move service calls to route modules - keep them in routes.ts initially
+- Import services as `import * as svc from './services'` (root services.ts)
+- Import validation schemas as-is from src/lib/validation.ts
+- Each route file should import middleware from ./middleware.ts
+- Mount pattern: router.use('/auth', authRouter), router.use('/classes', classRouter), etc.
+
 **Strategy:** Work on a feature branch. Copy file to new location, refactor imports, test locally with `npm run dev`, ensure E2E tests pass before merging.
 
 ---
