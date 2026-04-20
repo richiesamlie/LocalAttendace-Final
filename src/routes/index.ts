@@ -1,0 +1,13 @@
+export { authRouter } from './auth.routes';
+export { classRouter } from './class.routes';
+export { studentRouter } from './student.routes';
+export { recordRouter } from './record.routes';
+export { eventRouter } from './event.routes';
+export { noteRouter } from './note.routes';
+export { timetableRouter } from './timetable.routes';
+export { seatingRouter } from './seating.routes';
+export { inviteRouter } from './invite.routes';
+export { sessionRouter } from './session.routes';
+export { teacherRouter } from './teacher.routes';
+export { adminRouter } from './admin.routes';
+export { healthRouter } from './health.routes';
