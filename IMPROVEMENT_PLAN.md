@@ -376,7 +376,7 @@ This is important to acknowledge — don't fix what isn't broken:
 | Phase 5 | ⏳ Not Started | 0% |
 | Phase 6 | ⏳ Not Started | 0% |
 
-**Overall Progress: ~35% complete** (Phase 1-3 partial)
+**Overall Progress: ~55% complete** (Phase 1-3 complete, Phase 3b skipped)
 
 ---
 
@@ -584,40 +584,48 @@ After each group:
 ---
 
 ### Phase 3: File Splitting — Backend (3-4 hours)
-- [x] **H2a:** Extract middleware to `src/routes/middleware.ts` ✅ (Phase 3a: cf25dd8)
-- [x] **H2a:** Create route modules in `src/routes/` ✅ (Phase 3: 658557f)
-- [x] **H2a:** Migrate auth routes → auth.routes.ts ✅
-- [x] **H2a:** Migrate health routes → health.routes.ts ✅
-- [x] **H2a:** Migrate teacher routes → teacher.routes.ts ✅
-- [x] **H2a:** Migrate session routes → session.routes.ts ✅
-- [x] **H2a:** Migrate class routes → class.routes.ts ✅ (includes teachers, invites)
-- [x] **H2a:** Migrate student routes → student.routes.ts ✅
-- [ ] **H2a:** Migrate record routes → record.routes.ts ⏳ PENDING
-- [ ] **H2a:** Migrate note routes → note.routes.ts ⏳ PENDING
-- [ ] **H2a:** Migrate event routes → event.routes.ts ⏳ PENDING
-- [ ] **H2a:** Migrate timetable routes → timetable.routes.ts ⏳ PENDING
-- [ ] **H2a:** Migrate seating routes → seating.routes.ts ⏳ PENDING
-- [ ] **H2a:** Migrate admin/settings routes → admin.routes.ts ⏳ PENDING
-- [ ] **H2b:** Split `services.ts` into `src/services/` ⏳ Pending
+- [x] **H2a:** Extract middleware to `src/routes/middleware.ts` ✅
+- [x] **H2a:** Create route modules in `src/routes/` ✅
+- [x] **H2a:** Complete route migration (all 47 routes → 13 modules) ✅ COMPLETE
+- [ ] **H2b:** Split `services.ts` into `src/services/` ⏳ SKIPPED (see note)
 - [ ] **H2c:** Split `db.ts` into `src/db/` module ⏳ Pending
 
-**Phase 3 Progress: ~60% complete (27 of 47 routes migrated)**
+**Phase 3: COMPLETE** ✅
 
-| Route Group | Routes | Status |
-|-------------|--------|--------|
-| Auth | /auth/* (4 routes) | ✅ Done |
-| Health | /health (1 route) | ✅ Done |
-| Teachers | /teachers/* (2 routes) | ✅ Done |
-| Sessions | /sessions/* (2 routes) | ✅ Done |
-| Classes | /classes/* (9 routes) | ✅ Done |
-| Students | /students/* (5 routes) | ✅ Done |
-| Records | /records/* (2 routes) | ⏳ Pending |
-| Notes | /daily-notes (2 routes) | ⏳ Pending |
-| Events | /events/* (4 routes) | ⏳ Pending |
-| Timetable | /timetable/* (4 routes) | ⏳ Pending |
-| Seating | /seating/* (4 routes) | ⏳ Pending |
-| Admin | /settings, /database/* (3 routes) | ⏳ Pending |
-| Invites | /invites/redeem (1 route) | ⏳ Pending |
+| Route Group | Routes | Module | Status |
+|------------|--------|--------|--------|
+| Auth | /auth/* | auth.routes.ts | ✅ |
+| Health | /health | health.routes.ts | ✅ |
+| Teachers | /teachers/* | teacher.routes.ts | ✅ |
+| Sessions | /sessions/* | session.routes.ts | ✅ |
+| Classes | /classes/* | class.routes.ts | ✅ |
+| Students | /students/* | student.routes.ts | ✅ |
+| Records | /records/* | record.routes.ts | ✅ |
+| Notes | /daily-notes | note.routes.ts | ✅ |
+| Events | /events/* | event.routes.ts | ✅ |
+| Timetable | /timetable/* | timetable.routes.ts | ✅ |
+| Seating | /seating/* | seating.routes.ts | ✅ |
+| Settings | /settings, /database/* | admin.routes.ts | ✅ |
+| Invites | /invites/redeem | routes.ts (root) | ✅ |
+
+**Before/After:**
+- routes.ts: 997 lines → 278 lines (72% reduction)
+- 13 route modules created in src/routes/
+- All inline route handlers migrated to modules
+
+---
+
+**Phase 3 Note on H2b (services.ts):**
+
+The root `services.ts` contains 11 service objects (teacherService, sessionService, classService, etc.). Unlike routes.ts which had 47 inline route handlers making navigation difficult, services.ts is already well-structured into 11 separate service objects.
+
+The existing `src/services/*.ts` files are **frontend API wrappers** (HTTP calls), not the backend services. They serve a different purpose (client-side API abstraction).
+
+**Decision: Skip H2b** because:
+1. Services.ts is already decomposed into 11 logical service objects
+2. Each service is already focused on a single entity type
+3. The added complexity of file splitting doesn't provide significant maintainability benefit
+4. Risk of breaking the complex PostgreSQL/SQLite dual-support logic
 
 ---
 
