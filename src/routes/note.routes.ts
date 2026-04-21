@@ -1,15 +1,17 @@
 import express from 'express';
 import { noteService } from '../../services';
-import { requireAuth, requireClassAccess, withWriteQueue } from './middleware';
+import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { io } from '../../server';
+import type { DailyNote } from '../../src/types/db';
 
 export const noteRouter = express.Router();
 
 noteRouter.get('/classes/:classId/daily-notes', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
-    const notes = await noteService.getByClass(classId);
+    const notes = await noteService.getByClass(classId) as DailyNote[];
     const response: Record<string, string> = {};
-    for (const row of notes as any[]) {
+    for (const row of notes) {
       response[row.date] = row.note;
     }
     res.json(response);
@@ -18,7 +20,7 @@ noteRouter.get('/classes/:classId/daily-notes', requireClassAccess('classId'), a
   }
 });
 
-noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), withWriteQueue(async (req, res) => {
+noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { date, note } = req.body;
 
@@ -28,4 +30,5 @@ noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), 
 
   await noteService.upsert(classId, date, note);
   res.json({ success: true });
+  io?.to(classId).emit('notes_updated');
 }));

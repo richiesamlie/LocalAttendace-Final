@@ -586,9 +586,38 @@ After each group:
 ### Phase 3: File Splitting — Backend (3-4 hours)
 - [x] **H2a:** Extract middleware to `src/routes/middleware.ts` ✅ (Phase 3a: cf25dd8)
 - [x] **H2a:** Create route modules in `src/routes/` ✅ (Phase 3: 658557f)
-- [ ] **H2a:** Complete route migration (inline handlers → modules) ⏳ IN PROGRESS
+- [x] **H2a:** Migrate auth routes → auth.routes.ts ✅
+- [x] **H2a:** Migrate health routes → health.routes.ts ✅
+- [x] **H2a:** Migrate teacher routes → teacher.routes.ts ✅
+- [x] **H2a:** Migrate session routes → session.routes.ts ✅
+- [x] **H2a:** Migrate class routes → class.routes.ts ✅ (includes teachers, invites)
+- [x] **H2a:** Migrate student routes → student.routes.ts ✅
+- [ ] **H2a:** Migrate record routes → record.routes.ts ⏳ PENDING
+- [ ] **H2a:** Migrate note routes → note.routes.ts ⏳ PENDING
+- [ ] **H2a:** Migrate event routes → event.routes.ts ⏳ PENDING
+- [ ] **H2a:** Migrate timetable routes → timetable.routes.ts ⏳ PENDING
+- [ ] **H2a:** Migrate seating routes → seating.routes.ts ⏳ PENDING
+- [ ] **H2a:** Migrate admin/settings routes → admin.routes.ts ⏳ PENDING
 - [ ] **H2b:** Split `services.ts` into `src/services/` ⏳ Pending
 - [ ] **H2c:** Split `db.ts` into `src/db/` module ⏳ Pending
+
+**Phase 3 Progress: ~60% complete (27 of 47 routes migrated)**
+
+| Route Group | Routes | Status |
+|-------------|--------|--------|
+| Auth | /auth/* (4 routes) | ✅ Done |
+| Health | /health (1 route) | ✅ Done |
+| Teachers | /teachers/* (2 routes) | ✅ Done |
+| Sessions | /sessions/* (2 routes) | ✅ Done |
+| Classes | /classes/* (9 routes) | ✅ Done |
+| Students | /students/* (5 routes) | ✅ Done |
+| Records | /records/* (2 routes) | ⏳ Pending |
+| Notes | /daily-notes (2 routes) | ⏳ Pending |
+| Events | /events/* (4 routes) | ⏳ Pending |
+| Timetable | /timetable/* (4 routes) | ⏳ Pending |
+| Seating | /seating/* (4 routes) | ⏳ Pending |
+| Admin | /settings, /database/* (3 routes) | ⏳ Pending |
+| Invites | /invites/redeem (1 route) | ⏳ Pending |
 
 ---
 

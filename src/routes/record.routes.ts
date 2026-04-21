@@ -1,6 +1,7 @@
 import express from 'express';
 import { recordService, classService, studentService } from '../../services';
-import { requireAuth, requireClassAccess, withWriteQueue } from './middleware';
+import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { io } from '../../server';
 
 export const recordRouter = express.Router();
 
@@ -20,7 +21,7 @@ recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), asy
   }
 });
 
-recordRouter.post('/', requireAuth, withWriteQueue(async (req, res) => {
+recordRouter.post('/', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const records = Array.isArray(req.body) ? req.body : [req.body];
 
@@ -39,4 +40,6 @@ recordRouter.post('/', requireAuth, withWriteQueue(async (req, res) => {
     await recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
   }
   res.json({ success: true });
+  const classIds = [...new Set(records.map((r: any) => r.classId))];
+  classIds.forEach((cid: any) => io?.to(cid).emit('records_updated'));
 }));
