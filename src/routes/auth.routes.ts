@@ -2,16 +2,13 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { teacherService, sessionService } from '../../services';
-import type { Teacher } from '../types/db';
-import { requireAuth, getTeacherId, JWT_SECRET } from './middleware';
+import { requireAuth, getTeacherId, JWT_SECRET, authLimiter } from './middleware';
+import { validate, loginSchema } from '../../src/lib/validation';
+import type { Teacher } from '../../src/types/db';
 
 export const authRouter = express.Router();
 
-const authLimiter = (_req: express.Request, _res: express.Response, next: express.NextFunction) => {
-  next();
-};
-
-authRouter.post('/login', authLimiter, async (req, res) => {
+authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -57,7 +54,7 @@ authRouter.post('/logout', (req, res) => {
 authRouter.get('/verify', async (req, res) => {
   const teacherId = getTeacherId(req);
   if (!teacherId) return res.status(401).json({ authenticated: false });
-  const teacher = await teacherService.getById(teacherId) as Teacher | null;
+  const teacher = await teacherService.getById(teacherId);
   if (!teacher) return res.status(401).json({ authenticated: false });
   res.json({ authenticated: true, teacherId, name: teacher.name });
 });

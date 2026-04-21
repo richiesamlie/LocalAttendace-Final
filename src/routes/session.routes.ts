@@ -1,10 +1,11 @@
 import express from 'express';
 import { sessionService } from '../../services';
-import { requireAuth, withWriteQueue } from './middleware';
+import { requireAuth, withWriteQueue, postLimiter } from './middleware';
+import type { Session } from '../../src/types/db';
 
 export const sessionRouter = express.Router();
 
-sessionRouter.get('/sessions', requireAuth, async (req, res) => {
+sessionRouter.get('/', requireAuth, async (req, res) => {
   try {
     const teacherId = req.teacherId;
     await sessionService.deleteExpired();
@@ -15,7 +16,7 @@ sessionRouter.get('/sessions', requireAuth, async (req, res) => {
   }
 });
 
-sessionRouter.post('/sessions/revoke', requireAuth, withWriteQueue(async (req, res) => {
+sessionRouter.post('/revoke', postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { sessionId } = req.body;
 
@@ -24,8 +25,8 @@ sessionRouter.post('/sessions/revoke', requireAuth, withWriteQueue(async (req, r
     return res.json({ success: true, message: 'All sessions revoked' });
   }
 
-  const session = await sessionService.get(sessionId);
-  if (!session || (session as any).teacher_id !== teacherId) {
+  const session = await sessionService.get(sessionId) as (Session & { teacher_id?: string }) | null | undefined;
+  if (!session || session.teacher_id !== teacherId) {
     return res.status(404).json({ error: 'Session not found' });
   }
 

@@ -1,8 +1,18 @@
 # Codebase Improvement Plan
 
-**Last Updated:** 2026-04-20 (Phase 1 complete)
+**Last Updated:** 2026-04-21 (Phase 3 in progress)
 **Project:** Teacher Assistant (c:/repo)
-**Branch:** improvement/phase-1
+**Branch:** feature/split-routes-v2
+
+---
+
+## Branch Status
+
+| Branch | Status | Phase | Notes |
+|--------|--------|-------|-------|
+| `improvement/phase-1` | Merged to `develop` | Phase 1 & 2 | Complete |
+| `feature/split-routes` | Abandoned | Phase 3 | Superseded by v2 |
+| `feature/split-routes-v2` | Active | Phase 3 | Current working branch |
 
 ---
 
@@ -355,6 +365,21 @@ This is important to acknowledge — don't fix what isn't broken:
 
 ## 7. Implementation Phases
 
+### Overall Progress
+
+| Phase | Status | Completion |
+|-------|--------|------------|
+| Phase 1 | ✅ Complete | 4/4 items |
+| Phase 2 | ✅ Complete | 2/3 items (DTO types pending) |
+| Phase 3 | 🔄 In Progress | ~70% (route modules created, mounting incomplete) |
+| Phase 4 | ⏳ Not Started | 0% |
+| Phase 5 | ⏳ Not Started | 0% |
+| Phase 6 | ⏳ Not Started | 0% |
+
+**Overall Progress: ~35% complete** (Phase 1-3 partial)
+
+---
+
 ### Phase 1: Quick Wins (1-2 hours total)
 - [x] **H1:** Remove broken repository layer (deleted `src/repositories/`). Note: `src/services/` is a client-side API wrapper layer (HTTP calls), NOT a split of the backend `services.ts`. The backend services remain in the monolithic `services.ts` (715L). The plan had incorrectly assumed `services.ts` was already split — it is NOT.
 - [x] **L1:** Make JWT_SECRET throw in production mode (added `NODE_ENV === 'production'` guard)
@@ -368,80 +393,227 @@ This is important to acknowledge — don't fix what isn't broken:
 ---
 
 ### Phase 2: Type Safety (2-3 hours)
-- [ ] **H3:** Audit all `as any` casts in routes.ts, store.ts, App.tsx
-- [ ] **H3:** Fix each cast with proper types or `unknown`
-- [ ] **H3:** Create `src/types/dto.ts` with shared request/response types
+- [x] **H3:** Audit all `as any` casts in routes.ts, store.ts, App.tsx ✅ (on `improvement/phase-1`)
+- [x] **H3:** Fix each cast with proper types or `unknown` ✅ (on `improvement/phase-1`)
+- [ ] **H3:** Create `src/types/dto.ts` with shared request/response types ⏳ Pending
 
 **Verification:** Run `tsc --noEmit` — should be cleaner with fewer suppression comments.
+
+**Completed on `improvement/phase-1` (merged to develop):**
+- Fixed `as any` casts in routes.ts (Phase 2 commit: 691eadd)
+- Fixed `as any` casts in store.ts
+- Added proper types where possible
+
+---
+
+## Current State Analysis (2026-04-21)
+
+### What Exists
+
+**src/routes/ directory** — 13 route module files created as reference implementation:
+```
+src/routes/
+├── index.ts           (re-exports all routers)
+├── middleware.ts      (shared auth/class/role middleware - 168 lines)
+├── auth.routes.ts     (4 auth routes)
+├── class.routes.ts    (class CRUD + teacher management)
+├── student.routes.ts  (student CRUD + sync)
+├── record.routes.ts   (attendance records)
+├── event.routes.ts    (calendar events)
+├── note.routes.ts     (daily notes)
+├── timetable.routes.ts
+├── seating.routes.ts
+├── invite.routes.ts   (invite codes + redeem)
+├── session.routes.ts  (session management)
+├── teacher.routes.ts  (teacher list + register)
+├── admin.routes.ts    (settings + database ops)
+└── health.routes.ts   (health check)
+```
+
+**routes.ts** — STILL contains ALL ~47 original route definitions inline (997 lines):
+- All auth routes (login, logout, verify, me)
+- All class routes (CRUD, teachers, invites)
+- All student routes (CRUD, sync)
+- All record routes, event routes, etc.
+- The middleware (requireAuth, requireClassAccess, etc.) was NOT removed from routes.ts — it's still duplicated
+
+### The Problem
+
+The `src/routes/middleware.ts` exists BUT the inline middleware in routes.ts was NOT removed. So now we have DUPLICATE middleware definitions:
+
+| Middleware | In routes.ts (lines) | In middleware.ts | Used by |
+|------------|---------------------|------------------|---------|
+| JWT_SECRET | L15-17 | L7-9 | routes.ts only |
+| requireAuth | L47-78 | L39-70 | NOT used by route modules |
+| requireClassAccess | L80-104 | L72-95 | NOT used by route modules |
+| requireClassOwner | L106-128 | L97-118 | NOT used by route modules |
+| requireRole | L133-164 | L122-152 | NOT used by route modules |
+| withWriteQueue | L171-181 | L158-168 | NOT used by route modules |
+
+**Root cause:** The previous work created `src/routes/middleware.ts` and `src/routes/*.routes.ts` as a **reference implementation** showing how routes SHOULD be structured. But it never actually:
+1. Removed the inline middleware from routes.ts
+2. Updated route modules to use `middleware.ts` from `./middleware` (they import it but it doesn't match routes.ts)
+3. Mounted the route modules into routes.ts
+4. Removed the inline route handlers from routes.ts
+
+### Route Conflict Reality
+
+Every route exists in BOTH routes.ts AND the route modules:
+
+| Route | routes.ts | module | Module path |
+|-------|-----------|--------|-------------|
+| POST /auth/login | L200 | auth.routes.ts L14 | authRouter |
+| POST /auth/logout | L238 | auth.routes.ts L52 | authRouter |
+| GET /auth/verify | L243 | auth.routes.ts L57 | authRouter |
+| GET /auth/me | L251 | auth.routes.ts L65 | authRouter |
+| GET /health | L261 | health.routes.ts L5 | healthRouter |
+| GET /classes | L363 | class.routes.ts L8 | classRouter |
+| POST /classes | L388 | class.routes.ts L32 | classRouter |
+| PUT /classes/:id | L405 | class.routes.ts L39 | classRouter |
+| ... ALL 47 routes ... | | | |
+
+If we simply add `router.use('/auth', authRouter)` to routes.ts, Express would match BOTH the inline handler AND the mounted router handler — breaking the API with duplicate responses.
+
+---
+
+## Plan for Completing Phase 3 (Option A)
+
+### Strategy: Sequential Route Migration
+
+Work on branch `feature/split-routes-v2` (current). For each route group:
+
+1. **Update route module** to match the exact handler logic from routes.ts
+2. **Import middleware from `../routes/middleware`** (the shared middleware)
+3. **Import validation schemas** from `../../src/lib/validation`
+4. **Remove the inline route handler** from routes.ts
+5. **Add mount statement** in routes.ts to delegate to the module
+6. **Run TypeScript check** after each change
+7. **Commit** after each route group is fully migrated
+
+### Route Groups (in migration order)
+
+**Group 1: Auth routes** (`authRouter` at `/auth`)
+- POST /auth/login (L200)
+- POST /auth/logout (L238)
+- GET /auth/verify (L243)
+- GET /auth/me (L251)
+
+**Group 2: Health** (`healthRouter` at `/`)
+- GET /health (L261)
+
+**Group 3: Database admin** (`adminRouter` at `/database`, `/settings`)
+- GET /database/backup (L276)
+- POST /database/restore (L290)
+- GET /settings (L951)
+- POST /settings (L966)
+
+**Group 4: Teachers** (`teacherRouter` at `/teachers`)
+- POST /teachers/register (L324)
+- GET /teachers (L350)
+
+**Group 5: Sessions** (`sessionRouter` at `/sessions`)
+- GET /sessions (L579)
+- POST /sessions/revoke (L590)
+
+**Group 6: Classes** (`classRouter` at `/classes`) — 9 routes
+- GET /classes (L363)
+- POST /classes (L388)
+- PUT /classes/:id (L405)
+- DELETE /classes/:id (L429)
+- GET /classes/:classId/teachers (L445)
+- POST /classes/:classId/teachers (L462)
+- DELETE /classes/:classId/teachers/:teacherId (L485)
+- PUT /classes/:classId/teachers/:teacherId/role (L609)
+
+**Group 7: Invites** (`inviteRouter` mounts at two paths)
+- POST /classes/:classId/invites (L504)
+- GET /classes/:classId/invites (L525)
+- DELETE /classes/:classId/invites/:code (L535)
+- POST /invites/redeem (L540) — different prefix!
+
+**Group 8: Students** (`studentRouter` at `/:classId/students` and `/students`)
+- GET /classes/:classId/students (L629)
+- POST /classes/:classId/students (L650)
+- PUT /students/:id (L659)
+- DELETE /students/:id (L683)
+- POST /classes/:classId/students/sync (L697)
+
+**Group 9: Records** (`recordRouter` at `/records`)
+- GET /classes/:classId/records (L724)
+- POST /records (L741)
+
+**Group 10: Notes** (`noteRouter` at `/classes/:classId/daily-notes`)
+- GET /classes/:classId/daily-notes (L768)
+- POST /classes/:classId/daily-notes (L783)
+
+**Group 11: Events** (`eventRouter` at `/events`)
+- GET /classes/:classId/events (L793)
+- POST /classes/:classId/events (L803)
+- PUT /events/:id (L814)
+- DELETE /events/:id (L829)
+
+**Group 12: Timetable** (`timetableRouter` at `/timetable`)
+- GET /classes/:classId/timetable (L844)
+- POST /classes/:classId/timetable (L863)
+- PUT /timetable/:id (L872)
+- DELETE /timetable/:id (L887)
+
+**Group 13: Seating** (`seatingRouter` at `/classes/:classId/seating`)
+- GET /classes/:classId/seating (L902)
+- POST /classes/:classId/seating (L917)
+- PUT /classes/:classId/seating (L931)
+- DELETE /classes/:classId/seating (L942)
+
+### Special Cases
+
+**Middleware dependency chain:** All routes after `router.use(requireAuth)` (L360) depend on authentication. The mount must happen AFTER auth routes but BEFORE class routes.
+
+**Nested routes:** Some routes like `/classes/:classId/teachers` need to be mounted ON classRouter, not at top level. Express handles this via `classRouter.get('/:classId/teachers', ...)`.
+
+**Rate limiters:** authLimiter and postLimiter need to be accessible in route modules. They should be exported from `src/routes/middleware.ts`.
+
+**Validation schemas:** Already in `src/lib/validation.ts` — route modules import from there.
+
+### Verification
+
+After each group:
+1. `rtk tsc --noEmit` — TypeScript compiles
+2. `npx vitest run` — unit tests pass
+3. `npx playwright test` — E2E tests pass
 
 ---
 
 ### Phase 3: File Splitting — Backend (3-4 hours)
-- [ ] **H2a:** Split `routes.ts` into `src/routes/` module
-- [ ] **H2c:** Split `db.ts` into `src/db/` module
-
-**Detailed Implementation Plan for H2a:**
-
-**Step 1: Create src/routes/middleware.ts** (extract shared middleware)
-- JWT_SECRET constant
-- requireAuth handler
-- requireClassAccess handler
-- requireClassOwner handler
-- requireRole handler
-- withWriteQueue wrapper
-
-**Step 2: Create individual route files** (each module imports middleware)
-- src/routes/auth.routes.ts — /auth/* (4 routes)
-- src/routes/class.routes.ts — /classes/* (9 routes)
-- src/routes/student.routes.ts — /students/* (4 routes)
-- src/routes/record.routes.ts — /records/* (2 routes)
-- src/routes/event.routes.ts — /events/* (4 routes)
-- src/routes/timetable.routes.ts — /timetable/* (4 routes)
-- src/routes/seating.routes.ts — /seating/* (4 routes)
-- src/routes/invite.routes.ts — /invites/* (4 routes)
-- src/routes/session.routes.ts — /sessions/* (2 routes)
-- src/routes/teacher.routes.ts — /teachers/* (2 routes)
-- src/routes/admin.routes.ts — /settings, /database/* (6 routes)
-- src/routes/health.routes.ts — /health (1 route)
-
-**Step 3: Create src/routes/index.ts**
-- Re-exports all route routers
-
-**Step 4: Update routes.ts**
-- Import all route routers from src/routes/
-- Mount them using router.use('/path', routeRouter)
-
-**Critical Notes:**
-- DO NOT move service calls to route modules - keep them in routes.ts initially
-- Import services as `import * as svc from './services'` (root services.ts)
-- Import validation schemas as-is from src/lib/validation.ts
-- Each route file should import middleware from ./middleware.ts
-- Mount pattern: router.use('/auth', authRouter), router.use('/classes', classRouter), etc.
-
-**Strategy:** Work on a feature branch. Copy file to new location, refactor imports, test locally with `npm run dev`, ensure E2E tests pass before merging.
+- [x] **H2a:** Extract middleware to `src/routes/middleware.ts` ✅ (Phase 3a: cf25dd8)
+- [x] **H2a:** Create route modules in `src/routes/` ✅ (Phase 3: 658557f)
+- [ ] **H2a:** Complete route migration (inline handlers → modules) ⏳ IN PROGRESS
+- [ ] **H2b:** Split `services.ts` into `src/services/` ⏳ Pending
+- [ ] **H2c:** Split `db.ts` into `src/db/` module ⏳ Pending
 
 ---
 
 ### Phase 4: File Splitting — Frontend (2-3 hours)
-- [ ] **H2d:** Split `store.ts` into `src/store/slices/`
+- [ ] **H2d:** Split `store.ts` into `src/store/slices/` ⏳ Pending
 
 **Strategy:** Extract slices one at a time. Test each slice extraction independently.
+
+**Prerequisite:** Phase 3 must be complete (routes.ts fully split before store.ts to avoid import cycles).
 
 ---
 
 ### Phase 5: State Management + Testing (4-6 hours)
-- [ ] **M1:** Refactor `updateCurrentClass` helper to reduce sync errors
-- [ ] **M1:** Create `STATE_MANAGEMENT.md` doc
-- [ ] **M2:** Add unit tests for validation, error handler, excel utils
-- [ ] **M2:** Configure coverage reporting in Vitest
-- [ ] **M2:** Add API integration tests with Supertest
-- [ ] **M2:** Fix E2E DB isolation
+- [ ] **M1:** Refactor `updateCurrentClass` helper to reduce sync errors ⏳ Pending
+- [ ] **M1:** Create `STATE_MANAGEMENT.md` doc ⏳ Pending
+- [ ] **M2:** Add unit tests for validation, error handler, excel utils ⏳ Pending
+- [ ] **M2:** Configure coverage reporting in Vitest ⏳ Pending
+- [ ] **M2:** Add API integration tests with Supertest ⏳ Pending
+- [ ] **M2:** Fix E2E DB isolation ⏳ Pending
 
 ---
 
 ### Phase 6: Documentation (2-3 hours)
-- [ ] **L3:** Split AGENT_HANDOFF.md into ARCHITECTURE.md, DEVELOPER_GUIDE.md, API_REFERENCE.md, TROUBLESHOOTING.md, CONTRIBUTING.md
-- [ ] **L3:** Shorten AGENT_HANDOFF.md to 50-100 line summary
+- [ ] **L3:** Split AGENT_HANDOFF.md into ARCHITECTURE.md, DEVELOPER_GUIDE.md, API_REFERENCE.md, TROUBLESHOOTING.md, CONTRIBUTING.md ⏳ Pending
+- [ ] **L3:** Shorten AGENT_HANDOFF.md to 50-100 line summary ⏳ Pending
 
 ---
 
