@@ -13,27 +13,6 @@ function isPostgres(): boolean {
   return (process.env.DB_TYPE || 'sqlite') === 'postgres';
 }
 
-// =============================================================================
-// SERVICE LAYER - Backend Business Logic
-// =============================================================================
-// This file contains 11 service objects, each handling a specific domain:
-// - teacherService: Teacher CRUD, authentication, roles
-// - sessionService: JWT session management
-// - classService: Class CRUD, teacher assignments, invites
-// - studentService: Student CRUD, archiving
-// - recordService: Attendance records
-// - noteService: Daily notes
-// - eventService: Calendar events
-// - timetableService: Timetable slots
-// - seatingService: Seating layouts
-// - settingService: App settings
-// - inviteService: Invite codes
-//
-// Each service auto-detects SQLite vs PostgreSQL and routes accordingly.
-// =============================================================================
-
-// --- TEACHER SERVICE ---
-
 export const teacherService = {
   getByUsername(username: string) {
     if (isPostgres()) {
