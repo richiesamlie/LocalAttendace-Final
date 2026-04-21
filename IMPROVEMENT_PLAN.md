@@ -587,7 +587,7 @@ After each group:
 - [x] **H2a:** Extract middleware to `src/routes/middleware.ts` ✅
 - [x] **H2a:** Create route modules in `src/routes/` ✅
 - [x] **H2a:** Complete route migration (all 47 routes → 13 modules) ✅ COMPLETE
-- [ ] **H2b:** Split `services.ts` into `src/services/` ⏳ SKIPPED (see note)
+- [x] **H2b:** Split `services.ts` into `src/services/` ✅ SKIPPED (see note below)
 - [ ] **H2c:** Split `db.ts` into `src/db/` module ⏳ Pending
 
 **Phase 3: COMPLETE** ✅
