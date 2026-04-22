@@ -2,63 +2,20 @@ import { create } from 'zustand';
 import { shallow } from 'zustand/shallow';
 import { api } from './lib/api';
 import toast from 'react-hot-toast';
+import type {
+  Student,
+  AttendanceRecord,
+  CalendarEvent,
+  TimetableSlot,
+  ClassData,
+  AttendanceStatus,
+  EventType,
+  Theme,
+} from './types/store';
 
 type AttendanceRecordWithClassId = AttendanceRecord & { classId: string };
 
-// Default class constant — must match db.ts DEFAULTS
 const DEFAULT_CLASS_NAME = 'My First Class';
-
-export type AttendanceStatus = 'Present' | 'Absent' | 'Sick' | 'Late';
-export type EventType = 'Classwork' | 'Test' | 'Exam' | 'Holiday' | 'Other';
-
-export interface Student {
-  id: string;
-  name: string;
-  rollNumber: string;
-  parentName?: string;
-  parentPhone?: string;
-  isFlagged?: boolean;
-  isArchived?: boolean;
-}
-
-export interface AttendanceRecord {
-  studentId: string;
-  date: string; // YYYY-MM-DD
-  status: AttendanceStatus;
-  reason?: string;
-}
-
-export interface CalendarEvent {
-  id: string;
-  date: string; // YYYY-MM-DD
-  title: string;
-  type: EventType;
-  description?: string;
-}
-
-export interface TimetableSlot {
-  id: string;
-  dayOfWeek: number; 
-  startTime: string; 
-  endTime: string; 
-  subject: string;
-  lesson: string;
-}
-
-export interface ClassData {
-  id: string;
-  name: string;
-  teacher_id?: string;
-  owner_name?: string;
-  role?: string; // 'administrator' | 'owner' | 'teacher' | 'assistant'
-  students: Student[];
-  records: AttendanceRecord[];
-  dailyNotes: Record<string, string>;
-  events: CalendarEvent[];
-  timetable: TimetableSlot[];
-  seatingLayout: Record<string, string>;
-  loaded?: boolean;
-}
 
 interface AppState {
   isInitialized: boolean;
@@ -75,8 +32,8 @@ interface AppState {
   dailyNotes: Record<string, string>;
   events: CalendarEvent[];
   timetable: TimetableSlot[];
-  seatingLayout: Record<string, string>; 
-  theme: 'light' | 'dark';
+  seatingLayout: Record<string, string>;
+  theme: Theme;
 
   setAuth: (teacherId: string, teacherName: string, isAdmin?: boolean) => void;
   clearAuth: () => void;
@@ -116,21 +73,29 @@ interface AppState {
   setRecordForClass: (classId: string, record: AttendanceRecord) => Promise<void>;
 }
 
-const updateCurrentClass = (state: AppState, updates: Partial<AppState>) => {
+type ClassDataUpdatableFields = Pick<ClassData, 'students' | 'records' | 'dailyNotes' | 'events' | 'timetable' | 'seatingLayout'>;
+
+const updateCurrentClass = (
+  state: AppState,
+  updates: Partial<ClassDataUpdatableFields> & { lastAttendanceChange?: null }
+) => {
   let targetClassId = state.currentClassId;
   let newClasses = [...state.classes];
 
   if (!targetClassId) {
     if (newClasses.length === 0) {
-      return state; // Should not happen after init
+      return state;
     }
     targetClassId = newClasses[0].id;
   }
 
+  const { lastAttendanceChange, ...classUpdates } = updates;
+
   return {
-    ...updates,
+    ...classUpdates,
     currentClassId: targetClassId,
-    classes: newClasses.map(c => c.id === targetClassId ? { ...c, ...updates } : c)
+    lastAttendanceChange: lastAttendanceChange !== undefined ? lastAttendanceChange : state.lastAttendanceChange,
+    classes: newClasses.map(c => c.id === targetClassId ? { ...c, ...classUpdates } : c)
   };
 };
 
@@ -164,24 +129,16 @@ export const useStore = create<AppState>()((set, get) => ({
         api.getSettings(),
       ]);
 
-      // Never auto-create a default class here.
-      // If classesData is genuinely empty (new user), the UI will show an empty state
-      // with a "Create your first class" prompt. Auto-creating here was dangerous because
-      // a temporary auth failure (401) could also return an empty array, causing a new
-      // empty class to be created and making all existing data appear to vanish.
-
-      // Eagerly load only the first/default class; other classes are lazy-loaded on switch
       if (classesData.length > 0) {
         const first = classesData[0] as unknown as ClassData;
-        const [students, records, events, timetable, dailyNotes, seatingLayout] =
-          await Promise.all([
-            api.getStudents(first.id, false),
-            api.getRecords(first.id),
-            api.getEvents(first.id),
-            api.getTimetable(first.id),
-            api.getDailyNotes(first.id),
-            api.getSeating(first.id),
-          ]);
+        const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+          api.getStudents(first.id, false),
+          api.getRecords(first.id),
+          api.getEvents(first.id),
+          api.getTimetable(first.id),
+          api.getDailyNotes(first.id),
+          api.getSeating(first.id),
+        ]);
         first.students = students;
         first.records = records;
         first.events = events;
@@ -205,7 +162,7 @@ export const useStore = create<AppState>()((set, get) => ({
         events: initialClass?.events || [],
         timetable: initialClass?.timetable || [],
         seatingLayout: initialClass?.seatingLayout || {},
-        theme: (settings.theme as 'light'|'dark') || 'light',
+        theme: (settings.theme as Theme) || 'light',
       });
     } catch (error) {
       console.error('Failed to initialize store from API', error);
@@ -275,7 +232,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       const newClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
       await api.createClass({ id: newClassId, name });
-      
+
       set((state) => {
         const newClass: ClassData = {
           id: newClassId,
@@ -286,10 +243,10 @@ export const useStore = create<AppState>()((set, get) => ({
           events: [],
           timetable: [],
           seatingLayout: {},
-          loaded: true, // new class has no data to fetch
+          loaded: true,
         };
         const newClasses = [...state.classes, newClass];
-        
+
         return {
           classes: newClasses,
           currentClassId: newClass.id,
@@ -393,12 +350,12 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to sync students with database');
     }
   },
-  
+
   addStudent: async (student) => {
     const state = get();
     if (!state.currentClassId) return;
     if (state.students.some(s => s.rollNumber === student.rollNumber && s.name === student.name)) return;
-    
+
     try {
       await api.createStudent(state.currentClassId, student);
       set((state) => updateCurrentClass(state, { students: [...state.students, student] }));
@@ -407,13 +364,12 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to add student');
     }
   },
-  
+
   removeStudent: async (id) => {
     try {
       await api.deleteStudent(id);
       const state = get();
       if (state.currentClassId) {
-        // Also clear seating for this student in DB? The DB has ON DELETE CASCADE, so it's automatic.
       }
       set((state) => {
         const newSeating = { ...state.seatingLayout };
@@ -422,7 +378,7 @@ export const useStore = create<AppState>()((set, get) => ({
             delete newSeating[key];
           }
         });
-        return updateCurrentClass(state, { 
+        return updateCurrentClass(state, {
           students: state.students.map((s) => s.id === id ? { ...s, isArchived: true } : s),
           seatingLayout: newSeating
         });
@@ -432,7 +388,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to archive student');
     }
   },
-  
+
   updateStudent: async (id, data) => {
     try {
       await api.updateStudent(id, data);
@@ -443,18 +399,17 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to update student');
     }
   },
-  
+
   setRecord: async (record) => {
     const classId = get().currentClassId;
     if (!classId) return;
     try {
-      // Store the previous state for undo
       const existingRecord = get().records.find(
         (r) => r.studentId === record.studentId && r.date === record.date
       );
-      
+
       await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
-      
+
       set((state) => {
         const existingIndex = state.records.findIndex(
           (r) => r.studentId === record.studentId && r.date === record.date
@@ -475,23 +430,21 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to save attendance record');
     }
   },
-  
+
   undoLastAttendance: async () => {
     const lastChange = get().lastAttendanceChange;
     if (!lastChange) return;
-    
+
     const classId = get().currentClassId;
     if (!classId) return;
-    
+
     try {
-      // Restore the previous state or remove the record
       if (lastChange.status) {
         await api.saveRecords([{ ...lastChange, classId }] as AttendanceRecordWithClassId[]);
       } else {
-        // If there was no previous record, delete it
         await api.saveRecords([{ ...lastChange, classId, status: 'Present', reason: null }] as AttendanceRecordWithClassId[]);
       }
-      
+
       set((state) => {
         const existingIndex = state.records.findIndex(
           (r) => r.studentId === lastChange.studentId && r.date === lastChange.date
@@ -512,20 +465,19 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to undo attendance');
     }
   },
-  
+
   markAllPresent: async (date) => {
     const classId = get().currentClassId;
     if (!classId) return;
     const students = get().students.filter(s => !s.isArchived);
     const existingRecords = get().records;
-    
-    // Only create records for students without an existing record for this date
+
     const newRecords: AttendanceRecord[] = students
       .filter(s => !existingRecords.some(r => r.studentId === s.id && r.date === date))
       .map(s => ({ studentId: s.id, date, status: 'Present' as AttendanceStatus }));
-    
+
     if (newRecords.length === 0) return;
-    
+
     try {
       await api.saveRecords(newRecords.map(r => ({ ...r, classId })));
       set((state) => updateCurrentClass(state, {
@@ -536,7 +488,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to mark all present');
     }
   },
-  
+
   setDailyNote: async (date, note) => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -549,7 +501,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to save daily note');
     }
   },
-  
+
   addEvent: async (event) => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -561,7 +513,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to add event');
     }
   },
-  
+
   addEvents: async (newEvents) => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -572,7 +524,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to import events');
     }
   },
-  
+
   updateEvent: async (id, data) => {
     try {
       await api.updateEvent(id, data);
@@ -583,7 +535,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to update event');
     }
   },
-  
+
   removeEvent: async (id) => {
     try {
       await api.deleteEvent(id);
@@ -593,7 +545,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to remove event');
     }
   },
-  
+
   addTimetableSlot: async (slot) => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -604,7 +556,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to add timetable slot');
     }
   },
-  
+
   updateTimetableSlot: async (id, data) => {
     try {
       await api.updateTimetableSlot(id, data);
@@ -615,7 +567,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to update timetable slot');
     }
   },
-  
+
   removeTimetableSlot: async (id) => {
     try {
       await api.deleteTimetableSlot(id);
@@ -624,13 +576,13 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to remove timetable slot');
     }
   },
-  
+
   updateSeat: async (seatId, studentId) => {
     const classId = get().currentClassId;
     if (!classId) return;
     try {
       await api.updateSeat(classId, seatId, studentId);
-      
+
       set((state) => {
         const newSeating = { ...state.seatingLayout };
         if (studentId === null) {
@@ -649,7 +601,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to update seating chart');
     }
   },
-  
+
   setSeatingLayout: async (layout) => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -661,7 +613,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to save layout');
     }
   },
-  
+
   clearSeatingLayout: async () => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -672,7 +624,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to clear seating');
     }
   },
-  
+
   toggleTheme: async () => {
     const newTheme = get().theme === 'light' ? 'dark' : 'light';
     try {
@@ -682,7 +634,7 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to update theme');
     }
   },
-  
+
   clearData: async () => {
     const classId = get().currentClassId;
     if (!classId) return;
@@ -705,7 +657,7 @@ export const useStore = create<AppState>()((set, get) => ({
       const currentTeacherId = get().teacherId;
       const classes = get().classes;
       const failed: string[] = [];
-      
+
       await Promise.allSettled(
         classes.map(async (c) => {
           try {
@@ -715,21 +667,19 @@ export const useStore = create<AppState>()((set, get) => ({
           }
         })
       );
-      
+
       if (failed.length > 0 && failed.length === classes.length) {
         throw new Error('All deletions failed');
       }
-      
+
       const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
       await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
 
-      // Re-fetch admin status from server to ensure correctness after reset
       let currentIsAdmin = get().isAdmin;
       try {
         const me = await api.getMe();
         currentIsAdmin = me.isAdmin;
       } catch {
-        // Fall back to current state if fetch fails
       }
 
       set(() => {
@@ -757,7 +707,7 @@ export const useStore = create<AppState>()((set, get) => ({
           seatingLayout: {},
         };
       });
-      
+
       const msg = failed.length > 0
         ? `All data cleared (${failed.length} classes failed to delete)`
         : 'All data cleared successfully';
@@ -775,11 +725,11 @@ export const useStore = create<AppState>()((set, get) => ({
       toast.error('Failed to update admin password');
     }
   },
-  
+
   setRecordForClass: async (classId, record) => {
     try {
       await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
-      
+
       set((state) => {
         const newClasses = state.classes.map(c => {
           if (c.id === classId) {
@@ -813,3 +763,5 @@ export const useStore = create<AppState>()((set, get) => ({
 export const useActiveStudents = () => useStore(
   (state) => state.students.filter(s => !s.isArchived)
 );
+
+export type { AppState, ClassData, Student, AttendanceRecord, CalendarEvent, TimetableSlot, AttendanceStatus, EventType };
