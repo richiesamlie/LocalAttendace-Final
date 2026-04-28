@@ -15,6 +15,16 @@ import { errorHandler } from "./src/lib/errorHandler";
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
 
+// Get allowed origins from environment or default to localhost
+const getAllowedOrigins = () => {
+  const origins = process.env.ALLOWED_ORIGINS;
+  if (origins) {
+    return origins.split(',').map(o => o.trim());
+  }
+  // Default: allow localhost in all forms
+  return ['http://localhost:3000', 'http://127.0.0.1:3000'];
+};
+
 // Auto-detect and configure database
 async function configureDatabase() {
   const DATABASE_URL = process.env.DATABASE_URL;
@@ -100,7 +110,7 @@ async function startServer() {
   // Initialise Socket.io on the same HTTP server
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: '*',
+      origin: getAllowedOrigins(),
       credentials: true,
     },
     // Use path /ws to avoid conflicts with API routes
