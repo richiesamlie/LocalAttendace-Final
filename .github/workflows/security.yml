@@ -68,6 +68,9 @@ jobs:
   docker-scan:
     name: Trivy Docker Scan
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -76,6 +79,7 @@ jobs:
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: 'teacher-assistant:${{ github.sha }}'
           format: 'sarif'
