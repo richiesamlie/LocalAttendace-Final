@@ -69,11 +69,12 @@ adminRouter.post('/database/backup', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.post('/database/restore', requireAuth, async (req, res) => {
+adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<void> => {
   const callerId = req.teacherId;
   const caller = callerId ? await teacherService.getById(callerId) : null;
   if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can perform database operations' });
+    res.status(403).json({ error: 'Only administrators can perform database operations' });
+    return;
   }
   try {
     await db.enqueueWrite(() => {});
@@ -93,12 +94,13 @@ adminRouter.post('/database/restore', requireAuth, async (req, res) => {
     req.on('end', () => {
       const fileBuffer = Buffer.concat(chunks);
       if (fileBuffer.length < 100 || fileBuffer.toString('utf8', 0, 15) !== 'SQLite format 3') {
-        return res.status(400).json({ error: 'Invalid SQLite database file' });
+        res.status(400).json({ error: 'Invalid SQLite database file' });
+        return;
       }
       db.restore(fileBuffer);
-      return res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
+      res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
     });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to restore database' });
+    res.status(500).json({ error: 'Failed to restore database' });
   }
 });

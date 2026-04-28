@@ -14,7 +14,7 @@
 
 import Database from 'better-sqlite3';
 import bcrypt from 'bcrypt';
-import type { Teacher, Class, Student } from '../../types/db';
+import type { Teacher, Class } from '../../types/db';
 
 /**
  * Creates an in-memory SQLite database for testing
@@ -193,7 +193,18 @@ export const mockClasses: Partial<Class>[] = [
   },
 ];
 
-export const mockStudents: Partial<Student>[] = [
+interface MockStudent {
+  id: string;
+  class_id: string;
+  name: string;
+  roll_number: string;
+  parent_name?: string;
+  parent_phone?: string;
+  is_flagged?: number;
+  is_archived?: number;
+}
+
+export const mockStudents: MockStudent[] = [
   {
     id: 'student-1',
     class_id: 'class-1',

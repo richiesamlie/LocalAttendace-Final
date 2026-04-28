@@ -166,7 +166,9 @@ export default function GroupGenerator() {
                       {student.name}
                     </span>
                     {student.isFlagged && (
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Flagged Student" />
+                      <span title="Flagged Student">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                      </span>
                     )}
                   </li>
                 ))}
