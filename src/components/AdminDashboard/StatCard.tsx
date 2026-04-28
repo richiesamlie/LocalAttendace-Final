@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface StatCardProps {
-  icon: React.ReactNode;
+  icon: React.ReactElement<{ className?: string }>;
   label: string;
   value: number;
   color: 'indigo' | 'emerald' | 'amber' | 'rose';
@@ -18,7 +18,7 @@ export default function StatCard({ icon, label, value, color }: StatCardProps) {
   return (
     <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
       <div className={`p-4 rounded-xl ${colors[color]}`}>
-        {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6' })}
+        {React.cloneElement(icon, { className: 'w-6 h-6' })}
       </div>
       <div>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>

@@ -87,7 +87,8 @@ function requestLogger() {
         fs.appendFileSync('server-error.log', logEntry);
       }
       
-      originalEnd.apply(res, args);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (originalEnd as any).apply(res, args);
     } as any;
     
     next();

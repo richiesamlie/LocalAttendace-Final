@@ -3,7 +3,7 @@ import React from 'react';
 interface TabButtonProps {
   active: boolean;
   onClick: () => void;
-  icon: React.ReactNode;
+  icon: React.ReactElement<{ className?: string }>;
   label: string;
   count: number;
 }
@@ -19,7 +19,7 @@ export default function TabButton({ active, onClick, icon, label, count }: TabBu
       }`}
     >
       <div className="flex items-center gap-3">
-        {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
+        {React.cloneElement(icon, { className: 'w-4 h-4' })}
         {label}
       </div>
       <span className={`px-2 py-0.5 rounded-full text-xs ${

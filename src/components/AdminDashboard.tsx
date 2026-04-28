@@ -643,7 +643,7 @@ function TeachersTabContent() {
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactNode, label: string, value: number, color: string }) {
+function StatCard({ icon, label, value, color }: { icon: React.ReactElement<{ className?: string }>, label: string, value: number, color: string }) {
   const colors: Record<string, string> = {
     indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400',
     emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
@@ -654,7 +654,7 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode, label:
   return (
     <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
       <div className={`p-4 rounded-xl ${colors[color]}`}>
-        {React.cloneElement(icon as React.ReactElement, { className: 'w-6 h-6' })}
+        {React.cloneElement(icon, { className: 'w-6 h-6' })}
       </div>
       <div>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
@@ -664,7 +664,7 @@ function StatCard({ icon, label, value, color }: { icon: React.ReactNode, label:
   );
 }
 
-function TabButton({ active, onClick, icon, label, count }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, count: number }) {
+function TabButton({ active, onClick, icon, label, count }: { active: boolean, onClick: () => void, icon: React.ReactElement<{ className?: string }>, label: string, count: number }) {
   return (
     <button
       onClick={onClick}
@@ -675,7 +675,7 @@ function TabButton({ active, onClick, icon, label, count }: { active: boolean, o
       }`}
     >
       <div className="flex items-center gap-3">
-        {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
+        {React.cloneElement(icon, { className: 'w-4 h-4' })}
         {label}
       </div>
       <span className={`px-2 py-0.5 rounded-full text-xs ${
