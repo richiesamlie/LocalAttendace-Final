@@ -139,13 +139,18 @@ This document tracks the implementation of critical fixes identified in the comp
   3. Add ESLint to CI workflow
 - **Effort:** 2 hours (completed)
 
-### 7. Fix Docker Security (Non-Root User) 📋 PLANNED
+### 7. Fix Docker Security (Non-Root User) ✅ COMPLETE
 - **File:** `Dockerfile`
-- **Status:** Not started (next agent)
-- **Changes needed:**
-  - Add USER directive
-  - Fix volume permissions
-- **Effort:** 1 hour
+- **Status:** ✅ COMPLETE
+- **Changes made:**
+  - ✅ Added non-root user (nodejs:nodejs with UID 1001, GID 1001)
+  - ✅ Created /app/data and /app/backups directories with proper ownership
+  - ✅ Switched to USER nodejs before CMD
+  - ✅ Added HEALTHCHECK directive (30s interval, /health endpoint)
+  - ✅ Fixed volume permissions (chown nodejs:nodejs)
+  - ✅ Fixed dist path (./dist → ./dist)
+- **Security impact:** MEDIUM - Prevents container privilege escalation
+- **Effort:** 1 hour (completed)
 
 ---
 
