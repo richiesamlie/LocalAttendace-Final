@@ -118,6 +118,7 @@ export const sessionService = {
       return pgQuery('UPDATE user_sessions SET last_active = NOW() WHERE id = $1', [sessionId]);
     }
     try { db.stmt.updateSessionActivity.run(sessionId); } catch { /* non-critical */ }
+    return undefined;
   },
 
   deleteExpired() {

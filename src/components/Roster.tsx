@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
 import { importStudentsFromExcel, generateTemplate, exportClassData } from '../utils/excel';
-import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 import { useClickOutside } from '../hooks/useClickOutside';

@@ -41,7 +41,7 @@ async function configureDatabase() {
     try {
       const { Pool } = await import('pg');
       const pool = new Pool({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2000 });
-      const result = await pool.query('SELECT 1');
+      await pool.query('SELECT 1');
       await pool.end();
       
       process.env.DB_TYPE = 'postgres';
@@ -71,7 +71,6 @@ function requestLogger() {
       const duration = Date.now() - start;
       const status = res.statusCode;
       const timestamp = new Date().toISOString();
-      const logLine = `${timestamp} ${method} ${url} ${status} ${duration}ms`;
       const isDebug = process.env.NODE_ENV !== 'production';
       // Only log all requests in debug mode. In production, only log errors.
       if (isDebug || status >= 400) {

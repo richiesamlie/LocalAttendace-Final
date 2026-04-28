@@ -43,12 +43,12 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
-  res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
+  return res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
 });
 
-authRouter.post('/logout', (req, res) => {
+authRouter.post('/logout', (_req, res) => {
   res.clearCookie('auth_token');
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 authRouter.get('/verify', async (req, res) => {
@@ -56,7 +56,7 @@ authRouter.get('/verify', async (req, res) => {
   if (!teacherId) return res.status(401).json({ authenticated: false });
   const teacher = await teacherService.getById(teacherId);
   if (!teacher) return res.status(401).json({ authenticated: false });
-  res.json({ authenticated: true, teacherId, name: teacher.name });
+  return res.json({ authenticated: true, teacherId, name: teacher.name });
 });
 
 authRouter.get('/me', requireAuth, async (req, res) => {
@@ -65,5 +65,5 @@ authRouter.get('/me', requireAuth, async (req, res) => {
   if (!teacher) {
     return res.status(404).json({ error: 'Teacher not found' });
   }
-  res.json({ id: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
+  return res.json({ id: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
 });

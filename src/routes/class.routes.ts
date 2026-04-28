@@ -2,7 +2,7 @@ import express from 'express';
 import { classService, teacherService, inviteService } from '../../services';
 import { requireAuth, requireClassAccess, requireClassOwner, requireRole, withWriteQueue, postLimiter } from './middleware';
 import { validate, classSchema } from '../../src/lib/validation';
-import type { ClassWithRole, ClassTeacher, Invite } from '../../src/types/db';
+import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
 
 export const classRouter = express.Router();
 
@@ -24,9 +24,9 @@ classRouter.get('/', requireAuth, async (req, res) => {
     }
 
     const classes = await classService.getByTeacher(teacherId);
-    res.json(classes);
+    return res.json(classes);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch classes' });
+    return res.status(500).json({ error: 'Failed to fetch classes' });
   }
 });
 
@@ -43,7 +43,7 @@ classRouter.post('/', postLimiter, validate(classSchema), withWriteQueue(async (
 
   const { id, name } = req.body;
   await classService.insert(id, teacherId, name);
-  res.json({ id, teacher_id: teacherId, name });
+  return res.json({ id, teacher_id: teacherId, name });
 }));
 
 classRouter.put('/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -65,7 +65,7 @@ classRouter.put('/:id', postLimiter, withWriteQueue(async (req, res) => {
     }
   }
   await classService.update(name.trim(), req.params.id, teacherId);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 classRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -79,16 +79,16 @@ classRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
     }
   }
   await classService.delete(req.params.id, teacherId);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const teachers = await classService.getTeachers(classId);
-    res.json(teachers);
+    return res.json(teachers);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch class teachers' });
+    return res.status(500).json({ error: 'Failed to fetch class teachers' });
   }
 });
 
@@ -117,7 +117,7 @@ classRouter.post('/:classId/teachers', postLimiter, withWriteQueue(async (req, r
   }
 
   await classService.addTeacher(classId, newTeacherId, 'teacher');
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 classRouter.delete('/:classId/teachers/:teacherId', postLimiter, withWriteQueue(async (req, res) => {
@@ -135,7 +135,7 @@ classRouter.delete('/:classId/teachers/:teacherId', postLimiter, withWriteQueue(
   }
 
   await classService.removeTeacher(classId, targetTeacherId);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId'), postLimiter, withWriteQueue(async (req, res) => {
@@ -154,7 +154,7 @@ classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId
   }
 
   await classService.updateTeacherRole(role, classId, targetTeacherId);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
@@ -175,20 +175,20 @@ classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLim
   await inviteService.insert(code, classId, inviteRole, teacherId, expiresAt);
 
   const inviteUrl = `${req.protocol}://${req.get('host')}/invite/${code}`;
-  res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
+  return res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
 }));
 
 classRouter.get('/:classId/invites', requireRole('classId', 'teacher'), async (req, res) => {
   try {
     await inviteService.deleteExpired();
     const codes = await inviteService.getByClass(req.params.classId);
-    res.json(codes);
+    return res.json(codes);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch invite codes' });
+    return res.status(500).json({ error: 'Failed to fetch invite codes' });
   }
 });
 
 classRouter.delete('/:classId/invites/:code', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
   await inviteService.delete(req.params.code);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));

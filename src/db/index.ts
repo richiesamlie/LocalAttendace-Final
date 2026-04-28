@@ -1,5 +1,4 @@
 import Database from 'better-sqlite3';
-import path from 'path';
 import fs from 'fs';
 
 import { _db, initConnection, DB_FILE } from './connection';
@@ -37,7 +36,7 @@ function recompileStatements(): void {
 }
 
 const dbProxy = new Proxy({}, {
-  get(target, prop) {
+  get(_target, prop) {
     if (prop === 'restore') {
       return (buffer: Buffer) => {
         clearInterval(checkpointInterval);

@@ -192,7 +192,7 @@ export function useSyncStudents() {
 export function useSaveRecords() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ records, classId }: { records: Parameters<typeof api.saveRecords>[0]; classId: string }) => 
+    mutationFn: ({ records }: { records: Parameters<typeof api.saveRecords>[0]; classId: string }) => 
       api.saveRecords(records),
     onSuccess: (_, { classId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.records(classId) });

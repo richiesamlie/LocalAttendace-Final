@@ -32,6 +32,7 @@ timetableRouter.post('/classes/:classId/timetable', requireClassAccess('classId'
   await timetableService.insert(id, classId, dayOfWeek, startTime, endTime, subject, lesson);
   res.json({ success: true });
   io?.to(classId).emit('timetable_updated');
+  return;
 }));
 
 timetableRouter.put('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -47,6 +48,7 @@ timetableRouter.put('/timetable/:id', postLimiter, withWriteQueue(async (req, re
   await timetableService.update({ day_of_week: dayOfWeek, start_time: startTime, end_time: endTime, subject, lesson }, timetableId, teacherId);
   res.json({ success: true });
   io?.to((slot as TimetableSlot).class_id).emit('timetable_updated');
+  return;
 }));
 
 timetableRouter.delete('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -61,4 +63,5 @@ timetableRouter.delete('/timetable/:id', postLimiter, withWriteQueue(async (req,
   await timetableService.delete(timetableId, teacherId);
   res.json({ success: true });
   io?.to((slot as TimetableSlot).class_id).emit('timetable_updated');
+  return;
 }));

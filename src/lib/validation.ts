@@ -67,7 +67,7 @@ export function validate(schema: z.ZodSchema) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
       req.body = schema.parse(req.body);
-      next();
+      return next();
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -75,7 +75,7 @@ export function validate(schema: z.ZodSchema) {
           details: error.issues.map(e => ({ field: e.path.join('.'), message: e.message })) 
         });
       }
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   };
 }

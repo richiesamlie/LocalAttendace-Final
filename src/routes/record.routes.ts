@@ -42,4 +42,5 @@ recordRouter.post('/', requireAuth, postLimiter, withWriteQueue(async (req, res)
   res.json({ success: true });
   const classIds = [...new Set(records.map((r: any) => r.classId))];
   classIds.forEach((cid: any) => io?.to(cid).emit('records_updated'));
+  return;
 }));

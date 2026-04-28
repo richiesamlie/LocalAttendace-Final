@@ -29,7 +29,7 @@ inviteRouter.post('/classes/:classId/invites', requireRole('classId', 'teacher')
 inviteRouter.delete('/classes/:classId/invites/:code', requireRole('classId', 'teacher'), withWriteQueue(async (req, res) => {
   const code = req.params.code;
   await inviteService.delete(code);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 inviteRouter.post('/invites/redeem', requireAuth, withWriteQueue(async (req, res) => {
@@ -66,5 +66,5 @@ inviteRouter.post('/invites/redeem', requireAuth, withWriteQueue(async (req, res
   await inviteService.use(teacherId, code);
   await classService.addTeacher(invite.class_id, teacherId, invite.role);
 
-  res.json({ success: true, className: (classExists as any)?.name, role: invite.role });
+  return res.json({ success: true, className: (classExists as any)?.name, role: invite.role });
 }));

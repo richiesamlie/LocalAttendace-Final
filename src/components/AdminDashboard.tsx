@@ -1,10 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Shield, Lock, Database, Users, Calendar, BookOpen, Clock, FileText, Archive, Trash2, Search, ChevronRight, Upload, UserPlus, Download, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, UserPlus, AlertTriangle } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../lib/api';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { cn } from '../utils/cn';
 
 type TabType = 'classes' | 'students' | 'attendance' | 'events' | 'timetables' | 'notes' | 'teachers';
 

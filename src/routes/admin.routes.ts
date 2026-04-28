@@ -10,7 +10,7 @@ import type { Teacher, SettingRow } from '../../src/types/db';
 
 export const adminRouter = express.Router();
 
-adminRouter.get('/settings', requireAuth, async (req, res) => {
+adminRouter.get('/settings', requireAuth, async (_req, res) => {
   try {
     const settings = await settingService.getAll() as SettingRow[];
     const response: Record<string, string> = {};
@@ -19,9 +19,9 @@ adminRouter.get('/settings', requireAuth, async (req, res) => {
         response[row.key] = row.value;
       }
     }
-    res.json(response);
+    return res.json(response);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch settings' });
+    return res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
 
@@ -47,7 +47,7 @@ adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQue
   } else {
     await settingService.set(key, value);
   }
-  res.json({ success: true });
+  return res.json({ success: true });
 }));
 
 adminRouter.post('/database/backup', requireAuth, async (req, res) => {
@@ -63,9 +63,9 @@ adminRouter.post('/database/backup', requireAuth, async (req, res) => {
     }
     res.setHeader('Content-Disposition', 'attachment; filename="database.sqlite"');
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.sendFile(dbPath);
+    return res.sendFile(dbPath);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create backup' });
+    return res.status(500).json({ error: 'Failed to create backup' });
   }
 });
 
@@ -96,9 +96,9 @@ adminRouter.post('/database/restore', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Invalid SQLite database file' });
       }
       db.restore(fileBuffer);
-      res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
+      return res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to restore database' });
+    return res.status(500).json({ error: 'Failed to restore database' });
   }
 });

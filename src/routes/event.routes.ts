@@ -26,6 +26,7 @@ eventRouter.post('/classes/:classId/events', requireClassAccess('classId'), post
   }
   res.json({ success: true });
   io?.to(classId).emit('events_updated');
+  return;
 }));
 
 eventRouter.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -41,6 +42,7 @@ eventRouter.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
   await eventService.update({ date, title, type, description }, eventId, teacherId);
   res.json({ success: true });
   io?.to((event as CalendarEvent).class_id).emit('events_updated');
+  return;
 }));
 
 eventRouter.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -55,4 +57,5 @@ eventRouter.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) =
   await eventService.delete(eventId, teacherId);
   res.json({ success: true });
   io?.to((event as CalendarEvent).class_id).emit('events_updated');
+  return;
 }));

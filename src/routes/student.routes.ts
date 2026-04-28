@@ -1,6 +1,6 @@
 import express from 'express';
 import { studentService } from '../../services';
-import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, studentSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 
@@ -56,6 +56,7 @@ studentRouter.put('/:id', postLimiter, withWriteQueue(async (req, res) => {
   const updatedStudent = await studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   res.json({ success: true });
   if (updatedStudent) io?.to(updatedStudent.class_id!).emit('students_updated');
+  return;
 }));
 
 studentRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
@@ -70,6 +71,7 @@ studentRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
   await studentService.archive(studentId, teacherId);
   res.json({ success: true });
   if (student) io?.to(student.class_id!).emit('students_updated');
+  return;
 }));
 
 studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
@@ -108,4 +110,5 @@ studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), pos
 
   res.json({ success: true, inserted: toInsert.length, updated: toUpdate.length });
   io?.to(classId).emit('students_updated');
+  return;
 }));

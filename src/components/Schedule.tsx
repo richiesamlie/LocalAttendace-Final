@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore, EventType, CalendarEvent } from '../store';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
 import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree, FileSpreadsheet } from 'lucide-react';
 import { exportScheduleToExcel, importScheduleFromExcel } from '../utils/excel';

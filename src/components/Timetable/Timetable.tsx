@@ -9,8 +9,6 @@ import SlotCard from './SlotCard';
 import SlotListItem from './SlotListItem';
 import WeekView from './WeekView';
 import ExportMenu from './ExportMenu';
-import type { SlotCardProps } from './SlotCard';
-import type { SlotListItemProps } from './SlotListItem';
 
 import { parseTime } from './timetableUtils';
 

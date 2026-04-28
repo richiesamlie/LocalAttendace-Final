@@ -3,7 +3,7 @@ import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore } from '../store';
 import { exportMonthlyReportToExcel, ExportOptions } from '../utils/excel';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import { Download, FileSpreadsheet, Search, Settings, X } from 'lucide-react';
+import { FileSpreadsheet, Search, Settings, X } from 'lucide-react';
 
 export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));

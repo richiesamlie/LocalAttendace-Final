@@ -1,7 +1,5 @@
 import React, { useRef, useState } from 'react';
 import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { api } from '../lib/api';
-import toast from 'react-hot-toast';
 
 export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);

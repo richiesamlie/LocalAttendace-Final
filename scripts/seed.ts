@@ -59,10 +59,6 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-function getToday(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
 function getRecentDates(days: number): string[] {
   const dates: string[] = [];
   for (let i = 0; i < days; i++) {

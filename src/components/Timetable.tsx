@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStore, TimetableSlot } from '../store';
 import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List, Copy, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -463,7 +463,7 @@ export default function Timetable() {
           </div>
         ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {slotsForDay.map((slot, index) => {
+            {slotsForDay.map((slot) => {
               const slotColor = getSubjectColor(slot.subject);
 
               return (

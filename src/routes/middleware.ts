@@ -84,7 +84,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   }
 
   req.teacherId = teacherId;
-  next();
+  return next();
 };
 
 export const requireClassAccess = (paramName: string = 'classId'): RequestHandler => {

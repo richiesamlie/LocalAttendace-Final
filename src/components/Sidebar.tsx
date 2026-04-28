@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
-import { useLogout } from '../hooks/useData';
 import toast from 'react-hot-toast';
 
 function ClassSwitcher() {
@@ -12,7 +11,6 @@ function ClassSwitcher() {
   const addClass = useStore((state) => state.addClass);
   const removeClass = useStore((state) => state.removeClass);
   const updateClassName = useStore((state) => state.updateClassName);
-  const teacherId = useStore((state) => state.teacherId);
   const isAdmin = useStore((state) => state.isAdmin);
   
   const isHomeroomTeacher = classes.some(c => c.role === 'owner');
@@ -21,7 +19,6 @@ function ClassSwitcher() {
   const [newClassName, setNewClassName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleAddClass = () => {
     if (newClassName.trim()) {

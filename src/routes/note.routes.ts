@@ -31,4 +31,5 @@ noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), 
   await noteService.upsert(classId, date, note);
   res.json({ success: true });
   io?.to(classId).emit('notes_updated');
+  return;
 }));

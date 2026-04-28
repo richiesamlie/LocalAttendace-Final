@@ -31,5 +31,5 @@ sessionRouter.post('/revoke', postLimiter, withWriteQueue(async (req, res) => {
   }
 
   await sessionService.revoke(sessionId);
-  res.json({ success: true });
+  return res.json({ success: true });
 }));

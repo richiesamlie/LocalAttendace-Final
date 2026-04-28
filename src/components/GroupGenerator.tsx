@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore, Student } from '../store';
-import { Users, Shuffle, Download, UserPlus, AlertTriangle, Settings2 } from 'lucide-react';
+import { Users, Shuffle, AlertTriangle } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export default function GroupGenerator() {

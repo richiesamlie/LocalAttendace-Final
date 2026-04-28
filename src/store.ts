@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { shallow } from 'zustand/shallow';
 import { api } from './lib/api';
 import toast from 'react-hot-toast';
 import type {
@@ -440,9 +439,9 @@ export const useStore = create<AppState>()((set, get) => ({
 
     try {
       if (lastChange.status) {
-        await api.saveRecords([{ ...lastChange, classId }] as AttendanceRecordWithClassId[]);
+        await api.saveRecords([{ ...lastChange, classId }] as unknown as AttendanceRecordWithClassId[]);
       } else {
-        await api.saveRecords([{ ...lastChange, classId, status: 'Present', reason: null }] as AttendanceRecordWithClassId[]);
+        await api.saveRecords([{ ...lastChange, classId, status: 'Present', reason: undefined }] as unknown as AttendanceRecordWithClassId[]);
       }
 
       set((state) => {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { useStore, AttendanceRecord, AttendanceStatus } from '../store';
+import { useStore, AttendanceStatus } from '../store';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
 import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download, Undo2 } from 'lucide-react';

@@ -13,7 +13,7 @@
  */
 
 import Database from 'better-sqlite3';
-import type { Teacher, Class, Student } from '../../src/types/db';
+import type { Teacher, Class, Student } from '../../types/db';
 
 /**
  * Creates an in-memory SQLite database for testing

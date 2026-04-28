@@ -6,12 +6,12 @@ import { validate, teacherSchema } from '../../src/lib/validation';
 
 export const teacherRouter = express.Router();
 
-teacherRouter.get('/', requireAuth, async (req, res) => {
+teacherRouter.get('/', requireAuth, async (_req, res) => {
   try {
     const teachers = await teacherService.getAll();
-    res.json(teachers);
+    return res.json(teachers);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch teachers' });
+    return res.status(500).json({ error: 'Failed to fetch teachers' });
   }
 });
 
@@ -37,5 +37,5 @@ teacherRouter.post('/register', requireAuth, postLimiter, validate(teacherSchema
   const id = `teacher_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
   const hash = bcrypt.hashSync(password, 10);
   await teacherService.insert(id, username, hash, name);
-  res.json({ success: true, id, username, name });
+  return res.json({ success: true, id, username, name });
 }));
