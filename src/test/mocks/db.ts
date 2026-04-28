@@ -91,6 +91,15 @@ export function createMockDb(): Database.Database {
       FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE daily_notes (
+      class_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      note TEXT NOT NULL,
+      updated_at TEXT,
+      PRIMARY KEY (class_id, date),
+      FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE
+    );
+
     -- Create indexes
     CREATE INDEX idx_teachers_username ON teachers(username);
     CREATE INDEX idx_classes_teacher ON classes(teacher_id);
@@ -98,6 +107,8 @@ export function createMockDb(): Database.Database {
     CREATE INDEX idx_class_teachers_teacher ON class_teachers(teacher_id);
     CREATE INDEX idx_students_class ON students(class_id);
     CREATE INDEX idx_user_sessions_teacher ON user_sessions(teacher_id);
+    CREATE INDEX idx_daily_notes_class ON daily_notes(class_id);
+    CREATE INDEX idx_daily_notes_date ON daily_notes(date);
   `);
   
   return db;
