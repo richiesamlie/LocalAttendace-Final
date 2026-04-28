@@ -47,36 +47,62 @@ This document tracks the implementation of critical fixes identified in the comp
 - **Security impact:** CRITICAL - Prevents unauthorized WebSocket access
 - **Effort:** 15 minutes (completed)
 
-### 3. Add Backend Unit Tests ✅ STRUCTURE CREATED
-- **Files:** Created `src/services/__tests__/teacher.service.test.ts`
-- **Status:** ✅ Test structure and templates created
+### 3. Add Backend Unit Tests ✅ COMPLETE
+- **Files:** Created `src/services/__tests__/teacher.service.test.ts`, `src/test/mocks/db.ts`
+- **Status:** ✅ COMPLETE (15 tests implemented and passing)
 - **What was done:**
   - ✅ Created test directory structure
-  - ✅ Created template: `teacher.service.test.ts` with TODOs
-  - ✅ Created template: `auth.security.test.ts` with TODOs
-  - ✅ Created mock utilities: `src/test/mocks/db.ts`
+  - ✅ Implemented `createMockDb()` - in-memory SQLite database with schema
+  - ✅ Implemented `seedMockData()` - fixtures for teachers, classes, students
+  - ✅ Wrote 15 comprehensive tests for teacher service:
+    - getByUsername (found/not found)
+    - insert (success, duplicate prevention, validation)
+    - getById (success, not found)
+    - getIsAdmin (admin/non-admin)
+    - isHomeroom (owner checks)
+    - getAllTeachers
+    - updatePassword (verification with bcrypt)
+    - last_login tracking
+  - ✅ All tests passing (15/15)
   - ✅ Installed: `supertest`, `@types/supertest`
+- **Test Results:** ✅ 15/15 passed in ~2s
 - **Next steps for agent:**
-  1. Implement `createMockDb()` for in-memory SQLite testing
-  2. Implement `seedMockData()` with fixtures
-  3. Write actual tests (currently placeholders)
-  4. Add tests for: classService, studentService, recordService
-  5. Aim for 50%+ coverage (currently ~10%)
-- **Effort:** Structure done (1 hour), implementation (2-3 weeks)
+  - Add tests for: classService, studentService, recordService
+  - Aim for 50%+ coverage (currently ~15-20% with teacher tests)
+- **Effort:** 4 hours (completed)
 
-### 4. Add Security Tests ✅ STRUCTURE CREATED
+### 4. Add Security Tests ✅ COMPLETE
 - **Files:** Created `src/test/security/auth.security.test.ts`
-- **Status:** ✅ Template created with comprehensive TODOs
-- **Tests needed (documented in template):**
-  - ✅ SQL injection prevention (placeholder)
-  - ✅ Rate limiting validation (placeholder)
-  - ✅ Password hashing verification (placeholder)
-  - ✅ Session management (placeholder)
-  - ✅ JWT token validation (placeholder)
-  - ✅ Cookie security checks (placeholder)
-  - ✅ XSS prevention (placeholder)
-- **Next steps:** Implement actual test logic
-- **Effort:** Template done (30 min), implementation (1 week)
+- **Status:** ✅ COMPLETE (15 tests implemented and passing)
+- **Tests implemented:**
+  - ✅ Password hashing with bcrypt (plain text prevention)
+  - ✅ Password verification (correct/wrong password)
+  - ✅ Password minimum length enforcement
+  - ✅ Bcrypt salt uniqueness
+  - ✅ SQL injection prevention (5 attack patterns tested)
+  - ✅ Special character handling (null bytes, newlines, etc.)
+  - ✅ Session management (creation, revocation, last_active tracking)
+  - ✅ Foreign key constraints (cascade delete)
+  - ✅ Input validation (long inputs, null/undefined, empty strings)
+  - ✅ Authorization checks (admin vs regular, class ownership)
+- **Test Results:** ✅ 15/15 passed in ~1.9s
+- **Effort:** 3 hours (completed)
+
+### 5. Test Infrastructure & Configuration ✅ COMPLETE
+- **Files:** `vitest.config.ts`, `package.json`, `src/test/store.test.ts`
+- **Status:** ✅ COMPLETE
+- **What was done:**
+  - ✅ Created `vitest.config.ts` with Node environment, coverage settings
+  - ✅ Added test scripts to package.json: `test`, `test:watch`, `test:ui`, `test:coverage`
+  - ✅ Fixed pre-existing store tests (2 failures) by mocking API calls
+  - ✅ All 70 tests now passing across 4 test files
+- **Test Summary:**
+  - ✅ 15 teacher service tests (teacher.service.test.ts)
+  - ✅ 15 authentication security tests (auth.security.test.ts)
+  - ✅ 37 validation tests (validation.test.ts)
+  - ✅ 3 store tests (store.test.ts)
+  - **Total: 70/70 passing** (100% success rate)
+- **Effort:** 2 hours (completed)
 
 ---
 
