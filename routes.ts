@@ -25,18 +25,18 @@ import {
 const router = express.Router();
 
 // Mount all route modules
-router.use(authRouter);
-router.use(classRouter);
-router.use(studentRouter);
-router.use(recordRouter);
-router.use(noteRouter);
-router.use(eventRouter);
-router.use(timetableRouter);
-router.use(seatingRouter);
-router.use(inviteRouter);
-router.use(sessionRouter);
-router.use(teacherRouter);
-router.use(adminRouter);
-router.use(healthRouter);
+router.use('/auth', authRouter);
+router.use('/classes', classRouter);
+router.use('/students', studentRouter);
+router.use('/records', recordRouter);
+router.use('/notes', noteRouter);
+router.use('/events', eventRouter);
+router.use('/timetable', timetableRouter);
+router.use('/seating', seatingRouter);
+router.use('/invites', inviteRouter);
+router.use('/sessions', sessionRouter);
+router.use('/teachers', teacherRouter);
+router.use('/admin', adminRouter);
+router.use('/', healthRouter);
 
 export default router;
