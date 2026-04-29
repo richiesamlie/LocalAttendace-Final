@@ -77,22 +77,48 @@ async function complexOperation() {
 
 ## Configuration
 
-### Thresholds
+### Environment Variables
 
-- **Slow Request**: 1000ms (1 second)
-- **Slow Query**: 100ms (default, customizable)
+The performance monitoring system can be configured via environment variables:
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `PERF_SLOW_REQUEST_MS` | Threshold for slow HTTP requests (milliseconds) | `1000` | `500` |
+| `PERF_SLOW_QUERY_MS` | Threshold for slow database queries (milliseconds) | `100` | `150` |
+| `PERF_LOG_ALL_REQUESTS` | Log all requests regardless of speed | `true` (dev)<br>`false` (prod) | `true` |
+
+**Example `.env` configuration**:
+```bash
+# Performance Monitoring Configuration
+PERF_SLOW_REQUEST_MS=1000      # Log requests slower than 1 second
+PERF_SLOW_QUERY_MS=100         # Log queries slower than 100ms
+PERF_LOG_ALL_REQUESTS=false    # Only log slow operations (production mode)
+```
+
+**Use Cases**:
+
+- **SQLite Setup**: Use higher thresholds (e.g., `PERF_SLOW_QUERY_MS=150`)
+- **PostgreSQL Setup**: Use lower thresholds (e.g., `PERF_SLOW_QUERY_MS=50`)
+- **Old Hardware**: Increase thresholds to reduce noise
+- **Performance Tuning**: Enable all logging temporarily to identify bottlenecks
+- **Silent Production**: Set `PERF_LOG_ALL_REQUESTS=false` to only see problems
+
+### Default Thresholds
+
+- **Slow Request**: 1000ms (1 second) - configurable via `PERF_SLOW_REQUEST_MS`
+- **Slow Query**: 100ms - configurable via `PERF_SLOW_QUERY_MS`
 
 ### Logging Behavior
 
 - **Development** (`NODE_ENV !== 'production'`):
-  - All requests logged
-  - All queries logged
+  - All requests logged (unless `PERF_LOG_ALL_REQUESTS=false`)
+  - All queries logged (unless `PERF_LOG_ALL_REQUESTS=false`)
   - Slow operations logged as warnings
 
 - **Production** (`NODE_ENV === 'production'`):
-  - Only slow requests logged
-  - Only slow queries logged
-  - Normal operations silent
+  - Only slow requests logged (unless `PERF_LOG_ALL_REQUESTS=true`)
+  - Only slow queries logged (unless `PERF_LOG_ALL_REQUESTS=true`)
+  - Normal operations silent (reduce log volume)
 
 ## Rate Limiting Configuration
 
@@ -176,6 +202,24 @@ useEffect(() => {
 3. **Alerts**: Set up alerts for excessive slow queries/requests
 4. **Performance Budget**: Track performance metrics over time
 
+## Testing Performance Configuration
+
+To verify performance monitoring configuration:
+
+1. **Check current configuration**:
+   ```bash
+   npx tsx verify-perf-config.ts
+   ```
+
+2. **Test with custom thresholds**:
+   ```bash
+   # PowerShell
+   $env:PERF_SLOW_REQUEST_MS="500"; $env:PERF_SLOW_QUERY_MS="50"; npx tsx verify-perf-config.ts
+   
+   # Bash/Linux
+   PERF_SLOW_REQUEST_MS=500 PERF_SLOW_QUERY_MS=50 npx tsx verify-perf-config.ts
+   ```
+
 ## Testing Performance
 
 To test performance monitoring:
@@ -201,13 +245,52 @@ To test performance monitoring:
    # Only slow operations will be logged
    ```
 
+5. **Test with custom thresholds**:
+   ```bash
+   # Set aggressive thresholds for testing
+   PERF_SLOW_REQUEST_MS=100 PERF_SLOW_QUERY_MS=10 npm run dev
+   ```
+
+## Implemented Enhancements
+
+✅ **Custom Thresholds** (April 29, 2026): Configuration via environment variables
+   - `PERF_SLOW_REQUEST_MS` - Configurable request threshold
+   - `PERF_SLOW_QUERY_MS` - Configurable query threshold
+   - `PERF_LOG_ALL_REQUESTS` - Toggle all request logging
+   - Adapts to hardware capabilities (SQLite vs PostgreSQL)
+   - Production-ready with sensible defaults
+
 ## Future Enhancements
 
-Potential improvements:
+Recommended priority order:
 
-1. **Metrics Aggregation**: Collect and aggregate metrics over time
-2. **Dashboard**: Create admin dashboard for performance metrics
-3. **Query Profiling**: Detailed SQL query profiling with EXPLAIN
-4. **Resource Monitoring**: Track memory, CPU, and database connections
-5. **Distributed Tracing**: Track requests across microservices (if architecture expands)
-6. **Custom Thresholds**: Allow configuration via environment variables
+1. **Metrics Aggregation** ⭐ (Next Priority)
+   - Collect and aggregate metrics over time
+   - Store in database or time-series DB
+   - Calculate percentiles (p50, p95, p99)
+   - Track trends and patterns
+   - Foundation for dashboard and alerting
+
+2. **Dashboard** (After Metrics Aggregation)
+   - Admin page showing performance metrics
+   - Real-time request rate and latency
+   - Slow query history
+   - Database connection pool status
+   - Requires metrics aggregation first
+
+3. **Query Profiling**
+   - Detailed SQL query profiling with EXPLAIN
+   - Identify missing indexes
+   - Query optimization suggestions
+   - Only needed when performance issues arise
+
+4. **Resource Monitoring**
+   - Track memory, CPU, and database connections
+   - Detect memory leaks
+   - Alert on resource exhaustion
+   - Integration with system monitoring tools
+
+5. **Distributed Tracing**
+   - Track requests across microservices
+   - Only relevant if architecture expands
+   - Not applicable to current monolithic design
