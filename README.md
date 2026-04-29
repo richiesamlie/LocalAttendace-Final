@@ -72,7 +72,9 @@ npm install
 
 ### 3. Configure Environment
 
-The app requires two environment variables before it will start. Use the provided setup script to generate them automatically:
+The app requires environment variables to run. The easiest way is to use the provided setup script:
+
+#### Automatic Setup (Recommended)
 
 **Windows (PowerShell):**
 ```powershell
@@ -84,15 +86,39 @@ The app requires two environment variables before it will start. Use the provide
 bash setup-env.sh
 ```
 
-Or create a `.env` file manually:
+The script will:
+- ✅ Copy `.env.example` to `.env`
+- ✅ Generate secure random `JWT_SECRET` (64 characters)
+- ✅ Generate secure random `DEFAULT_ADMIN_PASSWORD` (16 characters)
+- ✅ Backup existing `.env` if present
+- ✅ Display your admin credentials
+
+**Your admin password will be shown in the terminal** - save it securely!
+
+#### Manual Setup
+
+Or create a `.env` file manually by copying `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and replace placeholders:
 
 ```env
 # REQUIRED — app throws on startup if these are missing
-JWT_SECRET=your_64_char_hex_secret        # openssl rand -hex 32
+JWT_SECRET=your_64_char_hex_secret        # Generate: openssl rand -hex 32
 DEFAULT_ADMIN_PASSWORD=your_admin_password
 
-# OPTIONAL — leave empty to use SQLite (default)
+# OPTIONAL — uncomment and configure as needed
+# NODE_ENV=production
 # DATABASE_URL=postgresql://user:password@localhost:5432/teacher_assistant
+# ALLOWED_ORIGINS=http://localhost:3000,http://192.168.1.50:3000
+
+# OPTIONAL — Performance Monitoring (see PERFORMANCE.md)
+# PERF_SLOW_REQUEST_MS=1000
+# PERF_SLOW_QUERY_MS=100
+# PERF_LOG_ALL_REQUESTS=false
 ```
 
 ### 4. Start the Server
