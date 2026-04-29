@@ -9,21 +9,26 @@ import type { RequestHandler } from 'express';
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
+// Login rate limiter - configured for ~40 teachers logging in during morning rush
+// Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins
+// while still protecting against brute force attacks
 export const authLimiter = skipRateLimitInTests
-  ? ((_req, _res, next) => next()) as any
+  ? ((_req: any, _res: any, next: any) => next()) as any
   : rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 5,
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 150, // Increased from 5 to support ~40 concurrent teacher logins
       standardHeaders: true,
       legacyHeaders: false,
       message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+      skipSuccessfulRequests: true, // Only count failed attempts for rate limiting
     });
 
+// General POST request rate limiter
 export const postLimiter = skipRateLimitInTests
-  ? ((_req, _res, next) => next()) as any
+  ? ((_req: any, _res: any, next: any) => next()) as any
   : rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 100,
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 500, // Increased from 100 to support multiple concurrent users
       standardHeaders: true,
       legacyHeaders: false,
       message: { error: 'Too many requests. Please try again later.' },
