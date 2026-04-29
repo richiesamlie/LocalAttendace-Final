@@ -3,11 +3,13 @@ import fs from 'fs';
 
 import { _db, initConnection, DB_FILE } from './connection';
 import { initSchema } from './schema';
-import { preparedStatements } from './statements';
+import { preparedStatements, initStatements } from './statements';
 import { cacheGet, cacheSet, cacheInvalidate, cached } from './cache';
 import { enqueueWrite } from './writeQueue';
 
+// Initialize schema first, then prepare SQL statements
 initSchema();
+initStatements();
 
 const checkpointInterval = setInterval(() => {
   try {
@@ -30,9 +32,8 @@ function reinitConnection(): void {
 }
 
 function recompileStatements(): void {
-  for (const key of Object.keys(preparedStatements)) {
-    (preparedStatements as any)[key] = _db.prepare((preparedStatements as any)[key].source);
-  }
+  // Re-initialize all prepared statements
+  initStatements();
 }
 
 const dbProxy = new Proxy({}, {
