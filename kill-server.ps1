@@ -18,24 +18,34 @@ try {
     
     if ($connection) {
         $processId = $connection.OwningProcess
-        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
         
-        if ($process) {
-            Write-Host "✓ Found process: $($process.ProcessName) (PID: $processId)" -ForegroundColor Yellow
-            Write-Host "⚠️  Terminating process..." -ForegroundColor Yellow
+        # Validate process ID (must be > 0 to avoid system processes)
+        if ($processId -and $processId -gt 0) {
+            $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
             
-            Stop-Process -Id $processId -Force
-            Start-Sleep -Milliseconds 500
-            
-            # Verify process is stopped
-            $stillRunning = Get-Process -Id $processId -ErrorAction SilentlyContinue
-            if (-not $stillRunning) {
-                Write-Host "✅ Server stopped successfully" -ForegroundColor Green
+            if ($process -and $process.ProcessName -ne "Idle") {
+                Write-Host "✓ Found process: $($process.ProcessName) (PID: $processId)" -ForegroundColor Yellow
+                Write-Host "⚠️  Terminating process..." -ForegroundColor Yellow
+                
+                try {
+                    Stop-Process -Id $processId -Force
+                    Start-Sleep -Milliseconds 500
+                    
+                    # Verify process is stopped
+                    $stillRunning = Get-Process -Id $processId -ErrorAction SilentlyContinue
+                    if (-not $stillRunning) {
+                        Write-Host "✅ Server stopped successfully" -ForegroundColor Green
+                    } else {
+                        Write-Host "⚠️  Process may still be running" -ForegroundColor Yellow
+                    }
+                } catch {
+                    Write-Host "❌ Error stopping process: $($_.Exception.Message)" -ForegroundColor Red
+                }
             } else {
-                Write-Host "⚠️  Process may still be running" -ForegroundColor Yellow
+                Write-Host "ℹ️  No valid server process found on port 3000" -ForegroundColor Gray
             }
         } else {
-            Write-Host "⚠️  Could not find process details" -ForegroundColor Yellow
+            Write-Host "ℹ️  No valid server process found on port 3000" -ForegroundColor Gray
         }
     } else {
         Write-Host "ℹ️  No server running on port 3000" -ForegroundColor Gray
