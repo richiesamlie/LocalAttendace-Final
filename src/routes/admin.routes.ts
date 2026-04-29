@@ -7,6 +7,7 @@ import { requireAuth, withWriteQueue, postLimiter } from './middleware';
 import { validate, settingSchema } from '../../src/lib/validation';
 import db from '../../db';
 import type { Teacher, SettingRow } from '../../src/types/db';
+import { metricsStore } from '../middleware/metricsStore';
 
 export const adminRouter = express.Router();
 
@@ -102,5 +103,66 @@ adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<voi
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to restore database' });
+  }
+});
+
+// Performance metrics endpoints (admin only)
+adminRouter.get('/metrics', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view metrics' });
+  }
+
+  try {
+    // Get time window from query param (in minutes), default to last hour
+    const windowMinutes = parseInt(req.query.window as string || '60', 10);
+    const windowMs = windowMinutes * 60 * 1000;
+
+    const aggregated = metricsStore.getAggregated(windowMs);
+    const summary = metricsStore.getSummary();
+    const bufferInfo = metricsStore.getBufferInfo();
+
+    return res.json({
+      summary,
+      bufferInfo,
+      metrics: aggregated,
+    });
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    return res.status(500).json({ error: 'Failed to fetch metrics' });
+  }
+});
+
+adminRouter.get('/metrics/summary', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view metrics' });
+  }
+
+  try {
+    const summary = metricsStore.getSummary();
+    const bufferInfo = metricsStore.getBufferInfo();
+    return res.json({ summary, bufferInfo });
+  } catch (error) {
+    console.error('Error fetching metrics summary:', error);
+    return res.status(500).json({ error: 'Failed to fetch metrics summary' });
+  }
+});
+
+adminRouter.delete('/metrics', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can clear metrics' });
+  }
+
+  try {
+    metricsStore.clear();
+    return res.json({ success: true, message: 'Metrics cleared' });
+  } catch (error) {
+    console.error('Error clearing metrics:', error);
+    return res.status(500).json({ error: 'Failed to clear metrics' });
   }
 });

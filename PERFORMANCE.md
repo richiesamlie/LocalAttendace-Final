@@ -260,37 +260,175 @@ To test performance monitoring:
    - Adapts to hardware capabilities (SQLite vs PostgreSQL)
    - Production-ready with sensible defaults
 
+✅ **Metrics Aggregation** (April 29, 2026): Collect and analyze performance data
+  - In-memory circular buffer stores last 10,000 metrics
+  - Request metrics: duration, status code, method, endpoint
+  - Query metrics: duration, success/failure, query name
+  - Percentile calculations (p50, p95, p99)
+  - Time-windowed queries (e.g., last hour, last 24 hours)
+  - Admin API endpoints: `/api/admin/metrics`, `/api/admin/metrics/summary`
+  - Configurable via `PERF_METRICS_ENABLED` and `PERF_METRICS_BUFFER_SIZE`
+  - Zero database overhead (all in-memory)
+
+### Using Metrics Aggregation
+
+The metrics system automatically collects performance data for all requests and database queries. Admin users can access this data via API endpoints.
+
+**Environment Variables**:
+```bash
+# Enable/disable metrics collection (default: true)
+PERF_METRICS_ENABLED=true
+
+# Maximum metrics to store (default: 10000)
+# Older metrics are automatically rotated out
+PERF_METRICS_BUFFER_SIZE=10000
+```
+
+**API Endpoints** (Admin only):
+
+1. **Get Aggregated Metrics** - `GET /api/admin/metrics?window=60`
+   
+   Query parameters:
+   - `window` (optional): Time window in minutes (default: 60)
+   
+   Returns comprehensive metrics including:
+   - Request statistics (total, successful, failed, avg duration, percentiles)
+   - Query statistics (total, successful, failed, avg duration, percentiles)
+   - Top 10 slowest requests and queries
+   - Breakdown by HTTP method and endpoint
+   - Time range information
+
+   Example:
+   ```bash
+   # Get metrics for last hour (default)
+   curl -H "Cookie: session=..." http://localhost:3000/api/admin/metrics
+   
+   # Get metrics for last 24 hours
+   curl -H "Cookie: session=..." http://localhost:3000/api/admin/metrics?window=1440
+   ```
+
+2. **Get Metrics Summary** - `GET /api/admin/metrics/summary`
+   
+   Returns a quick overview:
+   - Total requests and queries collected
+   - Oldest and newest metric timestamps
+   - Server uptime
+   - Buffer usage information
+
+3. **Clear Metrics** - `DELETE /api/admin/metrics`
+   
+   Clears all collected metrics. Useful for:
+   - Starting fresh after deployment
+   - Removing test data
+   - Troubleshooting
+
+**Sample Response** (GET /api/admin/metrics):
+```json
+{
+  "summary": {
+    "totalRequests": 1250,
+    "totalQueries": 3840,
+    "oldestMetric": 1714388400000,
+    "newestMetric": 1714392000000,
+    "uptimeMs": 3600000
+  },
+  "bufferInfo": {
+    "requestCount": 1250,
+    "queryCount": 3840,
+    "maxSize": 10000,
+    "requestUsage": 12.5,
+    "queryUsage": 38.4
+  },
+  "metrics": {
+    "requests": {
+      "total": 1250,
+      "successful": 1230,
+      "failed": 20,
+      "avgDuration": 45.5,
+      "p50": 38,
+      "p95": 120,
+      "p99": 450,
+      "slowest": [
+        {
+          "timestamp": 1714391800000,
+          "method": "POST",
+          "url": "/api/students",
+          "statusCode": 201,
+          "duration": 1250
+        }
+      ],
+      "byMethod": {
+        "GET": 800,
+        "POST": 300,
+        "PUT": 100,
+        "DELETE": 50
+      },
+      "byEndpoint": {
+        "/api/classes": { "count": 150, "avgDuration": 25.5 },
+        "/api/students": { "count": 420, "avgDuration": 65.2 }
+      }
+    },
+    "queries": {
+      "total": 3840,
+      "successful": 3835,
+      "failed": 5,
+      "avgDuration": 15.2,
+      "p50": 12,
+      "p95": 45,
+      "p99": 120,
+      "slowest": [
+        {
+          "timestamp": 1714391750000,
+          "queryName": "getAttendanceReport",
+          "duration": 185,
+          "success": true
+        }
+      ],
+      "byName": {
+        "getStudentsByClass": { "count": 850, "avgDuration": 8.5 },
+        "saveAttendance": { "count": 600, "avgDuration": 22.3 }
+      }
+    },
+    "timeRange": {
+      "start": 1714388400000,
+      "end": 1714392000000,
+      "durationMs": 3600000
+    }
+  }
+}
+```
+
+**Use Cases**:
+- **Performance Analysis**: Identify slowest endpoints and queries
+- **Capacity Planning**: Monitor request rates and response times
+- **Optimization**: Use percentiles to understand typical vs worst-case performance
+- **Debugging**: Correlate slow operations with user reports
+- **Trending**: Compare metrics across different time windows
+
 ## Future Enhancements
 
 Recommended priority order:
 
-1. **Metrics Aggregation** ⭐ (Next Priority)
-   - Collect and aggregate metrics over time
-   - Store in database or time-series DB
-   - Calculate percentiles (p50, p95, p99)
-   - Track trends and patterns
-   - Foundation for dashboard and alerting
-
-2. **Dashboard** (After Metrics Aggregation)
+1. **Dashboard** ⭐ (Next Priority)
    - Admin page showing performance metrics
-   - Real-time request rate and latency
+   - Real-time request rate and latency charts
    - Slow query history
    - Database connection pool status
-   - Requires metrics aggregation first
+   - Display aggregated metrics with visualizations
 
-3. **Query Profiling**
+2. **Query Profiling**
    - Detailed SQL query profiling with EXPLAIN
    - Identify missing indexes
    - Query optimization suggestions
    - Only needed when performance issues arise
 
-4. **Resource Monitoring**
+3. **Resource Monitoring**
    - Track memory, CPU, and database connections
    - Detect memory leaks
    - Alert on resource exhaustion
    - Integration with system monitoring tools
 
-5. **Distributed Tracing**
+4. **Distributed Tracing**
    - Track requests across microservices
    - Only relevant if architecture expands
    - Not applicable to current monolithic design
