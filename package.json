@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "dev:network": "tsx server.ts --network",
+    "kill": "node -e \"require('child_process').execSync(process.platform === 'win32' ? 'powershell -ExecutionPolicy Bypass -File kill-server.ps1' : './kill-server.sh', {stdio:'inherit'})\"",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
