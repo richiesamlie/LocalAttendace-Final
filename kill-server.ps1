@@ -14,38 +14,41 @@ Write-Host ""
 Write-Host "🔍 Looking for server process on port 3000..." -ForegroundColor Cyan
 
 try {
-    $connection = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+    $connections = @(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue)
     
-    if ($connection) {
-        $processId = $connection.OwningProcess
+    if ($connections.Count -gt 0) {
+        # Get unique process IDs, excluding 0 (system Idle process)
+        $processIds = $connections | 
+            ForEach-Object { $_.OwningProcess } | 
+            Where-Object { $_ -gt 0 } | 
+            Select-Object -Unique
         
-        # Validate process ID (must be > 0 to avoid system processes)
-        if ($processId -and $processId -gt 0) {
-            $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
-            
-            if ($process -and $process.ProcessName -ne "Idle") {
-                Write-Host "✓ Found process: $($process.ProcessName) (PID: $processId)" -ForegroundColor Yellow
-                Write-Host "⚠️  Terminating process..." -ForegroundColor Yellow
-                
-                try {
-                    Stop-Process -Id $processId -Force
-                    Start-Sleep -Milliseconds 500
-                    
-                    # Verify process is stopped
-                    $stillRunning = Get-Process -Id $processId -ErrorAction SilentlyContinue
-                    if (-not $stillRunning) {
-                        Write-Host "✅ Server stopped successfully" -ForegroundColor Green
-                    } else {
-                        Write-Host "⚠️  Process may still be running" -ForegroundColor Yellow
-                    }
-                } catch {
-                    Write-Host "❌ Error stopping process: $($_.Exception.Message)" -ForegroundColor Red
-                }
-            } else {
-                Write-Host "ℹ️  No valid server process found on port 3000" -ForegroundColor Gray
-            }
-        } else {
+        if ($processIds.Count -eq 0) {
             Write-Host "ℹ️  No valid server process found on port 3000" -ForegroundColor Gray
+        } else {
+            foreach ($processId in $processIds) {
+                $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+                
+                if ($process -and $process.ProcessName -ne "Idle") {
+                    Write-Host "✓ Found process: $($process.ProcessName) (PID: $processId)" -ForegroundColor Yellow
+                    Write-Host "⚠️  Terminating process..." -ForegroundColor Yellow
+                    
+                    try {
+                        Stop-Process -Id $processId -Force
+                        Start-Sleep -Milliseconds 500
+                        
+                        # Verify process is stopped
+                        $stillRunning = Get-Process -Id $processId -ErrorAction SilentlyContinue
+                        if (-not $stillRunning) {
+                            Write-Host "✅ Server stopped successfully" -ForegroundColor Green
+                        } else {
+                            Write-Host "⚠️  Process may still be running" -ForegroundColor Yellow
+                        }
+                    } catch {
+                        Write-Host "❌ Error stopping process: $($_.Exception.Message)" -ForegroundColor Red
+                    }
+                }
+            }
         }
     } else {
         Write-Host "ℹ️  No server running on port 3000" -ForegroundColor Gray

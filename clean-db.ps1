@@ -33,14 +33,17 @@ if (-not $Force) {
 Write-Host "🔍 Checking for running server..." -ForegroundColor Cyan
 
 # First check port 3000
-$connection = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+$connections = @(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue)
 $stoppedProcesses = @()
 
-if ($connection) {
-    $processId = $connection.OwningProcess
+if ($connections.Count -gt 0) {
+    # Get unique process IDs, excluding 0 (system Idle process)
+    $processIds = $connections | 
+        ForEach-Object { $_.OwningProcess } | 
+        Where-Object { $_ -gt 0 } | 
+        Select-Object -Unique
     
-    # Validate process ID (must be > 0 to avoid system processes)
-    if ($processId -and $processId -gt 0) {
+    foreach ($processId in $processIds) {
         $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
         
         if ($process -and $process.ProcessName -ne "Idle") {
