@@ -91,4 +91,10 @@ export const api = {
     return fetchApi<any>(`/admin/metrics${params}`);
   },
   clearPerformanceMetrics: () => fetchApi<{success: boolean, message: string}>('/admin/metrics', { method: 'DELETE' }),
+
+  // --- QUERY PROFILING (Admin only) ---
+  profileCustomQuery: (sql: string) => fetchApi<any>('/admin/profiling/query', { method: 'POST', body: JSON.stringify({ sql }) }),
+  getQueryProfilingStatements: () => fetchApi<any>('/admin/profiling/statements'),
+  getQueryProfilingIndexes: () => fetchApi<any>('/admin/profiling/indexes'),
+  getQueryProfilingStats: () => fetchApi<any>('/admin/profiling/stats'),
 };

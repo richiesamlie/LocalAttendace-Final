@@ -419,23 +419,37 @@ PERF_METRICS_BUFFER_SIZE=10000
 - **Debugging**: Correlate slow operations with user reports
 - **Trending**: Compare metrics across different time windows
 
+✅ **Query Profiling** (April 29, 2026): SQL query analysis and optimization
+  - EXPLAIN QUERY PLAN analysis for all queries
+  - Automatic detection of full table scans
+  - Index usage tracking and recommendations
+  - Optimization score (0-100) for each query
+  - Severity levels: good, warning, critical
+  - Admin UI at `/profiler` route with three tabs:
+    * Common Queries: Pre-configured app queries with analysis
+    * Indexes: Complete list of database indexes with definitions
+    * Custom Query: Analyze any SQL query on-demand
+  - Real-time suggestions for query optimization
+  - Table statistics: row counts, index counts
+  - Missing index detection and CREATE INDEX recommendations
+  - SELECT * detection and column-specific suggestions
+  - LIKE pattern analysis (leading wildcard warnings)
+  - ORDER BY optimization suggestions
+  - Admin API endpoints: `/api/admin/profiling/*`
+  - Zero performance impact (analysis on-demand only)
+
 ## Future Enhancements
 
 Recommended priority order:
 
-1. **Query Profiling** ⭐ (Next Priority)
-   - Detailed SQL query profiling with EXPLAIN
-   - Identify missing indexes
-   - Query optimization suggestions
-   - Only needed when performance issues arise
-
-2. **Resource Monitoring**
+1. **Resource Monitoring** ⭐ (Next Priority)
    - Track memory, CPU, and database connections
    - Detect memory leaks
    - Alert on resource exhaustion
    - Integration with system monitoring tools
+   - Real-time resource usage dashboard
 
-3. **Distributed Tracing**
+2. **Distributed Tracing**
    - Track requests across microservices
    - Only relevant if architecture expands
    - Not applicable to current monolithic design

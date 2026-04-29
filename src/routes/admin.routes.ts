@@ -8,6 +8,7 @@ import { validate, settingSchema } from '../../src/lib/validation';
 import db from '../../db';
 import type { Teacher, SettingRow } from '../../src/types/db';
 import { metricsStore } from '../middleware/metricsStore';
+import { profileQuery, profileAllStatements, getAllIndexes, getTableStats, getOptimizationScore } from '../db/profiling';
 
 export const adminRouter = express.Router();
 
@@ -164,5 +165,92 @@ adminRouter.delete('/metrics', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error clearing metrics:', error);
     return res.status(500).json({ error: 'Failed to clear metrics' });
+  }
+});
+
+// Query profiling endpoints (admin only)
+adminRouter.post('/profiling/query', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can profile queries' });
+  }
+
+  try {
+    const { sql } = req.body;
+    if (!sql || typeof sql !== 'string') {
+      return res.status(400).json({ error: 'SQL query is required' });
+    }
+
+    const result = profileQuery(sql);
+    const score = getOptimizationScore(result);
+    
+    return res.json({ ...result, score });
+  } catch (error) {
+    console.error('Error profiling query:', error);
+    return res.status(500).json({ 
+      error: 'Failed to profile query',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+adminRouter.get('/profiling/statements', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view profiling data' });
+  }
+
+  try {
+    const results = profileAllStatements();
+    const profilesWithScores = Array.from(results.entries()).map(([name, result]) => ({
+      name,
+      ...result,
+      score: getOptimizationScore(result),
+    }));
+
+    return res.json({ statements: profilesWithScores });
+  } catch (error) {
+    console.error('Error profiling statements:', error);
+    return res.status(500).json({ error: 'Failed to profile statements' });
+  }
+});
+
+adminRouter.get('/profiling/indexes', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view indexes' });
+  }
+
+  try {
+    const indexes = getAllIndexes();
+    return res.json({ indexes });
+  } catch (error) {
+    console.error('Error fetching indexes:', error);
+    return res.status(500).json({ error: 'Failed to fetch indexes' });
+  }
+});
+
+adminRouter.get('/profiling/stats', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view stats' });
+  }
+
+  try {
+    const stats = getTableStats();
+    const indexes = getAllIndexes();
+    
+    return res.json({ 
+      tables: stats,
+      indexCount: indexes.length,
+      totalRows: stats.reduce((sum, t) => sum + t.rowCount, 0),
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    return res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });

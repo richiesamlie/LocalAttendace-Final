@@ -21,6 +21,7 @@ const ExamTimer = React.lazy(() => import('./components/ExamTimer'));
 const Settings = React.lazy(() => import('./components/Settings'));
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 const PerformanceMonitor = React.lazy(() => import('./components/PerformanceMonitor'));
+const QueryProfiler = React.lazy(() => import('./components/QueryProfiler'));
 const Gatekeeper = React.lazy(() => import('./components/Gatekeeper'));
 
 function LoginScreen() {
@@ -152,6 +153,7 @@ export default function App() {
       case 'settings': return <Settings />;
       case 'admin': return <AdminDashboard />;
       case 'performance': return <PerformanceMonitor />;
+      case 'profiler': return <QueryProfiler />;
       case 'gatekeeper': return <Gatekeeper />;
       default: return <Dashboard navigate={setCurrentPage} />;
     }
