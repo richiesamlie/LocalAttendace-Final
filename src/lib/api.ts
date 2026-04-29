@@ -84,4 +84,11 @@ export const api = {
 
   // --- ROLE MANAGEMENT ---
   updateTeacherRole: (classId: string, teacherId: string, role: string) => fetchApi<{success: boolean}>(`/classes/${classId}/teachers/${teacherId}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
+
+  // --- PERFORMANCE METRICS (Admin only) ---
+  getPerformanceMetrics: (windowMinutes?: number) => {
+    const params = windowMinutes ? `?window=${windowMinutes}` : '';
+    return fetchApi<any>(`/admin/metrics${params}`);
+  },
+  clearPerformanceMetrics: () => fetchApi<{success: boolean, message: string}>('/admin/metrics', { method: 'DELETE' }),
 };

@@ -270,6 +270,20 @@ To test performance monitoring:
   - Configurable via `PERF_METRICS_ENABLED` and `PERF_METRICS_BUFFER_SIZE`
   - Zero database overhead (all in-memory)
 
+✅ **Dashboard** (April 29, 2026): Visual performance monitoring interface
+  - React-based admin dashboard at `/performance` route
+  - Real-time metrics display with 10-second auto-refresh
+  - Time window selector (15min, 1hr, 6hr, 24hr, all)
+  - Summary cards: total requests, queries, avg response time, server uptime
+  - Percentile visualizations (p50, p95, p99) for requests and queries
+  - Slowest requests table with method, endpoint, status, duration
+  - Slowest queries table with query name, status, duration
+  - Request breakdown by HTTP method with visual progress bars
+  - Top endpoints by traffic with average duration
+  - One-click metrics clearing (admin only)
+  - Dark mode support
+  - Mobile-responsive design
+
 ### Using Metrics Aggregation
 
 The metrics system automatically collects performance data for all requests and database queries. Admin users can access this data via API endpoints.
@@ -409,26 +423,19 @@ PERF_METRICS_BUFFER_SIZE=10000
 
 Recommended priority order:
 
-1. **Dashboard** ⭐ (Next Priority)
-   - Admin page showing performance metrics
-   - Real-time request rate and latency charts
-   - Slow query history
-   - Database connection pool status
-   - Display aggregated metrics with visualizations
-
-2. **Query Profiling**
+1. **Query Profiling** ⭐ (Next Priority)
    - Detailed SQL query profiling with EXPLAIN
    - Identify missing indexes
    - Query optimization suggestions
    - Only needed when performance issues arise
 
-3. **Resource Monitoring**
+2. **Resource Monitoring**
    - Track memory, CPU, and database connections
    - Detect memory leaks
    - Alert on resource exhaustion
    - Integration with system monitoring tools
 
-4. **Distributed Tracing**
+3. **Distributed Tracing**
    - Track requests across microservices
    - Only relevant if architecture expands
    - Not applicable to current monolithic design

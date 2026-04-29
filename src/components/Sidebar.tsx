@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff } from 'lucide-react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, Activity } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
@@ -369,6 +369,13 @@ export default function Sidebar({
           label="Admin Dashboard" 
           active={currentPage === 'admin'} 
           onClick={() => navigate('admin')} 
+        />
+
+        <NavItem 
+          icon={<Activity className="w-5 h-5" />} 
+          label="Performance" 
+          active={currentPage === 'performance'} 
+          onClick={() => navigate('performance')} 
         />
 
         <NavItem 
