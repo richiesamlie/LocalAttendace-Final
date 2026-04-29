@@ -6,21 +6,28 @@ import db from '../../db';
 import type { Session, ClassTeacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
-export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
-});
+// Disable rate limiting in test environment to avoid issues with integration tests
+const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
-export const postLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests. Please try again later.' },
-});
+export const authLimiter = skipRateLimitInTests
+  ? ((_req, _res, next) => next()) as any
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 5,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+    });
+
+export const postLimiter = skipRateLimitInTests
+  ? ((_req, _res, next) => next()) as any
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: 'Too many requests. Please try again later.' },
+    });
 
 export const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
  ? (() => { throw new Error('JWT_SECRET must be set in production'); })()

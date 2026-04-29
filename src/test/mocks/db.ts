@@ -132,6 +132,7 @@ export function createMockDb(): Database.Database {
  */
 export function seedMockData(db: Database.Database): void {
   // Hash password for test users (bcrypt hash of 'password123')
+  // This matches what the auth.security.test.ts expects
   const passwordHash = bcrypt.hashSync('password123', 10);
   
   // Insert mock teachers
