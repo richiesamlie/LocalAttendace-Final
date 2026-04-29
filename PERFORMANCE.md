@@ -438,18 +438,48 @@ PERF_METRICS_BUFFER_SIZE=10000
   - Admin API endpoints: `/api/admin/profiling/*`
   - Zero performance impact (analysis on-demand only)
 
+✅ **Resource Monitoring** (April 29, 2026): Real-time system resource tracking
+  - Automatic sampling every 10 seconds (configurable)
+  - Memory tracking: heap used/total, RSS, external memory
+  - CPU usage tracking: user time, system time, percentage
+  - Database monitoring: prepared statements, WAL status
+  - System metrics: total/free memory, load average, uptime
+  - Circular buffer storage (default 1000 samples = ~3 hours)
+  - Configurable alert thresholds:
+    * Memory usage > 85% (default)
+    * CPU usage > 80% (default)
+    * Active statements > 50 (default)
+  - Trend detection: stable, increasing, decreasing
+  - Admin UI at `/resources` route with:
+    * Current resource snapshot with progress bars
+    * Historical statistics (avg, min, max, current)
+    * Active alerts with severity indicators
+    * Monitor status and uptime
+  - Time window selector (15min, 1hr, 6hr, 24hr, all)
+  - Auto-refresh every 10 seconds
+  - Admin API endpoints: `/api/admin/resources/*`
+  - Zero database overhead (in-memory only)
+  - Environment configuration for thresholds and sampling
+  - Alert deduplication (5-minute window)
+
 ## Future Enhancements
 
 Recommended priority order:
 
-1. **Resource Monitoring** ⭐ (Next Priority)
-   - Track memory, CPU, and database connections
-   - Detect memory leaks
-   - Alert on resource exhaustion
-   - Integration with system monitoring tools
-   - Real-time resource usage dashboard
-
-2. **Distributed Tracing**
+1. **Distributed Tracing** (Low Priority)
    - Track requests across microservices
    - Only relevant if architecture expands
    - Not applicable to current monolithic design
+   - Consider OpenTelemetry integration
+
+2. **Advanced Alerting** (Medium Priority)
+   - Email/SMS notifications for critical alerts
+   - Webhook integration for external monitoring systems
+   - Alert history and acknowledgment
+   - Custom alert rules and thresholds per environment
+
+3. **Historical Data Export** (Low Priority)
+   - Export metrics and resource data to CSV/JSON
+   - Long-term storage in database or time-series DB
+   - Integration with Grafana or similar tools
+   - Scheduled reports generation

@@ -9,6 +9,7 @@ import db from '../../db';
 import type { Teacher, SettingRow } from '../../src/types/db';
 import { metricsStore } from '../middleware/metricsStore';
 import { profileQuery, profileAllStatements, getAllIndexes, getTableStats, getOptimizationScore } from '../db/profiling';
+import { resourceMonitor } from '../middleware/resourceMonitor';
 
 export const adminRouter = express.Router();
 
@@ -252,5 +253,66 @@ adminRouter.get('/profiling/stats', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching stats:', error);
     return res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// Resource monitoring endpoints (admin only)
+adminRouter.get('/resources', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view resources' });
+  }
+
+  try {
+    const current = resourceMonitor.getCurrent();
+    const status = resourceMonitor.getStatus();
+    return res.json({ current, status });
+  } catch (error) {
+    console.error('Error fetching resources:', error);
+    return res.status(500).json({ error: 'Failed to fetch resources' });
+  }
+});
+
+adminRouter.get('/resources/history', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view resource history' });
+  }
+
+  try {
+    // Get time window from query param (in minutes), default to last hour
+    const windowMinutes = parseInt(req.query.window as string || '60', 10);
+    const windowMs = windowMinutes * 60 * 1000;
+
+    const history = resourceMonitor.getHistory(windowMs);
+    const stats = resourceMonitor.getStats(windowMs);
+    const status = resourceMonitor.getStatus();
+
+    return res.json({ history, stats, status });
+  } catch (error) {
+    console.error('Error fetching resource history:', error);
+    return res.status(500).json({ error: 'Failed to fetch resource history' });
+  }
+});
+
+adminRouter.get('/resources/alerts', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can view resource alerts' });
+  }
+
+  try {
+    // Get time window from query param (in minutes), default to last hour
+    const windowMinutes = parseInt(req.query.window as string || '60', 10);
+    const windowMs = windowMinutes * 60 * 1000;
+
+    const alerts = resourceMonitor.getAlerts(windowMs);
+    return res.json({ alerts });
+  } catch (error) {
+    console.error('Error fetching alerts:', error);
+    return res.status(500).json({ error: 'Failed to fetch alerts' });
   }
 });

@@ -97,4 +97,15 @@ export const api = {
   getQueryProfilingStatements: () => fetchApi<any>('/admin/profiling/statements'),
   getQueryProfilingIndexes: () => fetchApi<any>('/admin/profiling/indexes'),
   getQueryProfilingStats: () => fetchApi<any>('/admin/profiling/stats'),
+
+  // --- RESOURCE MONITORING (Admin only) ---
+  getResourceCurrent: () => fetchApi<any>('/admin/resources'),
+  getResourceHistory: (windowMinutes?: number) => {
+    const params = windowMinutes ? `?window=${windowMinutes}` : '';
+    return fetchApi<any>(`/admin/resources/history${params}`);
+  },
+  getResourceAlerts: (windowMinutes?: number) => {
+    const params = windowMinutes ? `?window=${windowMinutes}` : '';
+    return fetchApi<any>(`/admin/resources/alerts${params}`);
+  },
 };
