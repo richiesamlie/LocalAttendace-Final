@@ -56,7 +56,7 @@ authRouter.get('/verify', async (req, res) => {
   if (!teacherId) return res.status(401).json({ authenticated: false });
   const teacher = await teacherService.getById(teacherId);
   if (!teacher) return res.status(401).json({ authenticated: false });
-  return res.json({ authenticated: true, teacherId, name: teacher.name });
+  return res.json({ authenticated: true, teacherId, name: teacher.name, isAdmin: !!teacher.is_admin });
 });
 
 authRouter.get('/me', requireAuth, async (req, res) => {
