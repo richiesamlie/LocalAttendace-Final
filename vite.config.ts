@@ -67,6 +67,15 @@ export default defineConfig(({mode}) => {
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
       exclude: ['**/node_modules/**', '**/e2e/**'],
+      coverage: {
+        reporter: ['text', 'html'],
+        exclude: ['**/node_modules/**', '**/e2e/**', '**/*.d.ts'],
+        thresholds: {
+          lines: 50,
+          functions: 50,
+          branches: 50,
+        },
+      },
     },
     esbuild: {
       pure: mode === 'production' ? ['console.log', 'console.debug', 'console.info'] : [],

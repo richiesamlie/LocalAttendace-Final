@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Timer, Clock } from 'lucide-react';
 import { cn } from '../utils/cn';
 
@@ -266,6 +266,8 @@ export default function ExamTimer() {
                 <button
                   onClick={resetTimer}
                   className="w-16 h-16 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 shadow-sm transition-all active:scale-95"
+                  title="Reset timer"
+                  aria-label="Reset timer"
                 >
                   <RotateCcw className="w-7 h-7" />
                 </button>
@@ -283,6 +285,7 @@ export default function ExamTimer() {
                       value={timerInputHours}
                       onChange={(e) => setTimerInputHours(e.target.value)}
                       className="w-16 h-16 text-center text-2xl font-mono font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                      aria-label="Hours"
                     />
                     <span className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium uppercase tracking-wider">Hours</span>
                   </div>
@@ -295,6 +298,7 @@ export default function ExamTimer() {
                       value={timerInputMinutes}
                       onChange={(e) => setTimerInputMinutes(e.target.value)}
                       className="w-16 h-16 text-center text-2xl font-mono font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                      aria-label="Minutes"
                     />
                     <span className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium uppercase tracking-wider">Mins</span>
                   </div>
@@ -307,6 +311,7 @@ export default function ExamTimer() {
                       value={timerInputSeconds}
                       onChange={(e) => setTimerInputSeconds(e.target.value)}
                       className="w-16 h-16 text-center text-2xl font-mono font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white"
+                      aria-label="Seconds"
                     />
                     <span className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium uppercase tracking-wider">Secs</span>
                   </div>
@@ -350,6 +355,8 @@ export default function ExamTimer() {
                 <button
                   onClick={resetStopwatch}
                   className="w-20 h-20 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 shadow-sm transition-all active:scale-95"
+                  title="Reset stopwatch"
+                  aria-label="Reset stopwatch"
                 >
                   <RotateCcw className="w-8 h-8" />
                 </button>

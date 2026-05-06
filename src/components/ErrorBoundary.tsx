@@ -1,8 +1,10 @@
-import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
+  
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 text-center">
@@ -11,7 +13,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
         </div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Something went wrong</h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-          {error?.message || 'An unexpected error occurred.'}
+          {errorMessage}
         </p>
         <button
           onClick={resetErrorBoundary}

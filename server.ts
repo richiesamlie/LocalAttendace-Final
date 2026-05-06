@@ -11,9 +11,20 @@ import fs from "fs";
 import os from "os";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
+import { performanceMonitor } from "./src/middleware/performance";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
+
+// Get allowed origins from environment or default to localhost
+const getAllowedOrigins = () => {
+  const origins = process.env.ALLOWED_ORIGINS;
+  if (origins) {
+    return origins.split(',').map(o => o.trim());
+  }
+  // Default: allow localhost in all forms
+  return ['http://localhost:3000', 'http://127.0.0.1:3000'];
+};
 
 // Auto-detect and configure database
 async function configureDatabase() {
@@ -31,7 +42,7 @@ async function configureDatabase() {
     try {
       const { Pool } = await import('pg');
       const pool = new Pool({ connectionString: DATABASE_URL, connectionTimeoutMillis: 2000 });
-      const result = await pool.query('SELECT 1');
+      await pool.query('SELECT 1');
       await pool.end();
       
       process.env.DB_TYPE = 'postgres';
@@ -46,43 +57,6 @@ async function configureDatabase() {
   
   // Default to SQLite
   console.log('[db] Using SQLite (no DATABASE_URL set)');
-}
-
-// Simple request logger middleware
-function requestLogger() {
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const start = Date.now();
-    const method = req.method;
-    const url = req.url;
-    
-    // Capture original end to log after response
-    const originalEnd = res.end;
-    res.end = function(...args: any[]) {
-      const duration = Date.now() - start;
-      const status = res.statusCode;
-      const timestamp = new Date().toISOString();
-      const logLine = `${timestamp} ${method} ${url} ${status} ${duration}ms`;
-      const isDebug = process.env.NODE_ENV !== 'production';
-      // Only log all requests in debug mode. In production, only log errors.
-      if (isDebug || status >= 400) {
-        const isError = status >= 400;
-        const statusColor = status >= 500 ? '\x1b[31m' : status >= 400 ? '\x1b[33m' : '\x1b[32m';
-        const reset = '\x1b[0m';
-        const logFn = isError ? console.error : console.log;
-        logFn(`  ${statusColor}${status}${reset} ${method} ${url} ${duration}ms`);
-      }
-      
-      // Log errors to file
-      if (status >= 500) {
-        const logEntry = `${timestamp} ERROR ${method} ${url} ${status} ${duration}ms\n`;
-        fs.appendFileSync('server-error.log', logEntry);
-      }
-      
-      originalEnd.apply(res, args);
-    } as any;
-    
-    next();
-  };
 }
 
 async function startServer() {
@@ -100,7 +74,7 @@ async function startServer() {
   // Initialise Socket.io on the same HTTP server
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: '*',
+      origin: getAllowedOrigins(),
       credentials: true,
     },
     // Use path /ws to avoid conflicts with API routes
@@ -139,8 +113,8 @@ async function startServer() {
   // Gzip compression for faster network transfer
   app.use(compression());
 
-  // Request logging
-  app.use(requestLogger());
+  // Performance monitoring and request logging
+  app.use(performanceMonitor);
 
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());

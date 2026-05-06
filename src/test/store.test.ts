@@ -1,15 +1,25 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useStore } from '../store';
+import * as apiModule from '../lib/api';
+
+// Mock the API module
+vi.mock('../lib/api', () => ({
+  api: {
+    saveSetting: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 describe('Zustand UI Store', () => {
-  // Try to use the store to get the state and verify it instead of overriding the inner set func first.
   beforeEach(() => {
-    // Zustand reset (simplified for test)
+    // Reset Zustand state
     useStore.setState({
       theme: 'light',
       currentClassId: null,
       isInitialized: false,
     });
+    
+    // Clear mock calls
+    vi.clearAllMocks();
   });
 
   it('should have the correct initial state', () => {
@@ -22,14 +32,18 @@ describe('Zustand UI Store', () => {
   it('should toggle theme from light to dark', async () => {
     const state = useStore.getState();
     await state.toggleTheme();
+    
     expect(useStore.getState().theme).toBe('dark');
+    expect(apiModule.api.saveSetting).toHaveBeenCalledWith('theme', 'dark');
   });
 
   it('should toggle theme from dark to light', async () => {
     useStore.setState({ theme: 'dark' });
     const state = useStore.getState();
     await state.toggleTheme();
+    
     expect(useStore.getState().theme).toBe('light');
+    expect(apiModule.api.saveSetting).toHaveBeenCalledWith('theme', 'light');
   });
 
 });

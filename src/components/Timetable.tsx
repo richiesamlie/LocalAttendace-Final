@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStore, TimetableSlot } from '../store';
 import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List, Copy, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -192,7 +192,7 @@ export default function Timetable() {
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Settings className="w-4 h-4" /> Export Lesson Plan
                   </h3>
-                  <button onClick={() => setShowExportMenu(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                  <button onClick={() => setShowExportMenu(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Close" aria-label="Close export menu">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -204,6 +204,7 @@ export default function Timetable() {
                       value={exportMonth}
                       onChange={(e) => setExportMonth(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      aria-label="Export start month"
                     />
                   </div>
                   <div className="space-y-2">
@@ -275,7 +276,7 @@ export default function Timetable() {
             <h3 className="font-semibold text-slate-900 dark:text-white">
               {editingId ? 'Edit Class' : `Add Class for ${DAYS[selectedDay]}`}
             </h3>
-            <button onClick={cancelEdit} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <button onClick={cancelEdit} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Close" aria-label="Cancel edit">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -288,6 +289,7 @@ export default function Timetable() {
                 value={formData.startTime}
                 onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                aria-label="Start time"
               />
             </div>
             <div>
@@ -297,6 +299,7 @@ export default function Timetable() {
                 value={formData.endTime}
                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                aria-label="End time"
               />
             </div>
             <div>
@@ -405,12 +408,16 @@ export default function Timetable() {
                                 <button
                                   onClick={(e) => { e.stopPropagation(); startEdit(slot); }}
                                   className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
+                                  title="Edit"
+                                  aria-label="Edit class"
                                 >
                                   <Edit2 className="w-3 h-3" />
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); removeTimetableSlot(slot.id); }}
                                   className="p-1 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
+                                  title="Delete"
+                                  aria-label="Delete class"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
@@ -463,7 +470,7 @@ export default function Timetable() {
           </div>
         ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {slotsForDay.map((slot, index) => {
+            {slotsForDay.map((slot) => {
               const slotColor = getSubjectColor(slot.subject);
 
               return (

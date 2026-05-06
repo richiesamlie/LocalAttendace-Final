@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, Activity, Database, Server } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
-import { useLogout } from '../hooks/useData';
 import toast from 'react-hot-toast';
 
 function ClassSwitcher() {
@@ -12,7 +11,6 @@ function ClassSwitcher() {
   const addClass = useStore((state) => state.addClass);
   const removeClass = useStore((state) => state.removeClass);
   const updateClassName = useStore((state) => state.updateClassName);
-  const teacherId = useStore((state) => state.teacherId);
   const isAdmin = useStore((state) => state.isAdmin);
   
   const isHomeroomTeacher = classes.some(c => c.role === 'owner');
@@ -21,7 +19,6 @@ function ClassSwitcher() {
   const [newClassName, setNewClassName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const handleAddClass = () => {
     if (newClassName.trim()) {
@@ -56,6 +53,7 @@ function ClassSwitcher() {
           value={currentClassId || ''}
           onChange={(e) => setCurrentClass(e.target.value)}
           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+          aria-label="Select class"
         >
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
@@ -79,7 +77,7 @@ function ClassSwitcher() {
                       autoFocus
                       onKeyDown={(e) => e.key === 'Enter' && handleUpdateClass(c.id)}
                     />
-                    <button onClick={() => handleUpdateClass(c.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded">
+                    <button onClick={() => handleUpdateClass(c.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded" title="Save" aria-label="Save class name">
                       <CheckSquare className="w-4 h-4" />
                     </button>
                   </div>
@@ -89,6 +87,8 @@ function ClassSwitcher() {
                     <button 
                       onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
                       className="p-1 text-slate-400 hover:text-indigo-600 rounded"
+                      title="Edit"
+                      aria-label="Edit class name"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -119,6 +119,8 @@ function ClassSwitcher() {
                           ), { duration: 8000 });
                         }}
                         className="p-1 text-slate-400 hover:text-red-600 rounded"
+                        title="Delete"
+                        aria-label="Delete class"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -134,6 +136,7 @@ function ClassSwitcher() {
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
               placeholder="New class name..."
+              aria-label="New class name"
               disabled={!canCreateClass}
               className="flex-1 px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               onKeyDown={(e) => e.key === 'Enter' && canCreateClass && handleAddClass()}
@@ -372,6 +375,27 @@ export default function Sidebar({
           label="Admin Dashboard" 
           active={currentPage === 'admin'} 
           onClick={() => navigate('admin')} 
+        />
+
+        <NavItem 
+          icon={<Activity className="w-5 h-5" />} 
+          label="Performance" 
+          active={currentPage === 'performance'} 
+          onClick={() => navigate('performance')} 
+        />
+
+        <NavItem 
+          icon={<Database className="w-5 h-5" />} 
+          label="Query Profiler" 
+          active={currentPage === 'profiler'} 
+          onClick={() => navigate('profiler')} 
+        />
+
+        <NavItem 
+          icon={<Server className="w-5 h-5" />} 
+          label="Resources" 
+          active={currentPage === 'resources'} 
+          onClick={() => navigate('resources')} 
         />
 
         <NavItem 

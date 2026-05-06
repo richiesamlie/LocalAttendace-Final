@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../store';
 import { Shuffle, User, Trophy } from 'lucide-react';
 import { cn } from '../utils/cn';

@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore, EventType } from '../store';
-import { format, isBefore, setHours, setMinutes, subDays, isAfter, parseISO } from 'date-fns';
-import { Calendar, Users, FileSpreadsheet, Home, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree, UserPlus } from 'lucide-react';
+import { format, isBefore, setHours, setMinutes, isAfter, parseISO } from 'date-fns';
+import { Calendar, Clock, CheckCircle2, AlertCircle, FileText, BookOpen, PenTool, GraduationCap, Bell, Palmtree, UserPlus } from 'lucide-react';
 import { cn } from '../utils/cn';
 import InviteTeacherModal from './InviteTeacherModal';
-import { CardSkeleton } from './Skeleton';
 import { parseTime } from './Timetable/timetableUtils';
 
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {

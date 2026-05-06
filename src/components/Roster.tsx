@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
 import { importStudentsFromExcel, generateTemplate, exportClassData } from '../utils/excel';
-import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, MoreVertical, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 import { useClickOutside } from '../hooks/useClickOutside';
@@ -253,6 +253,7 @@ export default function Roster() {
                 handleFileUpload(e);
                 setShowMoreMenu(false);
               }}
+              aria-label="Upload Excel file"
             />
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}
@@ -441,6 +442,7 @@ export default function Roster() {
                               value={editRoll}
                               onChange={(e) => setEditRoll(e.target.value)}
                               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
+                              aria-label="Roll number"
                             />
                           </div>
                           <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
@@ -451,6 +453,7 @@ export default function Roster() {
                               onChange={(e) => setEditName(e.target.value)}
                               autoFocus
                               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
+                              aria-label="Student name"
                             />
                           </div>
                           <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
@@ -460,6 +463,7 @@ export default function Roster() {
                               value={editParentName}
                               onChange={(e) => setEditParentName(e.target.value)}
                               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
+                              aria-label="Parent name"
                             />
                           </div>
                           <div className="flex flex-col gap-1 flex-1 min-w-[130px]">
@@ -469,6 +473,7 @@ export default function Roster() {
                               value={editParentPhone}
                               onChange={(e) => setEditParentPhone(e.target.value)}
                               className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
+                              aria-label="Parent phone"
                             />
                           </div>
                           <div className="flex items-end gap-2 pb-0.5">

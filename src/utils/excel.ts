@@ -75,7 +75,7 @@ export function importStudentsFromExcel(file: File, classId: string): Promise<St
         reject(err);
       }
     };
-    reader.onerror = (err) => reject(new Error("Failed to read the file."));
+    reader.onerror = () => reject(new Error("Failed to read the file."));
     reader.readAsBinaryString(file);
   });
 }
@@ -492,7 +492,7 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
         reject(err);
       }
     };
-    reader.onerror = (err) => reject(new Error("Failed to read the file."));
+    reader.onerror = () => reject(new Error("Failed to read the file."));
     reader.readAsBinaryString(file);
   });
 }
@@ -519,7 +519,7 @@ export function generateAttendanceTemplate(): void {
   XLSX.writeFile(wb, 'Attendance_Import_Template.xlsx');
 }
 
-export function importAttendanceFromExcel(file: File, classId: string, students: Student[]): Promise<AttendanceRecord[]> {
+export function importAttendanceFromExcel(file: File, _classId: string, students: Student[]): Promise<AttendanceRecord[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {

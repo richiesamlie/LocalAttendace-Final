@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { Search, Clock, CheckCircle2, UserCircle } from 'lucide-react';
-import { cn } from '../utils/cn';
 import { format } from 'date-fns';
 
 function useDebounce<T>(value: T, delay: number): T {

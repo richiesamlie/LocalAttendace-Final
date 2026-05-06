@@ -309,8 +309,6 @@ export default function SeatingChart() {
               }}
             >
               {Array.from({ length: totalSeats }).map((_, i) => {
-                const r = Math.floor(i / cols);
-                const c = i % cols;
                 const seatId = `seat-${i}`;
                 const studentId = seatingLayout[seatId];
                 const student = students.find(s => s.id === studentId);

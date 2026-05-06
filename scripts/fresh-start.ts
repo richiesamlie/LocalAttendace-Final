@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 
 const DB_PATH = './database.sqlite';
 const DATA_DIR = './data';
