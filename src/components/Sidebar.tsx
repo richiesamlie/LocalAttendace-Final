@@ -135,9 +135,8 @@ function ClassSwitcher() {
               type="text"
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
-              placeholder="New class name"
-              aria-label="New class name"
               placeholder="New class name..."
+              aria-label="New class name"
               disabled={!canCreateClass}
               className="flex-1 px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               onKeyDown={(e) => e.key === 'Enter' && canCreateClass && handleAddClass()}
