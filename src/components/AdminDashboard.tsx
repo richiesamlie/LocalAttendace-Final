@@ -205,6 +205,7 @@ export default function AdminDashboard() {
         <div className="flex gap-2 mt-3">
           <button
             className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700"
+            title="Confirm reset"
             onClick={() => {
               toast.dismiss(t.id);
               toast((t2) => (
@@ -343,6 +344,8 @@ function TeachersTabContent() {
               value={defaultPassword}
               onChange={(e) => setDefaultPassword(e.target.value)}
               className="w-full max-w-xs px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="Enter default password"
+              aria-label="Default password for new teachers"
             />
           </div>
           
@@ -551,6 +554,7 @@ function TeachersTabContent() {
               ref={fileInputRef}
               onChange={handleImportMassiveBackup}
               className="hidden"
+              aria-label="Import backup file"
             />
             <button
               onClick={() => fileInputRef.current?.click()}

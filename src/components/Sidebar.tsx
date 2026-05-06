@@ -53,6 +53,7 @@ function ClassSwitcher() {
           value={currentClassId || ''}
           onChange={(e) => setCurrentClass(e.target.value)}
           className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+          aria-label="Select class"
         >
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
@@ -76,7 +77,7 @@ function ClassSwitcher() {
                       autoFocus
                       onKeyDown={(e) => e.key === 'Enter' && handleUpdateClass(c.id)}
                     />
-                    <button onClick={() => handleUpdateClass(c.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded">
+                    <button onClick={() => handleUpdateClass(c.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded" title="Save" aria-label="Save class name">
                       <CheckSquare className="w-4 h-4" />
                     </button>
                   </div>
@@ -86,6 +87,8 @@ function ClassSwitcher() {
                     <button 
                       onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
                       className="p-1 text-slate-400 hover:text-indigo-600 rounded"
+                      title="Edit"
+                      aria-label="Edit class name"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -116,6 +119,8 @@ function ClassSwitcher() {
                           ), { duration: 8000 });
                         }}
                         className="p-1 text-slate-400 hover:text-red-600 rounded"
+                        title="Delete"
+                        aria-label="Delete class"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -130,6 +135,8 @@ function ClassSwitcher() {
               type="text"
               value={newClassName}
               onChange={(e) => setNewClassName(e.target.value)}
+              placeholder="New class name"
+              aria-label="New class name"
               placeholder="New class name..."
               disabled={!canCreateClass}
               className="flex-1 px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"

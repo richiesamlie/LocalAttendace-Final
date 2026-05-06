@@ -129,6 +129,7 @@ export default function TakeAttendance() {
               className="hidden"
               ref={fileInputRef}
               onChange={handleFileUpload}
+              aria-label="Import attendance file"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -153,6 +154,7 @@ export default function TakeAttendance() {
               onChange={(e) => setSelectedDate(e.target.value)}
               max={format(new Date(), 'yyyy-MM-dd')}
               className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white"
+              aria-label="Select date"
             />
           )}
           <button

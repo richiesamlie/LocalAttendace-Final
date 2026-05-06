@@ -101,6 +101,7 @@ export default function GroupGenerator() {
               value={generationMode}
               onChange={(e) => setGenerationMode(e.target.value as 'groupCount' | 'groupSize')}
               className="px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-800 outline-none cursor-pointer"
+              aria-label="Generation mode"
             >
               <option value="groupCount">Number of Groups</option>
               <option value="groupSize">Max Students per Group</option>
@@ -114,6 +115,7 @@ export default function GroupGenerator() {
                 value={groupCount}
                 onChange={(e) => setGroupCount(parseInt(e.target.value) || 1)}
                 className="w-16 px-3 py-2 text-center bg-transparent outline-none text-slate-900 dark:text-white font-medium"
+                aria-label="Number of groups"
               />
             ) : (
               <input
@@ -123,6 +125,7 @@ export default function GroupGenerator() {
                 value={groupSize}
                 onChange={(e) => setGroupSize(parseInt(e.target.value) || 1)}
                 className="w-16 px-3 py-2 text-center bg-transparent outline-none text-slate-900 dark:text-white font-medium"
+                aria-label="Group size"
               />
             )}
           </div>

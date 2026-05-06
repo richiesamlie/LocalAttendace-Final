@@ -106,6 +106,7 @@ export default function Reports() {
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white"
+            aria-label="Select month"
           />
           <div className="relative">
             <button
@@ -123,7 +124,7 @@ export default function Reports() {
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Settings className="w-4 h-4" /> Export Options
                   </h3>
-                  <button onClick={() => setShowExportOptions(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                  <button onClick={() => setShowExportOptions(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Close" aria-label="Close export options">
                     <X className="w-4 h-4" />
                   </button>
                 </div>

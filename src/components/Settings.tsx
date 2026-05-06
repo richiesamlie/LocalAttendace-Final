@@ -104,6 +104,7 @@ export default function Settings() {
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleImportBackup}
+                  aria-label="Import backup file"
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}

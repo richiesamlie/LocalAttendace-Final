@@ -155,6 +155,7 @@ export default function Schedule() {
                       handleImport(e);
                       setShowExportMenu(false);
                     }}
+                    aria-label="Import schedule file"
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -185,6 +186,7 @@ export default function Schedule() {
             value={format(currentDate, 'yyyy-MM')}
             onChange={(e) => setCurrentDate(parseISO(`${e.target.value}-01`))}
             className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white"
+            aria-label="Select month"
           />
         </div>
       </div>
@@ -279,7 +281,7 @@ export default function Schedule() {
                 <button type="button" onClick={() => {
                   setIsAddingEvent(false);
                   setIsEditingEvent(false);
-                }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Close" aria-label="Close form">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -298,6 +300,7 @@ export default function Schedule() {
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value as EventType)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
+                aria-label="Event type"
               >
                 <option value="Classwork">Classwork</option>
                 <option value="Test">Test</option>
@@ -374,6 +377,8 @@ export default function Schedule() {
                 <button
                   onClick={() => setSelectedEvent(null)}
                   className="p-2 bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 rounded-full transition-colors"
+                  title="Close"
+                  aria-label="Close event details"
                 >
                   <X className="w-5 h-5" />
                 </button>

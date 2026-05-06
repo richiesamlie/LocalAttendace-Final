@@ -167,7 +167,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{className}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" title="Close" aria-label="Close modal">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
@@ -266,6 +266,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                         onChange={(e) => handleRoleChange(t.teacher_id, e.target.value)}
                         disabled={updatingRole === t.teacher_id}
                         className="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                        aria-label="Teacher role"
                       >
                         <option value="teacher">Subject Teacher</option>
                         <option value="assistant">Assistant</option>
@@ -328,6 +329,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
+                    aria-label="Invite role"
                     className="flex-1 text-sm rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="teacher">Subject Teacher</option>
