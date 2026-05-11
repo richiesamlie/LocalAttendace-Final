@@ -1,7 +1,7 @@
 # Contributing — Teacher Assistant
 
-**Last Updated:** 2026-04-22
-**Branch:** `feature/split-routes-v2`
+**Last Updated:** 2026-05-11
+**Branch:** `develop`
 
 ---
 

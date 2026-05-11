@@ -46,7 +46,7 @@ export const api = {
   createStudent: (classId: string, student: Student) => fetchApi<{success: boolean}>(`/classes/${classId}/students`, { method: 'POST', body: JSON.stringify(student) }),
   updateStudent: (studentId: string, data: Partial<Student>) => fetchApi<{success: boolean}>(`/students/${studentId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteStudent: (studentId: string) => fetchApi<{success: boolean}>(`/students/${studentId}`, { method: 'DELETE' }),
-  syncStudents: (classId: string, students: Student[]) => fetchApi<{success: boolean, students: Student[]}>(`/classes/${classId}/students/sync`, { method: 'POST', body: JSON.stringify(students) }),
+  syncStudents: (classId: string, students: Student[]) => fetchApi<{success: boolean, inserted: number, updated: number}>(`/classes/${classId}/students/sync`, { method: 'POST', body: JSON.stringify({ students }) }),
 
   getRecords: (classId: string) => fetchApi<AttendanceRecord[]>(`/classes/${classId}/records`),
   saveRecords: (records: AttendanceRecord[]) => fetchApi<{success: boolean}>('/records', { method: 'POST', body: JSON.stringify(records) }),
@@ -69,8 +69,8 @@ export const api = {
   saveSeatingLayout: (classId: string, layout: Record<string, string>) => fetchApi<{success: boolean}>(`/classes/${classId}/seating`, { method: 'PUT', body: JSON.stringify(layout) }),
   clearSeating: (classId: string) => fetchApi<{success: boolean}>(`/classes/${classId}/seating`, { method: 'DELETE' }),
 
-  getSettings: () => fetchApi<Record<string, string>>('/settings'),
-  saveSetting: (key: string, value: string) => fetchApi<{success: boolean}>('/settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
+  getSettings: () => fetchApi<Record<string, string>>('/admin/settings'),
+  saveSetting: (key: string, value: string) => fetchApi<{success: boolean}>('/admin/settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
 
   // --- INVITES (Phase 2.2) ---
   createInvite: (classId: string, role?: string, expiresInHours?: number) => fetchApi<{success: boolean, code: string, inviteUrl: string, role: string, expiresAt: string}>(`/classes/${classId}/invites`, { method: 'POST', body: JSON.stringify({ role, expiresInHours }) }),

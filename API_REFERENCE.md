@@ -1,7 +1,7 @@
 # API Reference — Teacher Assistant
 
-**Last Updated:** 2026-04-22
-**Branch:** `feature/split-routes-v2`
+**Last Updated:** 2026-05-11
+**Branch:** `develop`
 
 Base URL: `/api`
 
@@ -240,7 +240,7 @@ Bulk sync students.
 
 **Response (200):**
 ```json
-{ "students": [...] }
+{ "success": true, "inserted": 3, "updated": 12 }
 ```
 
 ---
@@ -452,7 +452,7 @@ Create an invite code.
 
 **Request:**
 ```json
-{ "role": "teacher", "expiresIn": "7d" }
+{ "role": "teacher", "expiresInHours": 168 }
 ```
 
 **Response (201):**
@@ -538,17 +538,18 @@ List all teachers.
 
 ## Admin
 
-### GET /settings
+### GET /admin/settings
 Get all settings.
 
 **Response (200):**
 ```json
-{ "theme": "light", "adminPassword": "..." }
+{ "theme": "light", "schoolName": "Teacher Assistant" }
 ```
+`adminPassword` is intentionally excluded from this response.
 
 ---
 
-### POST /settings
+### POST /admin/settings
 Update a setting.
 
 **Request:**
@@ -560,14 +561,14 @@ Update a setting.
 
 ---
 
-### GET /database/backup
+### POST /admin/database/backup
 Download database backup.
 
 **Response:** Binary SQLite file download
 
 ---
 
-### POST /database/restore
+### POST /admin/database/restore
 Restore from backup.
 
 **Request:** Multipart form with `.sqlite` file
@@ -584,10 +585,23 @@ Restore from backup.
 | `classSchema` | id (max 100), name (1-200) |
 | `studentSchema` | id, name (1-200), rollNumber (1-100), parentName, parentPhone, isFlagged |
 | `attendanceRecordSchema` | studentId, classId, date (YYYY-MM-DD), status (Present/Absent/Sick/Late), reason |
+| `attendanceRecordsPayloadSchema` | single object OR non-empty array of attendance records |
 | `eventSchema` | id, date (YYYY-MM-DD), title (1-200), type (Classwork/Test/Exam/Holiday/Other), description |
 | `timetableSlotSchema` | id, dayOfWeek (0-6), startTime (HH:MM), endTime (HH:MM), subject, lesson |
+| `timetableSlotUpdateSchema` | dayOfWeek (0-6), startTime (HH:MM), endTime (HH:MM), subject, lesson (no id) |
 | `teacherSchema` | username (1-100), password (4-200), name (1-200) |
-| `settingSchema` | key, value |
+| `settingSchema` | key (1-100), value (1-10000) |
+| `dailyNotePayloadSchema` | date (YYYY-MM-DD), note (max 5000, sanitized) |
+| `seatingSeatUpdatePayloadSchema` | seatId (string), studentId (string \| null) |
+| `seatingLayoutPayloadSchema` | Record\<seatId, studentId\> (string map, sanitized) |
+| `classUpdateSchema` | name (1-200) |
+| `classTeacherAddSchema` | teacherId (string) |
+| `classTeacherRoleUpdateSchema` | role (owner \| teacher \| assistant) |
+| `classInviteCreateSchema` | role (optional), expiresInHours (1-8760, optional) |
+| `inviteRedeemSchema` | code (1-100, non-empty) |
+| `sessionRevokeSchema` | sessionId (string, required; special value "all" supported) |
+| `studentUpdateSchema` | partial Student fields, at least 1 field required |
+| `studentSyncPayloadSchema` | students (non-empty array of Student objects) |
 
 ---
 

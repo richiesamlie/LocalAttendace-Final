@@ -18,7 +18,7 @@ export const studentService = {
     return api.deleteStudent(studentId);
   },
 
-  async sync(classId: string, students: Student[]): Promise<{ success: boolean; students: Student[] }> {
+  async sync(classId: string, students: Student[]): Promise<{ success: boolean; inserted: number; updated: number }> {
     return api.syncStudents(classId, students);
   },
 };

@@ -1,7 +1,7 @@
 # Developer Guide — Teacher Assistant
 
-**Last Updated:** 2026-04-22
-**Branch:** `feature/split-routes-v2`
+**Last Updated:** 2026-05-11
+**Branch:** `develop`
 
 ---
 
@@ -203,7 +203,11 @@ export async function createFeature(data: FeatureData) {
 
 ## State Management
 
-See `STATE_MANAGEMENT.md` for full details. Quick reference:
+State architecture now lives in the active docs set:
+- High-level flow: `ARCHITECTURE.md`
+- API/state interaction patterns: this file (`DEVELOPER_GUIDE.md`)
+
+Quick reference:
 
 **When to use Zustand:**
 - Auth operations
@@ -328,7 +332,6 @@ gh pr create --title "feat: description"
 ## See Also
 
 - `ARCHITECTURE.md` — System design and data flow
-- `STATE_MANAGEMENT.md` — State architecture in depth
 - `API_REFERENCE.md` — All API endpoints
 - `TROUBLESHOOTING.md` — Common issues and fixes
-- `IMPROVEMENT_PLAN.md` — Technical debt roadmap
+- `DOCUMENTATION.md` — Active documentation index

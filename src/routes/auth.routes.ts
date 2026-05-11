@@ -20,7 +20,7 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const isValid = bcrypt.compareSync(password, teacher.password_hash);
+  const isValid = await bcrypt.compare(password, teacher.password_hash);
   if (!isValid) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }

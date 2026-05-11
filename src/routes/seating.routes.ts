@@ -2,6 +2,7 @@ import express from 'express';
 import { seatingService } from '../../services';
 import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { io } from '../../server';
+import { validate, seatingSeatUpdatePayloadSchema, seatingLayoutPayloadSchema } from '../../src/lib/validation';
 import type { SeatingLayoutRow } from '../../src/types/db';
 
 export const seatingRouter = express.Router();
@@ -20,7 +21,7 @@ seatingRouter.get('/classes/:classId/seating', requireClassAccess('classId'), as
   }
 });
 
-seatingRouter.post('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
+seatingRouter.post('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, validate(seatingSeatUpdatePayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { seatId, studentId } = req.body;
 
@@ -34,7 +35,7 @@ seatingRouter.post('/classes/:classId/seating', requireClassAccess('classId'), p
   io?.to(classId).emit('seating_updated');
 }));
 
-seatingRouter.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
+seatingRouter.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, validate(seatingLayoutPayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const layout = req.body as Record<string, string>;
 

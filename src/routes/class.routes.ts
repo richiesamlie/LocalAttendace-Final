@@ -1,7 +1,7 @@
 import express from 'express';
 import { classService, teacherService, inviteService } from '../../services';
 import { requireAuth, requireClassAccess, requireClassOwner, requireRole, withWriteQueue, postLimiter } from './middleware';
-import { validate, classSchema } from '../../src/lib/validation';
+import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classTeacherRoleUpdateSchema, classInviteCreateSchema } from '../../src/lib/validation';
 import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
 
 export const classRouter = express.Router();
@@ -46,7 +46,7 @@ classRouter.post('/', postLimiter, validate(classSchema), withWriteQueue(async (
   return res.json({ id, teacher_id: teacherId, name });
 }));
 
-classRouter.put('/:id', postLimiter, withWriteQueue(async (req, res) => {
+classRouter.put('/:id', postLimiter, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { name } = req.body;
 
@@ -92,7 +92,7 @@ classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req,
   }
 });
 
-classRouter.post('/:classId/teachers', postLimiter, withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/teachers', postLimiter, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
 
@@ -138,7 +138,7 @@ classRouter.delete('/:classId/teachers/:teacherId', postLimiter, withWriteQueue(
   return res.json({ success: true });
 }));
 
-classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId'), postLimiter, withWriteQueue(async (req, res) => {
+classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId'), postLimiter, validate(classTeacherRoleUpdateSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
   const { role } = req.body;
@@ -157,7 +157,7 @@ classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId
   return res.json({ success: true });
 }));
 
-classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLimiter, validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
