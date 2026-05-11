@@ -1,7 +1,7 @@
 import express from 'express';
 import { studentService } from '../../services';
 import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
-import { validate, studentSchema } from '../../src/lib/validation';
+import { validate, studentSchema, studentUpdateSchema, studentSyncPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 
 export const studentRouter = express.Router();
@@ -34,7 +34,7 @@ studentRouter.post('/:classId/students', requireClassAccess('classId'), postLimi
   io?.to(classId).emit('students_updated');
 }));
 
-studentRouter.put('/:id', postLimiter, withWriteQueue(async (req, res) => {
+studentRouter.put('/:id', postLimiter, validate(studentUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const studentId = req.params.id;
 
@@ -74,14 +74,11 @@ studentRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
   return;
 }));
 
-studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
+studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), postLimiter, validate(studentSyncPayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const teacherId = req.teacherId;
 
   const { students } = req.body;
-  if (!Array.isArray(students)) {
-    return res.status(400).json({ error: 'students must be an array' });
-  }
 
   const existing = await studentService.getByClass(classId);
   const existingMap = new Map<string, any>();

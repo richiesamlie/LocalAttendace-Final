@@ -1,7 +1,7 @@
 import express from 'express';
 import { timetableService } from '../../services';
 import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
-import { validate, timetableSlotSchema } from '../../src/lib/validation';
+import { validate, timetableSlotSchema, timetableSlotUpdateSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 import type { TimetableSlot } from '../../src/types/db';
 
@@ -35,7 +35,7 @@ timetableRouter.post('/classes/:classId/timetable', requireClassAccess('classId'
   return;
 }));
 
-timetableRouter.put('/timetable/:id', postLimiter, withWriteQueue(async (req, res) => {
+timetableRouter.put('/timetable/:id', postLimiter, validate(timetableSlotUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const timetableId = req.params.id;
   const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;

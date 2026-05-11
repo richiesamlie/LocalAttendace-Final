@@ -41,7 +41,7 @@ adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQue
       return res.status(400).json({ error: 'Password must be at least 4 characters' });
     }
 
-    const hash = bcrypt.hashSync(value, 10);
+    const hash = await bcrypt.hash(value, 10);
     const adminTeacher = await teacherService.getByUsername('admin') as Teacher | null;
     if (adminTeacher) {
       await teacherService.updatePassword(adminTeacher.id, hash);

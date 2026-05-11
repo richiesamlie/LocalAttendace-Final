@@ -4,10 +4,23 @@ import {
   classSchema,
   studentSchema,
   attendanceRecordSchema,
+  attendanceRecordsPayloadSchema,
   eventSchema,
   timetableSlotSchema,
   teacherSchema,
   settingSchema,
+  dailyNotePayloadSchema,
+  seatingSeatUpdatePayloadSchema,
+  seatingLayoutPayloadSchema,
+  classUpdateSchema,
+  classTeacherAddSchema,
+  classTeacherRoleUpdateSchema,
+  classInviteCreateSchema,
+  inviteRedeemSchema,
+  sessionRevokeSchema,
+  timetableSlotUpdateSchema,
+  studentUpdateSchema,
+  studentSyncPayloadSchema,
 } from '../lib/validation';
 
 describe('loginSchema', () => {
@@ -190,6 +203,51 @@ describe('attendanceRecordSchema', () => {
       });
       expect(result.success).toBe(true);
     }
+  });
+});
+
+describe('attendanceRecordsPayloadSchema', () => {
+  it('accepts single attendance record object', () => {
+    const result = attendanceRecordsPayloadSchema.safeParse({
+      studentId: 'student_123',
+      classId: 'class_123',
+      date: '2026-04-22',
+      status: 'Present',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts non-empty attendance record array', () => {
+    const result = attendanceRecordsPayloadSchema.safeParse([
+      {
+        studentId: 'student_123',
+        classId: 'class_123',
+        date: '2026-04-22',
+        status: 'Present',
+      },
+      {
+        studentId: 'student_456',
+        classId: 'class_123',
+        date: '2026-04-22',
+        status: 'Absent',
+        reason: 'Sick',
+      },
+    ]);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty attendance record array', () => {
+    const result = attendanceRecordsPayloadSchema.safeParse([]);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid payload shape', () => {
+    const result = attendanceRecordsPayloadSchema.safeParse({
+      classId: 'class_123',
+      date: '2026-04-22',
+      status: 'Present',
+    });
+    expect(result.success).toBe(false);
   });
 });
 
@@ -376,6 +434,236 @@ describe('settingSchema', () => {
       key: 'theme',
       value: '',
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('dailyNotePayloadSchema', () => {
+  it('validates a correct daily note payload', () => {
+    const result = dailyNotePayloadSchema.safeParse({
+      date: '2026-05-11',
+      note: 'Review fractions and homework reminders',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid date format', () => {
+    const result = dailyNotePayloadSchema.safeParse({
+      date: '11/05/2026',
+      note: 'Some note',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects note exceeding max length', () => {
+    const result = dailyNotePayloadSchema.safeParse({
+      date: '2026-05-11',
+      note: 'a'.repeat(5001),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('sanitizes null bytes and trims note', () => {
+    const result = dailyNotePayloadSchema.safeParse({
+      date: '2026-05-11',
+      note: '  hello\x00world  ',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.note).toBe('helloworld');
+    }
+  });
+});
+
+describe('seatingSeatUpdatePayloadSchema', () => {
+  it('accepts valid seat update payload with student assignment', () => {
+    const result = seatingSeatUpdatePayloadSchema.safeParse({
+      seatId: 'A1',
+      studentId: 'student_123',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts valid seat update payload with null student (unassign)', () => {
+    const result = seatingSeatUpdatePayloadSchema.safeParse({
+      seatId: 'A1',
+      studentId: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects missing seatId', () => {
+    const result = seatingSeatUpdatePayloadSchema.safeParse({
+      studentId: 'student_123',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('seatingLayoutPayloadSchema', () => {
+  it('accepts valid seating layout map', () => {
+    const result = seatingLayoutPayloadSchema.safeParse({
+      A1: 'student_123',
+      A2: 'student_456',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects non-string student id values', () => {
+    const result = seatingLayoutPayloadSchema.safeParse({
+      A1: 123,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('sanitizes keys and values', () => {
+    const result = seatingLayoutPayloadSchema.safeParse({
+      '  A1\x00  ': '  student_123\x00  ',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ A1: 'student_123' });
+    }
+  });
+});
+
+describe('classUpdateSchema', () => {
+  it('accepts valid class update payload', () => {
+    const result = classUpdateSchema.safeParse({ name: 'Primary 2A' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty class name', () => {
+    const result = classUpdateSchema.safeParse({ name: '' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('classTeacherAddSchema', () => {
+  it('accepts valid teacher id payload', () => {
+    const result = classTeacherAddSchema.safeParse({ teacherId: 'teacher_123' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects missing teacher id', () => {
+    const result = classTeacherAddSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('classTeacherRoleUpdateSchema', () => {
+  it('accepts valid role values', () => {
+    for (const role of ['owner', 'teacher', 'assistant']) {
+      const result = classTeacherRoleUpdateSchema.safeParse({ role });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('rejects invalid role', () => {
+    const result = classTeacherRoleUpdateSchema.safeParse({ role: 'admin' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('classInviteCreateSchema', () => {
+  it('accepts empty payload (defaults applied by route)', () => {
+    const result = classInviteCreateSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts valid role and expiry', () => {
+    const result = classInviteCreateSchema.safeParse({ role: 'assistant', expiresInHours: 24 });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid expiry range', () => {
+    const result = classInviteCreateSchema.safeParse({ expiresInHours: 0 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('inviteRedeemSchema', () => {
+  it('accepts valid invite code', () => {
+    const result = inviteRedeemSchema.safeParse({ code: 'inv-1234abcd' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty invite code', () => {
+    const result = inviteRedeemSchema.safeParse({ code: '' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('sessionRevokeSchema', () => {
+  it('accepts all keyword', () => {
+    const result = sessionRevokeSchema.safeParse({ sessionId: 'all' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts explicit session id', () => {
+    const result = sessionRevokeSchema.safeParse({ sessionId: 'sess_123' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects missing session id', () => {
+    const result = sessionRevokeSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('timetableSlotUpdateSchema', () => {
+  it('accepts valid timetable update payload without id', () => {
+    const result = timetableSlotUpdateSchema.safeParse({
+      dayOfWeek: 2,
+      startTime: '08:00',
+      endTime: '09:00',
+      subject: 'Science',
+      lesson: 'Plants',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('ignores unknown id field in update payload', () => {
+    const result = timetableSlotUpdateSchema.safeParse({
+      id: 'slot_1',
+      dayOfWeek: 2,
+      startTime: '08:00',
+      endTime: '09:00',
+      subject: 'Science',
+      lesson: 'Plants',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.data as { id?: string }).id).toBeUndefined();
+    }
+  });
+});
+
+describe('studentUpdateSchema', () => {
+  it('accepts partial update payload', () => {
+    const result = studentUpdateSchema.safeParse({ name: 'New Name' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty payload', () => {
+    const result = studentUpdateSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('studentSyncPayloadSchema', () => {
+  it('accepts valid sync payload', () => {
+    const result = studentSyncPayloadSchema.safeParse({
+      students: [
+        { id: 's1', name: 'A', rollNumber: '1', isFlagged: false },
+        { id: 's2', name: 'B', rollNumber: '2', isFlagged: true, isArchived: false },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects payload with invalid students type', () => {
+    const result = studentSyncPayloadSchema.safeParse({ students: 'oops' });
     expect(result.success).toBe(false);
   });
 });

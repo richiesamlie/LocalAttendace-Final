@@ -35,6 +35,11 @@ export const attendanceRecordSchema = z.object({
   reason: safeString({ max: 500 }).optional().nullable(),
 });
 
+export const attendanceRecordsPayloadSchema = z.union([
+  attendanceRecordSchema,
+  z.array(attendanceRecordSchema).min(1),
+]);
+
 export const eventSchema = z.object({
   id: safeString({ max: 100 }),
   date: safeString({ min: 1, max: 10 }).refine(v => /^\d{4}-\d{2}-\d{2}$/.test(v), { message: 'Invalid date format (expected YYYY-MM-DD)' }),
@@ -61,6 +66,68 @@ export const teacherSchema = z.object({
 export const settingSchema = z.object({
   key: safeString({ min: 1, max: 100 }),
   value: safeString({ min: 1, max: 10000 }),
+});
+
+export const dailyNotePayloadSchema = z.object({
+  date: safeString({ min: 1, max: 10 }).refine(v => /^\d{4}-\d{2}-\d{2}$/.test(v), { message: 'Invalid date format (expected YYYY-MM-DD)' }),
+  note: safeString({ max: 5000 }),
+});
+
+export const seatingSeatUpdatePayloadSchema = z.object({
+  seatId: safeString({ min: 1, max: 100 }),
+  studentId: safeString({ max: 100 }).nullable(),
+});
+
+export const seatingLayoutPayloadSchema = z.record(safeString({ max: 100 }), safeString({ max: 100 }));
+
+export const classUpdateSchema = z.object({
+  name: safeString({ min: 1, max: 200 }),
+});
+
+export const classTeacherAddSchema = z.object({
+  teacherId: safeString({ min: 1, max: 100 }),
+});
+
+export const classTeacherRoleUpdateSchema = z.object({
+  role: z.enum(['owner', 'teacher', 'assistant']),
+});
+
+export const classInviteCreateSchema = z.object({
+  role: z.enum(['teacher', 'assistant']).optional(),
+  expiresInHours: z.coerce.number().int().min(1).max(720).optional(),
+});
+
+export const inviteRedeemSchema = z.object({
+  code: safeString({ min: 1, max: 100 }),
+});
+
+export const sessionRevokeSchema = z.object({
+  sessionId: z.union([
+    z.literal('all'),
+    safeString({ min: 1, max: 200 }),
+  ]),
+});
+
+export const timetableSlotUpdateSchema = timetableSlotSchema.omit({ id: true });
+
+export const studentUpdateSchema = z.object({
+  name: safeString({ min: 1, max: 200 }).optional(),
+  rollNumber: safeString({ min: 1, max: 100 }).optional(),
+  parentName: safeString({ max: 200 }).nullable().optional(),
+  parentPhone: safeString({ max: 100 }).nullable().optional(),
+  isFlagged: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
+}).refine(
+  (obj) => Object.keys(obj).length > 0,
+  { message: 'At least one field is required for update' }
+);
+
+export const studentSyncItemSchema = studentSchema.extend({
+  isArchived: z.boolean().optional(),
+});
+
+export const studentSyncPayloadSchema = z.object({
+  students: z.array(studentSyncItemSchema),
 });
 
 export function validate(schema: z.ZodSchema) {

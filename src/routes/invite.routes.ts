@@ -2,6 +2,7 @@ import express from 'express';
 import { inviteService, classService } from '../../services';
 import type { Invite } from '../types/db';
 import { requireAuth, requireRole, withWriteQueue } from './middleware';
+import { validate, classInviteCreateSchema, inviteRedeemSchema } from '../../src/lib/validation';
 
 export const inviteRouter = express.Router();
 
@@ -15,7 +16,7 @@ inviteRouter.get('/classes/:classId/invites', requireRole('classId', 'teacher'),
   }
 });
 
-inviteRouter.post('/classes/:classId/invites', requireRole('classId', 'teacher'), withWriteQueue(async (req, res) => {
+inviteRouter.post('/classes/:classId/invites', requireRole('classId', 'teacher'), validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
 
@@ -32,13 +33,9 @@ inviteRouter.delete('/classes/:classId/invites/:code', requireRole('classId', 't
   return res.json({ success: true });
 }));
 
-inviteRouter.post('/invites/redeem', requireAuth, withWriteQueue(async (req, res) => {
+inviteRouter.post('/invites/redeem', requireAuth, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { code } = req.body;
-
-  if (!code) {
-    return res.status(400).json({ error: 'Invite code is required' });
-  }
 
   const invite = await inviteService.getByCode(code) as Invite | null | undefined;
   if (!invite) {

@@ -1,7 +1,7 @@
 # Architecture — Teacher Assistant
 
-**Last Updated:** 2026-04-22
-**Branch:** `feature/split-routes-v2`
+**Last Updated:** 2026-05-11
+**Branch:** `develop`
 
 ---
 
@@ -37,25 +37,6 @@ Browser ──── JWT Cookie ──── Express API ──── SQLite/Pos
 ### Frontend State (src/store.ts + src/hooks/useData.ts)
 
 **Hybrid approach** — Zustand is the primary state source, React Query provides caching/deduplication.
-
-```
-AppState:
-├── Auth: teacherId, teacherName, isAdmin, isAuthenticated
-├── UI: theme, isLoading
-├── Class List: classes[] (all classes with full data)
-└── Current Class (flat view):
-    ├── students, records, events, timetable
-    ├── seatingLayout, dailyNotes
-    └── lastAttendanceChange (for undo)
-
-Data Flow:
-1. initializeStore() → fetches classes, eagerly loads first class
-2. loadClassData(classId) → lazy-loads class data (guarded by cls.loaded)
-3. setCurrentClass(id) → switches current class, triggers load if needed
-4. updateCurrentClass(updates) → syncs flat fields AND classes[] entry
-```
-
-See `STATE_MANAGEMENT.md` for full details.
 
 ---
 
@@ -236,7 +217,6 @@ db.cache.invalidate(`classes:${teacherId}`); // trailing colon for prefix match
 
 ## See Also
 
-- `STATE_MANAGEMENT.md` — Hybrid state architecture in depth
-- `IMPROVEMENT_PLAN.md` — Technical debt and refactoring roadmap
 - `API_REFERENCE.md` — All API endpoints with types
 - `DEVELOPER_GUIDE.md` — Coding conventions and workflows
+- `DOCUMENTATION.md` — Active documentation index

@@ -1,7 +1,16 @@
 # Troubleshooting — Teacher Assistant
 
-**Last Updated:** 2026-04-22
-**Branch:** `feature/split-routes-v2`
+**Last Updated:** 2026-05-11
+**Branch:** `develop`
+
+---
+
+## Quick Indonesian Notes
+
+- Jika app tidak bisa start, cek dulu `.env` dan pastikan `JWT_SECRET` + `DEFAULT_ADMIN_PASSWORD` terisi.
+- Jika login gagal, verifikasi password terbaru (bukan default hardcoded).
+- Jika import Excel bermasalah, kecilkan file/sheet lalu coba lagi.
+- Jalankan `npm run lint` dan `npm run test` untuk validasi cepat kondisi sistem.
 
 ---
 
@@ -223,5 +232,4 @@ curl http://localhost:3000/api/health
 
 - `ARCHITECTURE.md` — System design
 - `DEVELOPER_GUIDE.md` — How to add features
-- `STATE_MANAGEMENT.md` — State architecture
-- `IMPROVEMENT_PLAN.md` — Known issues and roadmap
+- `DOCUMENTATION.md` — Active documentation index

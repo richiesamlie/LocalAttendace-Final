@@ -2,6 +2,7 @@ import express from 'express';
 import { recordService, classService, studentService } from '../../services';
 import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { io } from '../../server';
+import { validate, attendanceRecordsPayloadSchema } from '../../src/lib/validation';
 
 export const recordRouter = express.Router();
 
@@ -21,7 +22,7 @@ recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), asy
   }
 });
 
-recordRouter.post('/', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+recordRouter.post('/', requireAuth, postLimiter, validate(attendanceRecordsPayloadSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const records = Array.isArray(req.body) ? req.body : [req.body];
 

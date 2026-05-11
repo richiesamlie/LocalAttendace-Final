@@ -341,8 +341,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const classId = get().currentClassId;
     if (!classId) return;
     try {
-      const res = await api.syncStudents(classId, students);
-      set((state) => updateCurrentClass(state, { students: res.students }));
+      await api.syncStudents(classId, students);
+      set((state) => updateCurrentClass(state, { students }));
       toast.success('Students synced');
     } catch (error) {
       console.error('Failed to sync students', error);

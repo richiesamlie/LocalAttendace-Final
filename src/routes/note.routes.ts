@@ -2,6 +2,7 @@ import express from 'express';
 import { noteService } from '../../services';
 import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { io } from '../../server';
+import { validate, dailyNotePayloadSchema } from '../../src/lib/validation';
 import type { DailyNote } from '../../src/types/db';
 
 export const noteRouter = express.Router();
@@ -20,7 +21,7 @@ noteRouter.get('/classes/:classId/daily-notes', requireClassAccess('classId'), a
   }
 });
 
-noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
+noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, validate(dailyNotePayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { date, note } = req.body;
 

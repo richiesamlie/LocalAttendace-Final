@@ -1,6 +1,15 @@
 # Teacher Assistant App
 
+Panduan utama proyek ini menggunakan English sebagai teks utama, dengan catatan operasional penting dalam Bahasa Indonesia bila diperlukan.
+
 A comprehensive, local-first web application designed to help teachers manage their classrooms efficiently. Features include multi-teacher support (Google Classroom-style), attendance tracking, student roster management, visual seating charts, class scheduling, a random student picker, and monthly reports.
+
+## Quick Indonesian Notes
+
+- Login awal: gunakan akun `admin` dengan password dari `DEFAULT_ADMIN_PASSWORD` di file `.env`.
+- Untuk pemakaian sekolah harian: fokus ke Dashboard, Student Roster, Take Attendance, dan Monthly Reports.
+- Import Excel memakai `exceljs` dengan guardrails aktif (batas ukuran file/sheet).
+- Untuk masalah umum, cek `TROUBLESHOOTING.md` dulu sebelum eskalasi.
 
 ## Key Features
 
@@ -115,9 +124,10 @@ DEFAULT_ADMIN_PASSWORD=your_admin_password
 # DATABASE_URL=postgresql://user:password@localhost:5432/teacher_assistant
 # ALLOWED_ORIGINS=http://localhost:3000,http://192.168.1.50:3000
 
-# OPTIONAL — Performance Monitoring (see PERFORMANCE.md)
-# PERF_SLOW_REQUEST_MS=1000
-# PERF_SLOW_QUERY_MS=100
+# OPTIONAL — Performance Monitoring
+# Available admin endpoints:
+# - GET /api/admin/metrics
+# - GET /api/admin/resources
 # PERF_LOG_ALL_REQUESTS=false
 ```
 
@@ -372,7 +382,7 @@ Move the entire project folder into your Google Drive/Dropbox folder for automat
 | **Auth** | JWT, bcrypt |
 | **Validation** | Zod |
 | **Security** | Helmet, express-rate-limit |
-| **Excel** | xlsx (SheetJS) |
+| **Excel** | exceljs |
 | **Icons** | Lucide React |
 | **Dates** | date-fns |
 

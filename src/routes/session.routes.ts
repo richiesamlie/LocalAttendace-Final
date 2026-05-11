@@ -1,6 +1,7 @@
 import express from 'express';
 import { sessionService } from '../../services';
 import { requireAuth, withWriteQueue, postLimiter } from './middleware';
+import { validate, sessionRevokeSchema } from '../../src/lib/validation';
 import type { Session } from '../../src/types/db';
 
 export const sessionRouter = express.Router();
@@ -16,7 +17,7 @@ sessionRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-sessionRouter.post('/revoke', postLimiter, withWriteQueue(async (req, res) => {
+sessionRouter.post('/revoke', postLimiter, validate(sessionRevokeSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { sessionId } = req.body;
 
