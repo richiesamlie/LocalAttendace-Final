@@ -97,8 +97,6 @@ export default [
       'src/components/Gatekeeper.tsx',
       'src/components/Settings.tsx',
       'src/components/Sidebar.tsx',
-      'src/lib/api.ts',
-      'src/utils/excel.ts',
     ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',

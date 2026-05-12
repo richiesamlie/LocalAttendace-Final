@@ -64,15 +64,23 @@ export function validateSheetCellCount(
   }
 }
 
-function normalizeCellValue(value: unknown): string | number | Date | null {
+type CellRichTextPart = { text?: unknown };
+type CellObject = {
+  result?: unknown;
+  text?: unknown;
+  richText?: CellRichTextPart[];
+  hyperlink?: unknown;
+};
+
+function normalizeCellValue(value: unknown): string | number | boolean | Date | null {
   if (value === null || value === undefined) return null;
   if (value instanceof Date) return value;
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value as any;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
   if (typeof value === 'object') {
-    const v: any = value;
+    const v = value as CellObject;
     if (v?.result !== undefined && v?.result !== null) return normalizeCellValue(v.result);
     if (v?.text !== undefined && v?.text !== null) return String(v.text);
-    if (v?.richText && Array.isArray(v.richText)) return v.richText.map((r: any) => r.text || '').join('');
+    if (v?.richText && Array.isArray(v.richText)) return v.richText.map((r) => String(r.text || '')).join('');
     if (v?.hyperlink) return String(v.text || v.hyperlink);
   }
   return String(value);
@@ -100,7 +108,7 @@ async function loadFirstWorksheet(file: File): Promise<ExcelJS.Worksheet> {
   return worksheet;
 }
 
-function worksheetToObjects(worksheet: ExcelJS.Worksheet): any[] {
+function worksheetToObjects(worksheet: ExcelJS.Worksheet): Record<string, unknown>[] {
   const headerRow = worksheet.getRow(1);
   const headers: string[] = [];
 
@@ -109,10 +117,10 @@ function worksheetToObjects(worksheet: ExcelJS.Worksheet): any[] {
     headers.push(hv ? String(hv).trim() : `Column ${c}`);
   }
 
-  const rows: any[] = [];
+  const rows: Record<string, unknown>[] = [];
   for (let r = 2; r <= worksheet.rowCount; r++) {
     const row = worksheet.getRow(r);
-    const obj: Record<string, any> = {};
+    const obj: Record<string, unknown> = {};
     let hasAny = false;
 
     for (let c = 1; c <= headers.length; c++) {
@@ -147,7 +155,7 @@ function setWorksheetColumns(worksheet: ExcelJS.Worksheet, widths: number[]): vo
 function addObjectWorksheet(
   workbook: ExcelJS.Workbook,
   sheetName: string,
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   columnWidths?: number[],
 ): ExcelJS.Worksheet {
   const worksheet = workbook.addWorksheet(sheetName);
@@ -196,7 +204,7 @@ export function importStudentsFromExcel(file: File, classId: string): Promise<St
     const errors: string[] = [];
 
     for (let index = 0; index < json.length; index++) {
-      const row: any = json[index];
+      const row = json[index] as Record<string, unknown>;
       const rowNum = index + 2;
       const name = row['Name'] || row['name'] || row['Student Name'];
       const rollNumberRaw = row['Roll Number'] || row['rollNumber'] || row['Roll'] || row['ID'];
@@ -274,7 +282,7 @@ export function exportMonthlyReportToExcel(
   }
 
   const data = students.map(student => {
-    const row: any = {};
+    const row: Record<string, string | number> = {};
 
     if (options.includeRollNumber) row['Roll Number'] = student.rollNumber;
     if (options.includeName) row['Name'] = student.name;
@@ -367,7 +375,7 @@ export function exportTimetableToExcel(
     const startDate = parseISO(`${startDateStr}-01`);
     const endDate = addMonths(startDate, 1);
     let currentDate = startDate;
-    const weeks: Record<string, any[]> = {};
+    const weeks: Record<string, Record<string, unknown>[]> = {};
 
     while (currentDate < endDate) {
       if (!isWeekend(currentDate)) {
@@ -401,7 +409,7 @@ export function exportTimetableToExcel(
     const startDate = parseISO(`${startDateStr}-01`);
     const endDate = addMonths(startDate, 6);
     let currentDate = startDate;
-    const months: Record<string, any[]> = {};
+    const months: Record<string, Record<string, unknown>[]> = {};
 
     while (currentDate < endDate) {
       if (!isWeekend(currentDate)) {
@@ -488,7 +496,7 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
     const errors: string[] = [];
 
     for (let index = 0; index < json.length; index++) {
-      const row: any = json[index];
+      const row = json[index] as Record<string, unknown>;
       const rowNum = index + 2;
 
       let dateStr = row['Date (YYYY-MM-DD)'] || row['Date'] || row['date'];
@@ -546,7 +554,7 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
         id: `evt_import_${Date.now()}_${index}`,
         date: dateStr,
         title: String(title).trim(),
-        type: matchedType as any,
+        type: matchedType as CalendarEvent['type'],
         description: row['Description'] || row['description'] || '',
       });
     }
@@ -594,7 +602,7 @@ export function importAttendanceFromExcel(file: File, _classId: string, students
     const validStatuses = ['Present', 'Absent', 'Sick', 'Late'];
 
     for (let index = 0; index < json.length; index++) {
-      const row: any = json[index];
+      const row = json[index] as Record<string, unknown>;
       const rowNum = index + 2;
 
       const rollNumberRaw = row['Roll Number'] || row['rollNumber'] || row['Roll'] || row['ID'];
