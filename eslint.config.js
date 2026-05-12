@@ -98,11 +98,8 @@ export default [
       'src/components/Settings.tsx',
       'src/components/Sidebar.tsx',
       'src/lib/api.ts',
-      'src/middleware/performance.ts',
       'src/routes/middleware.ts',
-      'src/routes/record.routes.ts',
       'src/routes/student.routes.ts',
-      'src/routes/timetable.routes.ts',
       'src/utils/excel.ts',
     ],
     rules: {

@@ -5,13 +5,22 @@ import { validate, timetableSlotSchema, timetableSlotUpdateSchema } from '../../
 import { io } from '../../server';
 import type { TimetableSlot } from '../../src/types/db';
 
+interface TimetableRow {
+  id: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  subject: string;
+  lesson: string;
+}
+
 export const timetableRouter = express.Router();
 
 timetableRouter.get('/classes/:classId/timetable', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const slots = await timetableService.getByClass(classId);
-    const mapped = slots.map((s: any) => ({
+    const mapped = slots.map((s: TimetableRow) => ({
       id: s.id,
       dayOfWeek: s.day_of_week,
       startTime: s.start_time,
