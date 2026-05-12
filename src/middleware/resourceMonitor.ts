@@ -1,6 +1,10 @@
 import os from 'os';
 import { _db } from '../db/connection';
 
+interface DbWithPreparedStatements {
+  preparedStatements?: unknown[];
+}
+
 /**
  * Resource snapshot at a point in time
  */
@@ -134,7 +138,7 @@ export class ResourceMonitor {
     
     try {
       // Count prepared statements (we have 57 pre-compiled)
-      const stmts = (_db as any).preparedStatements || [];
+      const stmts = (_db as unknown as DbWithPreparedStatements).preparedStatements || [];
       preparedStatements = stmts.length || 57; // Default to known count
       
       // SQLite doesn't track "active" connections like PostgreSQL
