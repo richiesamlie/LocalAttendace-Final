@@ -4,6 +4,10 @@ import type { Invite } from '../types/db';
 import { requireAuth, requireRole, withWriteQueue } from './middleware';
 import { validate, classInviteCreateSchema, inviteRedeemSchema } from '../../src/lib/validation';
 
+interface ClassNameCarrier {
+  name: string;
+}
+
 export const inviteRouter = express.Router();
 
 inviteRouter.get('/classes/:classId/invites', requireRole('classId', 'teacher'), async (req, res) => {
@@ -63,5 +67,6 @@ inviteRouter.post('/invites/redeem', requireAuth, validate(inviteRedeemSchema), 
   await inviteService.use(teacherId, code);
   await classService.addTeacher(invite.class_id, teacherId, invite.role);
 
-  return res.json({ success: true, className: (classExists as any)?.name, role: invite.role });
+  const className = (classExists as ClassNameCarrier | null)?.name;
+  return res.json({ success: true, className, role: invite.role });
 }));

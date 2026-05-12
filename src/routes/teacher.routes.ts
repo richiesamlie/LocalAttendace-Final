@@ -4,6 +4,10 @@ import { teacherService, classService } from '../../services';
 import { requireAuth, withWriteQueue, postLimiter } from './middleware';
 import { validate, teacherSchema } from '../../src/lib/validation';
 
+interface ClassRole {
+  role?: string;
+}
+
 export const teacherRouter = express.Router();
 
 teacherRouter.get('/', requireAuth, async (_req, res) => {
@@ -24,7 +28,7 @@ teacherRouter.post('/register', requireAuth, postLimiter, validate(teacherSchema
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
   const myClasses = await classService.getByTeacher(teacherId);
-  const isHomeroom = myClasses.some((c: any) => c.role === 'owner');
+  const isHomeroom = myClasses.some((c) => (c as ClassRole).role === 'owner');
   if (!isGlobalAdmin && !isHomeroom) {
     return res.status(403).json({ error: 'Only Administrators or Homeroom Teachers can register new teachers' });
   }

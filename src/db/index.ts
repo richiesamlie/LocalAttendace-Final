@@ -61,7 +61,8 @@ const dbProxy = new Proxy({}, {
     if (prop === 'cache') {
       return { get: cacheGet, set: cacheSet, invalidate: cacheInvalidate, cached };
     }
-    const val = (_db as any)[prop];
+    const dbObj = _db as unknown as Record<PropertyKey, unknown>;
+    const val = dbObj[prop];
     if (typeof val === 'function') {
       return val.bind(_db);
     }
