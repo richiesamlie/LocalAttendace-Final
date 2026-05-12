@@ -91,10 +91,4 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-  {
-    files: ['src/routes/middleware.ts'],
-    rules: {
-      '@typescript-eslint/no-namespace': 'off',
-    },
-  },
 ];

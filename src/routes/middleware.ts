@@ -48,12 +48,10 @@ export interface JwtPayload {
 
 export type ClassRole = 'administrator' | 'owner' | 'teacher' | 'assistant';
 
-declare global {
-  namespace Express {
-    interface Request {
-      teacherId: string;
-      classRole?: ClassRole;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    teacherId: string;
+    classRole?: ClassRole;
   }
 }
 
