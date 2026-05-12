@@ -70,7 +70,7 @@ export const seatingService = {
     }
 
     // SQLite: db.transaction ensures the loop is atomic
-    const tx = (db as any).transaction(() => {
+    const tx = db.transaction(() => {
       db.stmt.clearSeatingByClass.run(classId);
       for (const [seatId, studentId] of Object.entries(layout)) {
         if (studentId) {

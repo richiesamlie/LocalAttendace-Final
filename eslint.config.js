@@ -97,9 +97,7 @@ export default [
       'src/components/Gatekeeper.tsx',
       'src/components/Settings.tsx',
       'src/components/Sidebar.tsx',
-      'src/db/cache.ts',
       'src/db/index.ts',
-      'src/db/statements.ts',
       'src/lib/api.ts',
       'src/lib/errorHandler.ts',
       'src/middleware/performance.ts',
@@ -111,7 +109,6 @@ export default [
       'src/routes/student.routes.ts',
       'src/routes/teacher.routes.ts',
       'src/routes/timetable.routes.ts',
-      'src/services/seating.service.ts',
       'src/utils/excel.ts',
     ],
     rules: {
