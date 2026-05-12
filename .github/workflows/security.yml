@@ -9,9 +9,6 @@ on:
     # Run weekly on Mondays at 9am UTC
     - cron: '0 9 * * 1'
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   dependency-audit:
     name: npm audit
