@@ -14,13 +14,19 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
   const currentClassId = useStore((state) => state.currentClassId);
   const currentClass = useStore((state) => state.classes.find(c => c.id === state.currentClassId));
   const teacherId = useStore((state) => state.teacherId);
-  
+  const isAdmin = useStore((state) => state.isAdmin);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
+    if (isAdmin) {
+      setUserRole('administrator');
+      return;
+    }
+
     if (currentClassId && teacherId) {
       import('../lib/api').then(({ api }) => {
         api.getClassTeachers(currentClassId).then(teachers => {
@@ -28,8 +34,10 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
           setUserRole(me?.role || 'teacher');
         }).catch(() => setUserRole('teacher'));
       });
+    } else {
+      setUserRole('teacher');
     }
-  }, [currentClassId, teacherId]);
+  }, [currentClassId, teacherId, isAdmin]);
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
   const currentDayOfWeek = currentTime.getDay();

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, Activity, Database, Server } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
+import { api } from '../lib/api';
 import toast from 'react-hot-toast';
 
 function ClassSwitcher() {
@@ -216,6 +217,12 @@ export default function Sidebar({
 }: SidebarProps) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const classes = useStore((state) => state.classes);
+  const teacherName = useStore((state) => state.teacherName);
+  const teacherId = useStore((state) => state.teacherId);
+  const isAdmin = useStore((state) => state.isAdmin);
+  const setAuth = useStore((state) => state.setAuth);
+  const isHomeroomTeacher = classes.some((c) => c.role === 'owner');
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -247,6 +254,20 @@ export default function Sidebar({
       clearInterval(pingInterval);
     };
   }, []);
+
+  useEffect(() => {
+    if (!teacherId || isAdmin) return;
+
+    api.getMe()
+      .then((me) => {
+        if (me.isAdmin) {
+          setAuth(teacherId, me.name, true);
+        }
+      })
+      .catch(() => {
+        // noop: keep current state if profile refresh fails
+      });
+  }, [teacherId, isAdmin, setAuth]);
 
   return (
     <aside className={cn(
@@ -413,19 +434,19 @@ export default function Sidebar({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{useStore((state) => state.teacherName) || 'Teacher'}</p>
-              {useStore((state) => state.isAdmin) ? (
+              <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{teacherName || 'Teacher'}</p>
+              {isAdmin ? (
                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
                   Admin
                 </span>
-              ) : useStore.getState().classes.some((c) => c.role === 'owner') && (
+              ) : isHomeroomTeacher && (
                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
                   Homeroom
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              {useStore((state) => state.isAdmin) ? 'Administrator' : useStore.getState().classes.some((c) => c.role === 'owner') ? 'Homeroom Teacher' : 'Subject Teacher'}
+              {isAdmin ? 'Administrator' : isHomeroomTeacher ? 'Homeroom Teacher' : 'Subject Teacher'}
             </p>
           </div>
         </div>
