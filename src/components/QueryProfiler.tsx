@@ -41,6 +41,19 @@ interface TableStat {
   rowCount: number;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null
+);
+
+const isQueryPlan = (value: unknown): value is QueryPlan => {
+  if (!isRecord(value)) return false;
+  return typeof value.id === 'number' && typeof value.parent === 'number' && typeof value.notused === 'number' && typeof value.detail === 'string';
+};
+
+const isProfileResult = (value: unknown): value is ProfileResult => {
+  if (!isRecord(value)) return false;
+  return typeof value.query === 'string' && Array.isArray(value.plan) && value.plan.every(isQueryPlan) && Array.isArray(value.suggestions) && typeof value.score === 'number';
+};
 export default function QueryProfiler() {
   const [activeTab, setActiveTab] = useState<'statements' | 'indexes' | 'custom'>('statements');
   const [customSQL, setCustomSQL] = useState('');
@@ -77,7 +90,10 @@ export default function QueryProfiler() {
     setIsAnalyzing(true);
     try {
       const response = await api.profileCustomQuery(customSQL);
-      setCustomResult(response as unknown as ProfileResult);
+      if (!isProfileResult(response)) {
+        throw new Error('Invalid profile result response shape');
+      }
+      setCustomResult(response);
     } catch (error) {
       console.error('Failed to analyze query:', error);
       setCustomResult(null);

@@ -77,6 +77,19 @@ interface AlertsData {
   alerts: ResourceAlert[];
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null
+);
+
+const isResourceAlert = (value: unknown): value is ResourceAlert => {
+  if (!isRecord(value)) return false;
+  return typeof value.id === 'string' && typeof value.timestamp === 'number' && typeof value.message === 'string';
+};
+
+const isAlertsData = (value: unknown): value is AlertsData => {
+  if (!isRecord(value) || !Array.isArray(value.alerts)) return false;
+  return value.alerts.every(isResourceAlert);
+};
 type TimeWindow = '15min' | '1hr' | '6hr' | '24hr' | 'all';
 
 const TIME_WINDOWS: Record<TimeWindow, number | undefined> = {
@@ -105,7 +118,10 @@ export default function ResourceMonitor() {
     queryFn: async () => {
       const windowMinutes = TIME_WINDOWS[timeWindow];
       const response = await api.getResourceAlerts(windowMinutes);
-      return response as unknown as AlertsData;
+      if (!isAlertsData(response)) {
+        throw new Error('Invalid alerts response shape');
+      }
+      return response;
     },
     refetchInterval: 10000,
   });
