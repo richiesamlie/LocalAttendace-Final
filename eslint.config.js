@@ -93,7 +93,6 @@ export default [
   },
   {
     files: [
-      'src/components/Roster.tsx',
       'src/components/TakeAttendance.tsx',
       'src/components/Timetable/SlotForm.tsx',
     ],

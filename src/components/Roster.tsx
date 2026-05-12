@@ -25,7 +25,7 @@ export default function Roster() {
   React.useEffect(() => {
     if (!archiveConfirmId) return;
     const student = students.find(s => s.id === archiveConfirmId);
-    if (!student) { setArchiveConfirmId(null); return; }
+    if (!student) return;
     const toastId = toast(
       (t) => (
         <div>
