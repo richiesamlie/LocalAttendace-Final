@@ -50,12 +50,18 @@ jobs:
             **How to use:**
             1. Download the `LocalAttendance-${{ env.VERSION }}.zip` file below.
             2. Extract the folder to your computer.
-            3. Double-click `start-app.bat` to run the app. (It will automatically install the required dependencies on the first run).
+            3. Run `setup-env.ps1` once (required) to generate `.env` with secure `JWT_SECRET` and `DEFAULT_ADMIN_PASSWORD`.
+            4. Save the generated admin password shown in terminal.
+            5. Double-click `start-app.bat` to run the app. (It will automatically install the required dependencies on the first run).
             
+            If PowerShell execution is restricted, create `.env` manually from `.env.example` and fill required values before running `start-app.bat`.
+
             ---
             ### 📝 Changelog
+
           generateReleaseNotes: true
           prerelease: false
           makeLatest: true
           artifacts: "LocalAttendance-${{ env.VERSION }}.zip"
           token: ${{ secrets.GITHUB_TOKEN }}
+
