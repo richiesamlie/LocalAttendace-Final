@@ -3,7 +3,7 @@ import express from 'express';
 
 // Sanitize string inputs: trim whitespace and strip null bytes
 const sanitizeString = (val: string): string =>
-  val.replace(/\x00/g, '').trim();
+  val.split('\0').join('').trim();
 
 const safeString = (opts?: { min?: number; max?: number }) =>
   z.string().transform(sanitizeString).pipe(z.string().min(opts?.min ?? 0).max(opts?.max ?? 10000));

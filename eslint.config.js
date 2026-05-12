@@ -93,11 +93,9 @@ export default [
   },
   {
     files: [
-      'src/components/ExamTimer.tsx',
       'src/components/Roster.tsx',
       'src/components/TakeAttendance.tsx',
       'src/components/Timetable/SlotForm.tsx',
-      'src/lib/validation.ts',
     ],
     rules: {
       'react-hooks/exhaustive-deps': 'off',

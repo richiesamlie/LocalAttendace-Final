@@ -31,7 +31,7 @@ export default function ExamTimer() {
 
   // --- Timer Logic (ref-based to avoid interval recreation) ---
   useEffect(() => {
-    if (isTimerRunning && timerRemaining > 0) {
+    if (isTimerRunning && timerRemainingRef.current > 0) {
       timerIntervalRef.current = window.setInterval(() => {
         timerRemainingRef.current -= 1;
         setTimerRemaining(timerRemainingRef.current);
