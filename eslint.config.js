@@ -67,4 +67,17 @@ export default [
       'react-hooks/preserve-manual-memoization': 'warn',
     },
   },
+  {
+    files: [
+      'server.ts',
+      'verify-perf-config.ts',
+      'scripts/**/*.ts',
+      'src/db/connection.ts',
+      'src/db/schema.ts',
+      'src/middleware/performance.ts',
+    ],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];
