@@ -11,7 +11,7 @@ on:
 
 jobs:
   dependency-audit:
-    name: npm audit (high)
+    name: npm audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,11 +25,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit (high threshold, non-blocking baseline)
-        run: npm audit --audit-level=high
-        continue-on-error: true
+      - name: Run npm audit (prod deps only, blocking at high)
+        run: npm audit --omit=dev --audit-level=high
 
-      - name: Generate audit report
+      - name: Generate full audit report (including dev deps, non-blocking)
         if: always()
         run: |
           npm audit --json > npm-audit.json || true
@@ -94,7 +93,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -109,13 +108,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: 'javascript-typescript'
           queries: +security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
