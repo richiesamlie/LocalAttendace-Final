@@ -53,7 +53,10 @@ export default function Reports() {
     if (!recordsByStudent.has(r.studentId)) {
       recordsByStudent.set(r.studentId, new Map());
     }
-    recordsByStudent.get(r.studentId)!.set(r.date, { status: r.status });
+    const studentRecordMap = recordsByStudent.get(r.studentId);
+    if (studentRecordMap) {
+      studentRecordMap.set(r.date, { status: r.status });
+    }
   };
 
   const summary = filteredStudents.map(student => {

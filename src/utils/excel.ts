@@ -267,7 +267,10 @@ export function exportMonthlyReportToExcel(
   const recordsByStudent = new Map<string, Map<string, { status: string; reason?: string | null }>>();
   for (const r of records) {
     if (!recordsByStudent.has(r.studentId)) recordsByStudent.set(r.studentId, new Map());
-    recordsByStudent.get(r.studentId)!.set(r.date, { status: r.status, reason: r.reason });
+    const studentRecordMap = recordsByStudent.get(r.studentId);
+    if (studentRecordMap) {
+      studentRecordMap.set(r.date, { status: r.status, reason: r.reason });
+    }
   }
 
   const data = students.map(student => {

@@ -55,7 +55,7 @@ studentRouter.put('/:id', postLimiter, validate(studentUpdateSchema), withWriteQ
   await studentService.update(updateData, studentId, teacherId);
   const updatedStudent = await studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   res.json({ success: true });
-  if (updatedStudent) io?.to(updatedStudent.class_id!).emit('students_updated');
+  if (updatedStudent?.class_id) io?.to(updatedStudent.class_id).emit('students_updated');
   return;
 }));
 
@@ -70,7 +70,7 @@ studentRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
 
   await studentService.archive(studentId, teacherId);
   res.json({ success: true });
-  if (student) io?.to(student.class_id!).emit('students_updated');
+  if (student?.class_id) io?.to(student.class_id).emit('students_updated');
   return;
 }));
 

@@ -12,7 +12,8 @@ export async function processWriteQueue(): Promise<void> {
   isProcessingWriteQueue = true;
 
   while (writeQueue.length > 0) {
-    const task = writeQueue.shift()!;
+    const task = writeQueue.shift();
+    if (!task) continue;
     try {
       await task.fn();
       task.resolve();

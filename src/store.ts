@@ -313,7 +313,11 @@ export const useStore = create<AppState>()((set, get) => ({
       await get().loadClassData(id);
     }
 
-    const updated = get().classes.find(c => c.id === id)!;
+    const updated = get().classes.find(c => c.id === id);
+    if (!updated) {
+      set({ isLoading: false });
+      return;
+    }
     set({
       currentClassId: id,
       students: updated.students,

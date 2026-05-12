@@ -30,9 +30,9 @@ export function useAuth() {
       if (result.authenticated && result.teacherId) {
         try {
           const teacher = await api.getMe();
-          setAuth(result.teacherId!, teacher.name, teacher.isAdmin);
+          setAuth(result.teacherId, teacher.name, teacher.isAdmin);
         } catch {
-          setAuth(result.teacherId!, 'Teacher', false);
+          setAuth(result.teacherId, 'Teacher', false);
         }
       } else {
         clearAuth();
