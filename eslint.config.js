@@ -98,8 +98,6 @@ export default [
       'src/components/Settings.tsx',
       'src/components/Sidebar.tsx',
       'src/lib/api.ts',
-      'src/routes/middleware.ts',
-      'src/routes/student.routes.ts',
       'src/utils/excel.ts',
     ],
     rules: {
@@ -113,13 +111,18 @@ export default [
       'src/components/TakeAttendance.tsx',
       'src/components/Timetable/SlotForm.tsx',
       'src/lib/validation.ts',
-      'src/routes/middleware.ts',
     ],
     rules: {
       'react-hooks/exhaustive-deps': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/preserve-manual-memoization': 'off',
       'no-control-regex': 'off',
+      '@typescript-eslint/no-namespace': 'off',
+    },
+  },
+  {
+    files: ['src/routes/middleware.ts'],
+    rules: {
       '@typescript-eslint/no-namespace': 'off',
     },
   },

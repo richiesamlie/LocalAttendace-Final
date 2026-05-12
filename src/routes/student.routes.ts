@@ -4,6 +4,26 @@ import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, studentSchema, studentUpdateSchema, studentSyncPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 
+interface StudentDbRow {
+  id: string;
+  name: string;
+  roll_number?: string | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
+  is_flagged?: number | boolean;
+  is_archived?: number | boolean;
+}
+
+interface StudentSyncItem {
+  id: string;
+  name: string;
+  rollNumber?: string | null;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  isFlagged?: boolean;
+  isArchived?: boolean;
+}
+
 export const studentRouter = express.Router();
 
 studentRouter.get('/:classId/students', requireClassAccess('classId'), async (req, res) => {
@@ -11,7 +31,7 @@ studentRouter.get('/:classId/students', requireClassAccess('classId'), async (re
     const classId = req.params.classId;
     const includeArchived = req.query.includeArchived === 'true';
     const students = await studentService.getByClass(classId, includeArchived);
-    const mapped = students.map((s: any) => ({
+    const mapped = students.map((s: StudentDbRow) => ({
       id: s.id,
       name: s.name,
       rollNumber: s.roll_number,
@@ -78,16 +98,16 @@ studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), pos
   const classId = req.params.classId;
   const teacherId = req.teacherId;
 
-  const { students } = req.body;
+  const { students } = req.body as { students: StudentSyncItem[] };
 
   const existing = await studentService.getByClass(classId);
-  const existingMap = new Map<string, any>();
-  for (const s of existing as any[]) {
+  const existingMap = new Map<string, StudentDbRow>();
+  for (const s of existing as StudentDbRow[]) {
     existingMap.set(s.id, s);
   }
 
-  const toInsert = students.filter((s: any) => !existingMap.has(s.id));
-  const toUpdate = students.filter((s: any) => existingMap.has(s.id));
+  const toInsert = students.filter((s) => !existingMap.has(s.id));
+  const toUpdate = students.filter((s) => existingMap.has(s.id));
 
   for (const s of toInsert) {
     await studentService.insert(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);
