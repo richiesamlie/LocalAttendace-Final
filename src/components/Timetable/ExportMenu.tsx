@@ -2,8 +2,13 @@ import { useState, useRef } from 'react';
 import { Download, Settings, X } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { TimetableSlot } from '../../store';
-import { exportTimetableToExcel } from '../../utils/excel';
 import { format } from 'date-fns';
+
+let excelUtilsPromise: Promise<typeof import('../../utils/excel')> | null = null;
+const getExcelUtils = () => {
+  if (!excelUtilsPromise) excelUtilsPromise = import('../../utils/excel');
+  return excelUtilsPromise;
+};
 
 interface ExportMenuProps {
   timetable: TimetableSlot[];
@@ -16,7 +21,8 @@ export default function ExportMenu({ timetable, className }: ExportMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, () => setShowMenu(false), showMenu);
 
-  const handleExport = (duration: 'weekly' | 'month' | 'semester') => {
+  const handleExport = async (duration: 'weekly' | 'month' | 'semester') => {
+    const { exportTimetableToExcel } = await getExcelUtils();
     exportTimetableToExcel(timetable, exportMonth, duration, className);
     setShowMenu(false);
   };
