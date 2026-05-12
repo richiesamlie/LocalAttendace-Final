@@ -367,9 +367,6 @@ export const useStore = create<AppState>()((set, get) => ({
   removeStudent: async (id) => {
     try {
       await api.deleteStudent(id);
-      const state = get();
-      if (state.currentClassId) {
-      }
       set((state) => {
         const newSeating = { ...state.seatingLayout };
         Object.keys(newSeating).forEach(key => {
@@ -679,6 +676,7 @@ export const useStore = create<AppState>()((set, get) => ({
         const me = await api.getMe();
         currentIsAdmin = me.isAdmin;
       } catch {
+        // Keep existing admin flag if profile refresh fails.
       }
 
       set(() => {

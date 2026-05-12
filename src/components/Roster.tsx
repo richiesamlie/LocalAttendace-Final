@@ -29,7 +29,7 @@ export default function Roster() {
     const toastId = toast(
       (t) => (
         <div>
-          <p className="font-medium">Archive "{student.name}"?</p>
+          <p className="font-medium">Archive &quot;{student.name}&quot;?</p>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">They will be hidden from attendance and reports but their records will be preserved.</p>
           <div className="flex gap-2 mt-3">
             <button
@@ -583,7 +583,7 @@ export default function Roster() {
               {filteredStudents.length === 0 && !isAdding && students.length > 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    No students found matching "{searchQuery}".
+                    No students found matching &quot;{searchQuery}&quot;.
                   </td>
                 </tr>
               )}

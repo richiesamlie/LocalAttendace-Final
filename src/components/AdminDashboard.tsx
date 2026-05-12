@@ -378,7 +378,7 @@ function TeachersTabContent() {
           <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800 dark:text-amber-200">
             <p className="font-medium">Important</p>
-            <p className="mt-1">Each teacher has their own separate classes and data. They cannot see or modify other teachers' data.</p>
+            <p className="mt-1">Each teacher has their own separate classes and data. They cannot see or modify other teachers&apos; data.</p>
           </div>
         </div>
       </div>

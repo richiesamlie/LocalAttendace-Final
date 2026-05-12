@@ -242,7 +242,7 @@ export default function ExamTimer() {
                   </span>
                   {timerRemaining === 0 && (
                     <span className="text-rose-500 font-bold uppercase tracking-widest mt-2 animate-pulse">
-                      Time's Up!
+                      Time&apos;s Up!
                     </span>
                   )}
                 </div>

@@ -298,7 +298,7 @@ export default function SeatingChart() {
           <div className="min-w-max flex flex-col items-center">
             {/* Teacher Desk Indicator */}
             <div className="w-64 h-12 bg-slate-200 dark:bg-slate-800 rounded-xl mb-12 flex items-center justify-center text-slate-500 dark:text-slate-400 font-medium uppercase tracking-widest text-sm shadow-inner">
-              Teacher's Desk
+              Teacher&apos;s Desk
             </div>
 
             {/* Grid */}

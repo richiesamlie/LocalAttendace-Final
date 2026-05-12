@@ -444,7 +444,7 @@ export default function Timetable() {
               <Clock className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg text-slate-900 dark:text-white font-semibold">No classes scheduled</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">Click "Add Class" to build your timetable for {DAYS[selectedDay]}.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">Click &quot;Add Class&quot; to build your timetable for {DAYS[selectedDay]}.</p>
             
             {selectedDay !== 1 && timetable.some(s => s.dayOfWeek === 1) && (
               <button

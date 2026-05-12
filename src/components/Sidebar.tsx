@@ -99,7 +99,7 @@ function ClassSwitcher() {
                           const classId = c.id;
                           toast((t) => (
                             <div>
-                              <p className="font-medium">Delete "{name}"?</p>
+                              <p className="font-medium">Delete &quot;{name}&quot;?</p>
                               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">All data for this class will be lost.</p>
                               <div className="flex gap-2 mt-3">
                                 <button
