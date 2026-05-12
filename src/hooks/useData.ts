@@ -26,20 +26,21 @@ export function useAuth() {
   return useQuery({
     queryKey: queryKeys.auth,
     queryFn: async () => {
-      const result = await api.verifyAuth() as { authenticated: boolean; teacherId?: string; name?: string };
+      const result = await api.verifyAuth() as { authenticated: boolean; teacherId?: string; name?: string; isAdmin?: boolean };
       if (result.authenticated && result.teacherId) {
         try {
           const teacher = await api.getMe();
           setAuth(result.teacherId, teacher.name, teacher.isAdmin);
         } catch {
-          setAuth(result.teacherId, 'Teacher', false);
+          // Fallback to /auth/verify payload instead of force-downgrading to non-admin.
+          setAuth(result.teacherId, result.name || 'Teacher', !!result.isAdmin);
         }
       } else {
         clearAuth();
       }
       return result;
     },
-    retry: false,
+
   });
 }
 

@@ -218,12 +218,12 @@ export default function AdminDashboard() {
                 <div>
                   <p className="font-medium">Final confirmation</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Type YES in the field below to confirm.</p>
-                  <form onSubmit={(e) => {
+                  <form onSubmit={async (e) => {
                     e.preventDefault();
                     const form = e.target as HTMLFormElement;
                     const input = form.elements.namedItem('confirm') as HTMLInputElement;
                     if (input.value === 'YES') {
-                      clearAllData();
+                      await clearAllData();
                       toast.success('All academic data has been reset.');
                       toast.dismiss(t2.id);
                       window.location.reload();

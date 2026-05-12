@@ -25,7 +25,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
   const [inviteRole, setInviteRole] = useState('teacher');
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
 
-  const canManageTeachers = userRole === 'owner' || userRole === 'admin';
+  const canManageTeachers = userRole === 'owner' || userRole === 'admin' || userRole === 'administrator';
   const canManageRoles = userRole === 'owner';
 
   useEffect(() => {
