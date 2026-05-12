@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore, AttendanceStatus } from '../store';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
 import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download, Undo2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
-import { generateAttendanceTemplate, importAttendanceFromExcel } from '../utils/excel';
 import { AttendanceGridSkeleton } from './Skeleton';
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
@@ -22,10 +22,7 @@ export default function TakeAttendance() {
   const isLoading = useStore((state) => state.isLoading);
   const currentClassId = useStore((state) => state.currentClassId);
   const allRecords = useStore((state) => state.records);
-  const records = useMemo(
-    () => allRecords.filter((r) => r.date === date),
-    [allRecords, date]
-  );
+  const records = allRecords.filter((r) => r.date === date);
   const setRecord = useStore((state) => state.setRecord);
   const markAllPresent = useStore((state) => state.markAllPresent);
   const undoLastAttendance = useStore((state) => state.undoLastAttendance);
@@ -45,6 +42,7 @@ export default function TakeAttendance() {
 
     setIsImporting(true);
     try {
+      const { importAttendanceFromExcel } = await getExcelUtils();
       const importedRecords = await importAttendanceFromExcel(file, currentClassId, students);
       if (importedRecords.length === 0) {
         toast.error('No valid attendance records found in file.');
@@ -91,18 +89,15 @@ export default function TakeAttendance() {
     markAllPresent(date);
   };
 
-  const filteredStudents = useMemo(() =>
-    students
-      .filter(student =>
-        !student.isArchived &&
-        (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-      .sort((a, b) =>
-        a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
-      ),
-    [students, searchQuery]
-  );
+  const filteredStudents = students
+    .filter(student =>
+      !student.isArchived &&
+      (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) =>
+      a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -141,7 +136,10 @@ export default function TakeAttendance() {
             </button>
           </div>
           <button
-            onClick={generateAttendanceTemplate}
+            onClick={async () => {
+              const { generateAttendanceTemplate } = await getExcelUtils();
+              generateAttendanceTemplate();
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Download className="w-4 h-4" />
@@ -185,7 +183,7 @@ export default function TakeAttendance() {
               : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
           )}
         >
-          Today's Attendance
+          Today&apos;s Attendance
         </button>
         <button
           onClick={() => setActiveTab('past')}

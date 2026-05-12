@@ -1,6 +1,10 @@
 import os from 'os';
 import { _db } from '../db/connection';
 
+interface DbWithPreparedStatements {
+  preparedStatements?: unknown[];
+}
+
 /**
  * Resource snapshot at a point in time
  */
@@ -134,14 +138,14 @@ export class ResourceMonitor {
     
     try {
       // Count prepared statements (we have 57 pre-compiled)
-      const stmts = (_db as any).preparedStatements || [];
+      const stmts = (_db as unknown as DbWithPreparedStatements).preparedStatements || [];
       preparedStatements = stmts.length || 57; // Default to known count
       
       // SQLite doesn't track "active" connections like PostgreSQL
       // but we can check if WAL mode is enabled
       const walInfo = _db.pragma('journal_mode', { simple: true });
       walCheckpoint = walInfo === 'wal';
-    } catch (err) {
+    } catch (_err) {
       // Silent fail - not critical
     }
 

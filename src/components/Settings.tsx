@@ -30,10 +30,11 @@ export default function Settings() {
       setImportStatus('success');
       setTimeout(() => window.location.reload(), 1500);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Import failed:', error);
       setImportStatus('error');
-      setErrorMessage(error.message || 'Failed to import backup file.');
+      const message = error instanceof Error ? error.message : 'Failed to import backup file.';
+      setErrorMessage(message);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -69,7 +70,7 @@ export default function Settings() {
                 <li>Run the <code>start-app.bat</code> file from its new location inside Google Drive.</li>
               </ol>
               <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 italic">
-              That's it! Every time you take attendance, the <code>database.sqlite</code> file will automatically sync to your Google Drive in the background.
+              That&apos;s it! Every time you take attendance, the <code>database.sqlite</code> file will automatically sync to your Google Drive in the background.
               </p>
             </div>
           </div>

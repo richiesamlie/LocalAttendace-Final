@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
-import { importStudentsFromExcel, generateTemplate, exportClassData } from '../utils/excel';
 import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 import { useClickOutside } from '../hooks/useClickOutside';
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function Roster() {
   const students = useStore((state) => state.students);
@@ -25,11 +25,11 @@ export default function Roster() {
   React.useEffect(() => {
     if (!archiveConfirmId) return;
     const student = students.find(s => s.id === archiveConfirmId);
-    if (!student) { setArchiveConfirmId(null); return; }
+    if (!student) return;
     const toastId = toast(
       (t) => (
         <div>
-          <p className="font-medium">Archive "{student.name}"?</p>
+          <p className="font-medium">Archive &quot;{student.name}&quot;?</p>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">They will be hidden from attendance and reports but their records will be preserved.</p>
           <div className="flex gap-2 mt-3">
             <button
@@ -83,8 +83,9 @@ export default function Roster() {
 
     setIsImporting(true);
     try {
+      const { importStudentsFromExcel } = await getExcelUtils();
       const importedStudents = await importStudentsFromExcel(file, currentClassId);
-      // Replace the roster automatically to avoid confirm prompt issues in iframe
+
       await setStudents(importedStudents);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error importing students. Please ensure it is a valid Excel file.');
@@ -193,13 +194,14 @@ export default function Roster() {
     }
   };
 
-  const handleExportClass = () => {
+  const handleExportClass = async () => {
     const state = useStore.getState();
     const currentClass = state.classes.find(c => c.id === state.currentClassId);
     if (!currentClass) {
       toast.error('No class selected');
       return;
     }
+    const { exportClassData } = await getExcelUtils();
     exportClassData(
       currentClass.name,
       state.students,
@@ -267,7 +269,8 @@ export default function Roster() {
               <div ref={moreMenuRef} className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <div className="p-2 space-y-1">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      const { generateTemplate } = await getExcelUtils();
                       generateTemplate();
                       setShowMoreMenu(false);
                     }}
@@ -583,7 +586,7 @@ export default function Roster() {
               {filteredStudents.length === 0 && !isAdding && students.length > 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    No students found matching "{searchQuery}".
+                    No students found matching &quot;{searchQuery}&quot;.
                   </td>
                 </tr>
               )}

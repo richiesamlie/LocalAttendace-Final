@@ -69,7 +69,16 @@ const timeWindows = [
   { label: '6 hours', value: 360 },
   { label: '24 hours', value: 1440 },
   { label: 'All', value: undefined },
-];
+] as const;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null
+);
+
+const isMetricsData = (value: unknown): value is MetricsData => {
+  if (!isRecord(value)) return false;
+  return isRecord(value.summary) && isRecord(value.bufferInfo) && isRecord(value.metrics);
+};
 
 export default function PerformanceMonitor() {
   const [timeWindow, setTimeWindow] = useState(60); // Default: 1 hour
@@ -78,7 +87,11 @@ export default function PerformanceMonitor() {
   const { data: metricsData, isLoading, error, refetch } = useQuery<MetricsData>({
     queryKey: ['performance-metrics', timeWindow],
     queryFn: async () => {
-      return api.getPerformanceMetrics(timeWindow);
+      const response = await api.getPerformanceMetrics(timeWindow);
+      if (!isMetricsData(response)) {
+        throw new Error('Invalid metrics response shape');
+      }
+      return response;
     },
     refetchInterval: 10000, // Refresh every 10 seconds
   });
@@ -193,7 +206,7 @@ export default function PerformanceMonitor() {
         {timeWindows.map((window) => (
           <button
             key={window.label}
-            onClick={() => setTimeWindow(window.value as number)}
+            onClick={() => setTimeWindow(window.value ?? 60)}
             className={cn(
               'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
               timeWindow === window.value

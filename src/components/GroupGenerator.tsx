@@ -186,7 +186,7 @@ export default function GroupGenerator() {
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-12 text-center border-dashed">
-          <p className="text-slate-500 dark:text-slate-400">Click "Generate Groups" to randomly divide your {students.length} students.</p>
+          <p className="text-slate-500 dark:text-slate-400">Click &quot;Generate Groups&quot; to randomly divide your {students.length} students.</p>
         </div>
       )}
     </div>

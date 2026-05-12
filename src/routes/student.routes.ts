@@ -4,14 +4,34 @@ import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, studentSchema, studentUpdateSchema, studentSyncPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 
+interface StudentDbRow {
+  id: string;
+  name: string;
+  roll_number?: string | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
+  is_flagged?: number | boolean;
+  is_archived?: number | boolean;
+}
+
+interface StudentSyncItem {
+  id: string;
+  name: string;
+  rollNumber: string;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  isFlagged?: boolean;
+  isArchived?: boolean;
+}
+
 export const studentRouter = express.Router();
 
 studentRouter.get('/:classId/students', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const includeArchived = req.query.includeArchived === 'true';
-    const students = await studentService.getByClass(classId, includeArchived);
-    const mapped = students.map((s: any) => ({
+    const students = await studentService.getByClass(classId, includeArchived) as StudentDbRow[];
+    const mapped = students.map((s) => ({
       id: s.id,
       name: s.name,
       rollNumber: s.roll_number,
@@ -21,7 +41,7 @@ studentRouter.get('/:classId/students', requireClassAccess('classId'), async (re
       isArchived: !!s.is_archived
     }));
     res.json(mapped);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch students' });
   }
 });
@@ -55,7 +75,7 @@ studentRouter.put('/:id', postLimiter, validate(studentUpdateSchema), withWriteQ
   await studentService.update(updateData, studentId, teacherId);
   const updatedStudent = await studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   res.json({ success: true });
-  if (updatedStudent) io?.to(updatedStudent.class_id!).emit('students_updated');
+  if (updatedStudent?.class_id) io?.to(updatedStudent.class_id).emit('students_updated');
   return;
 }));
 
@@ -70,7 +90,7 @@ studentRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
 
   await studentService.archive(studentId, teacherId);
   res.json({ success: true });
-  if (student) io?.to(student.class_id!).emit('students_updated');
+  if (student?.class_id) io?.to(student.class_id).emit('students_updated');
   return;
 }));
 
@@ -78,16 +98,16 @@ studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), pos
   const classId = req.params.classId;
   const teacherId = req.teacherId;
 
-  const { students } = req.body;
+  const { students } = req.body as { students: StudentSyncItem[] };
 
-  const existing = await studentService.getByClass(classId);
-  const existingMap = new Map<string, any>();
-  for (const s of existing as any[]) {
+  const existing = await studentService.getByClass(classId) as StudentDbRow[];
+  const existingMap = new Map<string, StudentDbRow>();
+  for (const s of existing as StudentDbRow[]) {
     existingMap.set(s.id, s);
   }
 
-  const toInsert = students.filter((s: any) => !existingMap.has(s.id));
-  const toUpdate = students.filter((s: any) => existingMap.has(s.id));
+  const toInsert = students.filter((s) => !existingMap.has(s.id));
+  const toUpdate = students.filter((s) => existingMap.has(s.id));
 
   for (const s of toInsert) {
     await studentService.insert(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);

@@ -5,6 +5,14 @@ import { validate, eventSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 import type { CalendarEvent } from '../../src/types/db';
 
+interface EventPayload {
+  id: string;
+  date: string;
+  title: string;
+  type: string;
+  description?: string | null;
+}
+
 export const eventRouter = express.Router();
 
 eventRouter.get('/classes/:classId/events', requireClassAccess('classId'), async (req, res) => {
@@ -12,7 +20,7 @@ eventRouter.get('/classes/:classId/events', requireClassAccess('classId'), async
     const classId = req.params.classId;
     const events = await eventService.getByClass(classId);
     res.json(events);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch events' });
   }
 });
@@ -20,8 +28,8 @@ eventRouter.get('/classes/:classId/events', requireClassAccess('classId'), async
 eventRouter.post('/classes/:classId/events', requireClassAccess('classId'), postLimiter, validate(eventSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
 
-  const events = Array.isArray(req.body) ? req.body : [req.body];
-  for (const e of events as any[]) {
+  const events = (Array.isArray(req.body) ? req.body : [req.body]) as EventPayload[];
+  for (const e of events) {
     await eventService.insert(e.id, classId, e.date, e.title, e.type, e.description || null);
   }
   res.json({ success: true });

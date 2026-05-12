@@ -41,6 +41,34 @@ interface TableStat {
   rowCount: number;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null
+);
+
+const isQueryPlan = (value: unknown): value is QueryPlan => {
+  if (!isRecord(value)) return false;
+  return typeof value.id === 'number' && typeof value.parent === 'number' && typeof value.notused === 'number' && typeof value.detail === 'string';
+};
+
+const isProfileResult = (value: unknown): value is ProfileResult => {
+  if (!isRecord(value)) return false;
+  return typeof value.query === 'string' && Array.isArray(value.plan) && value.plan.every(isQueryPlan) && Array.isArray(value.suggestions) && typeof value.score === 'number';
+};
+
+const isStatementProfile = (value: unknown): value is StatementProfile => {
+  if (!isRecord(value)) return false;
+  return typeof value.name === 'string' && isProfileResult(value);
+};
+
+const isIndex = (value: unknown): value is Index => {
+  if (!isRecord(value)) return false;
+  return typeof value.name === 'string' && typeof value.table === 'string' && (typeof value.sql === 'string' || value.sql === null);
+};
+
+const isTableStat = (value: unknown): value is TableStat => {
+  if (!isRecord(value)) return false;
+  return typeof value.table === 'string' && typeof value.rowCount === 'number';
+};
 export default function QueryProfiler() {
   const [activeTab, setActiveTab] = useState<'statements' | 'indexes' | 'custom'>('statements');
   const [customSQL, setCustomSQL] = useState('');
@@ -51,7 +79,10 @@ export default function QueryProfiler() {
     queryKey: ['query-profiling-statements'],
     queryFn: async () => {
       const response = await api.getQueryProfilingStatements();
-      return response as { statements: StatementProfile[] };
+      if (!isRecord(response) || !Array.isArray(response.statements) || !response.statements.every(isStatementProfile)) {
+        throw new Error('Invalid statements response shape');
+      }
+      return { statements: response.statements };
     },
   });
 
@@ -59,7 +90,10 @@ export default function QueryProfiler() {
     queryKey: ['query-profiling-indexes'],
     queryFn: async () => {
       const response = await api.getQueryProfilingIndexes();
-      return response as { indexes: Index[] };
+      if (!isRecord(response) || !Array.isArray(response.indexes) || !response.indexes.every(isIndex)) {
+        throw new Error('Invalid indexes response shape');
+      }
+      return { indexes: response.indexes };
     },
   });
 
@@ -67,7 +101,10 @@ export default function QueryProfiler() {
     queryKey: ['query-profiling-stats'],
     queryFn: async () => {
       const response = await api.getQueryProfilingStats();
-      return response as { tables: TableStat[]; indexCount: number; totalRows: number };
+      if (!isRecord(response) || !Array.isArray(response.tables) || !response.tables.every(isTableStat) || typeof response.indexCount !== 'number' || typeof response.totalRows !== 'number') {
+        throw new Error('Invalid stats response shape');
+      }
+      return { tables: response.tables, indexCount: response.indexCount, totalRows: response.totalRows };
     },
   });
 
@@ -77,7 +114,10 @@ export default function QueryProfiler() {
     setIsAnalyzing(true);
     try {
       const response = await api.profileCustomQuery(customSQL);
-      setCustomResult(response as ProfileResult);
+      if (!isProfileResult(response)) {
+        throw new Error('Invalid profile result response shape');
+      }
+      setCustomResult(response);
     } catch (error) {
       console.error('Failed to analyze query:', error);
       setCustomResult(null);

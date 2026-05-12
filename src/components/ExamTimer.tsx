@@ -31,7 +31,7 @@ export default function ExamTimer() {
 
   // --- Timer Logic (ref-based to avoid interval recreation) ---
   useEffect(() => {
-    if (isTimerRunning && timerRemaining > 0) {
+    if (isTimerRunning && timerRemainingRef.current > 0) {
       timerIntervalRef.current = window.setInterval(() => {
         timerRemainingRef.current -= 1;
         setTimerRemaining(timerRemainingRef.current);
@@ -242,7 +242,7 @@ export default function ExamTimer() {
                   </span>
                   {timerRemaining === 0 && (
                     <span className="text-rose-500 font-bold uppercase tracking-widest mt-2 animate-pulse">
-                      Time's Up!
+                      Time&apos;s Up!
                     </span>
                   )}
                 </div>

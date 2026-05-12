@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore } from '../store';
-import { exportMonthlyReportToExcel, ExportOptions } from '../utils/excel';
+import type { ExportOptions } from '../utils/excel';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Search, Settings, X } from 'lucide-react';
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -26,9 +27,10 @@ export default function Reports() {
   const classes = useStore((state) => state.classes);
   const currentClassId = useStore((state) => state.currentClassId);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const currentClass = classes.find(c => c.id === currentClassId);
     const className = currentClass ? currentClass.name : 'Class';
+    const { exportMonthlyReportToExcel } = await getExcelUtils();
     exportMonthlyReportToExcel(month, students, records, className, exportOptions);
     setShowExportOptions(false);
   };
@@ -53,7 +55,10 @@ export default function Reports() {
     if (!recordsByStudent.has(r.studentId)) {
       recordsByStudent.set(r.studentId, new Map());
     }
-    recordsByStudent.get(r.studentId)!.set(r.date, { status: r.status });
+    const studentRecordMap = recordsByStudent.get(r.studentId);
+    if (studentRecordMap) {
+      studentRecordMap.set(r.date, { status: r.status });
+    }
   };
 
   const summary = filteredStudents.map(student => {

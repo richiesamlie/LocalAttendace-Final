@@ -6,6 +6,8 @@ import db from '../../db';
 import type { Session, ClassTeacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
+const testBypassHandler: RequestHandler = (_req, _res, next) => next();
+
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
@@ -13,7 +15,7 @@ const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 // Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins
 // while still protecting against brute force attacks
 export const authLimiter = skipRateLimitInTests
-  ? ((_req: any, _res: any, next: any) => next()) as any
+  ? testBypassHandler
   : rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 150, // Increased from 5 to support ~40 concurrent teacher logins
@@ -25,7 +27,7 @@ export const authLimiter = skipRateLimitInTests
 
 // General POST request rate limiter
 export const postLimiter = skipRateLimitInTests
-  ? ((_req: any, _res: any, next: any) => next()) as any
+  ? testBypassHandler
   : rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 500, // Increased from 100 to support multiple concurrent users
@@ -46,12 +48,10 @@ export interface JwtPayload {
 
 export type ClassRole = 'administrator' | 'owner' | 'teacher' | 'assistant';
 
-declare global {
-  namespace Express {
-    interface Request {
-      teacherId: string;
-      classRole?: ClassRole;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    teacherId: string;
+    classRole?: ClassRole;
   }
 }
 
@@ -187,7 +187,7 @@ export const withWriteQueue = (handler: WriteHandler): RequestHandler => {
   return async (req, res) => {
     try {
       await db.enqueueWrite(() => handler(req, res));
-    } catch (error) {
+    } catch (_error) {
       if (!res.headersSent) {
         res.status(503).json({ error: 'Database write queue error' });
       }

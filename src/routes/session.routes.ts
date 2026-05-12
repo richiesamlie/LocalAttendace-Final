@@ -12,7 +12,7 @@ sessionRouter.get('/', requireAuth, async (req, res) => {
     await sessionService.deleteExpired();
     const sessions = await sessionService.getByTeacher(teacherId);
     res.json(sessions);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch sessions' });
   }
 });

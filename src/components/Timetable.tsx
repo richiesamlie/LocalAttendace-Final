@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useStore, TimetableSlot } from '../store';
 import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List, Copy, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { exportTimetableToExcel } from '../utils/excel';
 import { format } from 'date-fns';
+import { getExcelUtils } from '../utils/excelLoader';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WORK_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
@@ -120,9 +120,10 @@ export default function Timetable() {
   const classes = useStore((state) => state.classes);
   const currentClassId = useStore((state) => state.currentClassId);
 
-  const handleExport = (duration: 'weekly' | 'month' | 'semester') => {
+  const handleExport = async (duration: 'weekly' | 'month' | 'semester') => {
     const currentClass = classes.find(c => c.id === currentClassId);
     const className = currentClass ? currentClass.name : 'Class';
+    const { exportTimetableToExcel } = await getExcelUtils();
     exportTimetableToExcel(timetable, exportMonth, duration, className);
     setShowExportMenu(false);
   };
@@ -444,7 +445,7 @@ export default function Timetable() {
               <Clock className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg text-slate-900 dark:text-white font-semibold">No classes scheduled</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">Click "Add Class" to build your timetable for {DAYS[selectedDay]}.</p>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">Click &quot;Add Class&quot; to build your timetable for {DAYS[selectedDay]}.</p>
             
             {selectedDay !== 1 && timetable.some(s => s.dayOfWeek === 1) && (
               <button

@@ -67,10 +67,10 @@ export function performanceMonitor(req: Request, res: Response, next: NextFuncti
   const startTime = Date.now();
 
   // Capture the original end function
-  const originalEnd = res.end.bind(res);
+  const originalEnd = res.end.bind(res) as Response['end'];
 
   // Override res.end to capture response time
-  res.end = function(chunk?: any, encoding?: any, callback?: any): Response {
+  res.end = ((...args: Parameters<Response['end']>): ReturnType<Response['end']> => {
     const duration = Date.now() - startTime;
     const timestamp = formatTimestamp();
 
@@ -106,8 +106,8 @@ export function performanceMonitor(req: Request, res: Response, next: NextFuncti
     }
 
     // Call the original end function
-    return originalEnd(chunk, encoding, callback);
-  } as any;
+    return originalEnd(...args);
+  }) as Response['end'];
 
   next();
 }

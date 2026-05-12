@@ -217,7 +217,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Today's Summary</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Today&apos;s Summary</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Present</p>
@@ -249,7 +249,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
                     : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 )}
               >
-                <Clock className="w-4 h-4" /> Today's Classes
+                <Clock className="w-4 h-4" /> Today&apos;s Classes
               </button>
               <button
                 onClick={() => setActiveTab('events')}
@@ -272,7 +272,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
                       : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   )}
                 >
-                  <FileText className="w-4 h-4" /> Today's Notes
+                  <FileText className="w-4 h-4" /> Today&apos;s Notes
                 </button>
               )}
             </div>

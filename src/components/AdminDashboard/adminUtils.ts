@@ -71,7 +71,8 @@ export const mergeBackupClasses = (parsed: MassiveBackupPayload): ClassData[] =>
     if (!semester?.classes) return;
     semester.classes.forEach((c) => {
       if (mergedClasses.has(c.id)) {
-        const existing = mergedClasses.get(c.id)!;
+        const existing = mergedClasses.get(c.id);
+        if (!existing) return;
         mergedClasses.set(c.id, {
           ...existing,
           records: [...(existing.records || []), ...(c.records || [])],

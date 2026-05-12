@@ -258,7 +258,7 @@ export const useStore = create<AppState>()((set, get) => ({
         };
       });
       toast.success('Class created');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to create class');
     }
   },
@@ -297,7 +297,7 @@ export const useStore = create<AppState>()((set, get) => ({
         return { classes: newClasses };
       });
       toast.success('Class deleted');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete class');
     }
   },
@@ -313,7 +313,11 @@ export const useStore = create<AppState>()((set, get) => ({
       await get().loadClassData(id);
     }
 
-    const updated = get().classes.find(c => c.id === id)!;
+    const updated = get().classes.find(c => c.id === id);
+    if (!updated) {
+      set({ isLoading: false });
+      return;
+    }
     set({
       currentClassId: id,
       students: updated.students,
@@ -332,7 +336,7 @@ export const useStore = create<AppState>()((set, get) => ({
       set((state) => ({
         classes: state.classes.map(c => c.id === id ? { ...c, name } : c)
       }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to rename class');
     }
   },
@@ -359,7 +363,7 @@ export const useStore = create<AppState>()((set, get) => ({
       await api.createStudent(state.currentClassId, student);
       set((state) => updateCurrentClass(state, { students: [...state.students, student] }));
       toast.success('Student added');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to add student');
     }
   },
@@ -367,9 +371,6 @@ export const useStore = create<AppState>()((set, get) => ({
   removeStudent: async (id) => {
     try {
       await api.deleteStudent(id);
-      const state = get();
-      if (state.currentClassId) {
-      }
       set((state) => {
         const newSeating = { ...state.seatingLayout };
         Object.keys(newSeating).forEach(key => {
@@ -383,7 +384,7 @@ export const useStore = create<AppState>()((set, get) => ({
         });
       });
       toast.success('Student archived');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to archive student');
     }
   },
@@ -394,7 +395,7 @@ export const useStore = create<AppState>()((set, get) => ({
       set((state) => updateCurrentClass(state, {
         students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
       }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update student');
     }
   },
@@ -425,7 +426,7 @@ export const useStore = create<AppState>()((set, get) => ({
           lastAttendanceChange: existingRecord || null,
         };
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save attendance record');
     }
   },
@@ -460,7 +461,7 @@ export const useStore = create<AppState>()((set, get) => ({
         return updateCurrentClass(state, { records: newRecords, lastAttendanceChange: null });
       });
       toast.success('Attendance undone');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to undo attendance');
     }
   },
@@ -483,7 +484,7 @@ export const useStore = create<AppState>()((set, get) => ({
         records: [...state.records, ...newRecords]
       }));
       toast.success(`${newRecords.length} students marked present`);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to mark all present');
     }
   },
@@ -496,7 +497,7 @@ export const useStore = create<AppState>()((set, get) => ({
       set((state) => updateCurrentClass(state, {
         dailyNotes: { ...state.dailyNotes, [date]: note },
       }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save daily note');
     }
   },
@@ -508,7 +509,7 @@ export const useStore = create<AppState>()((set, get) => ({
       await api.createEvents(classId, [event]);
       set((state) => updateCurrentClass(state, { events: [...state.events, event] }));
       toast.success('Event added');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to add event');
     }
   },
@@ -519,7 +520,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       await api.createEvents(classId, newEvents);
       set((state) => updateCurrentClass(state, { events: [...state.events, ...newEvents] }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to import events');
     }
   },
@@ -530,7 +531,7 @@ export const useStore = create<AppState>()((set, get) => ({
       set((state) => updateCurrentClass(state, {
         events: state.events.map((e) => (e.id === id ? { ...e, ...data } : e)),
       }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update event');
     }
   },
@@ -540,7 +541,7 @@ export const useStore = create<AppState>()((set, get) => ({
       await api.deleteEvent(id);
       set((state) => updateCurrentClass(state, { events: state.events.filter((e) => e.id !== id) }));
       toast.success('Event removed');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to remove event');
     }
   },
@@ -551,7 +552,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       await api.createTimetableSlot(classId, slot);
       set((state) => updateCurrentClass(state, { timetable: [...state.timetable, slot] }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to add timetable slot');
     }
   },
@@ -562,7 +563,7 @@ export const useStore = create<AppState>()((set, get) => ({
       set((state) => updateCurrentClass(state, {
         timetable: state.timetable.map((s) => (s.id === id ? { ...s, ...data } : s)),
       }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update timetable slot');
     }
   },
@@ -571,7 +572,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       await api.deleteTimetableSlot(id);
       set((state) => updateCurrentClass(state, { timetable: state.timetable.filter((s) => s.id !== id) }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to remove timetable slot');
     }
   },
@@ -596,7 +597,7 @@ export const useStore = create<AppState>()((set, get) => ({
         }
         return updateCurrentClass(state, { seatingLayout: newSeating });
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update seating chart');
     }
   },
@@ -608,7 +609,7 @@ export const useStore = create<AppState>()((set, get) => ({
       await api.saveSeatingLayout(classId, layout);
       set((state) => updateCurrentClass(state, { seatingLayout: layout }));
       toast.success('Seating layout saved');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save layout');
     }
   },
@@ -619,7 +620,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       await api.clearSeating(classId);
       set((state) => updateCurrentClass(state, { seatingLayout: {} }));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to clear seating');
     }
   },
@@ -629,7 +630,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       await api.saveSetting('theme', newTheme);
       set({ theme: newTheme });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update theme');
     }
   },
@@ -646,7 +647,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
       set((state) => updateCurrentClass(state, { students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }));
       toast.success('Class data cleared');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to clear class data');
     }
   },
@@ -679,6 +680,7 @@ export const useStore = create<AppState>()((set, get) => ({
         const me = await api.getMe();
         currentIsAdmin = me.isAdmin;
       } catch {
+        // Keep existing admin flag if profile refresh fails.
       }
 
       set(() => {
@@ -711,7 +713,7 @@ export const useStore = create<AppState>()((set, get) => ({
         ? `All data cleared (${failed.length} classes failed to delete)`
         : 'All data cleared successfully';
       toast.success(msg);
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to clear all data');
     }
   },
@@ -720,7 +722,7 @@ export const useStore = create<AppState>()((set, get) => ({
     try {
       await api.saveSetting('adminPassword', password);
       toast.success('Admin password updated');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update admin password');
     }
   },
@@ -753,7 +755,7 @@ export const useStore = create<AppState>()((set, get) => ({
 
         return { classes: newClasses };
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to save attendance record');
     }
   },

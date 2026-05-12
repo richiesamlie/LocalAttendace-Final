@@ -3,7 +3,7 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-const cache = new Map<string, CacheEntry<any>>();
+const cache = new Map<string, CacheEntry<unknown>>();
 const DEFAULT_TTL = 5000;
 const LONG_TTL = 60000;
 
@@ -13,7 +13,7 @@ export function cacheGet<T>(key: string): T | null {
     cache.delete(key);
     return null;
   }
-  return entry.value;
+  return entry.value as T;
 }
 
 export function cacheSet<T>(key: string, value: T, ttl: number = DEFAULT_TTL): void {

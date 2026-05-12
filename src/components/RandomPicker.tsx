@@ -29,8 +29,8 @@ export default function RandomPicker() {
       setSelectedStudent(students[randomIndex].id);
       spins++;
       
-      if (spins >= maxSpins) {
-        clearInterval(intervalRef.current!);
+      if (spins >= maxSpins && intervalRef.current) {
+        clearInterval(intervalRef.current);
         intervalRef.current = null;
         setIsSpinning(false);
       }

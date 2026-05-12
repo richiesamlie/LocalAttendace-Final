@@ -1,7 +1,8 @@
 import { _db } from './connection';
+import type Database from 'better-sqlite3';
 
 // Statements object - will be populated by initStatements()
-export const preparedStatements: any = {};
+export const preparedStatements: Record<string, Database.Statement> = {};
 
 // Initialize all prepared statements (call AFTER initSchema)
 export function initStatements(): void {

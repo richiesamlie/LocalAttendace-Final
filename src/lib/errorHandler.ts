@@ -66,14 +66,14 @@ export function errorHandler(
 }
 
 // Async route wrapper to handle errors
-export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) {
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
 
 // Request validation wrapper
-export function validateRequest(validator: (body: any) => { valid: boolean; error?: string }) {
+export function validateRequest(validator: (body: unknown) => { valid: boolean; error?: string }) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = validator(req.body);
     if (!result.valid) {

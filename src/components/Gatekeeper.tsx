@@ -36,7 +36,7 @@ export default function Gatekeeper() {
     }))
   );
 
-  const safeString = (val: any) => (val ? String(val).toLowerCase() : '');
+  const safeString = (val: unknown) => (val ? String(val).toLowerCase() : '');
 
   const filteredStudents = debouncedQuery.trim() === '' 
     ? [] 
@@ -135,7 +135,7 @@ export default function Gatekeeper() {
             </div>
           ) : (
             <div className="p-8 text-center text-slate-500 dark:text-slate-400">
-              No students found matching "{searchQuery}"
+              No students found matching &quot;{searchQuery}&quot;
             </div>
           )}
         </div>
