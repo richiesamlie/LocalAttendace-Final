@@ -9,6 +9,13 @@ on:
     # Run weekly on Mondays at 9am UTC
     - cron: '0 9 * * 1'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dependency-audit:
     name: npm audit
