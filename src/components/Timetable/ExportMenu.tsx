@@ -3,12 +3,7 @@ import { Download, Settings, X } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { TimetableSlot } from '../../store';
 import { format } from 'date-fns';
-
-let excelUtilsPromise: Promise<typeof import('../../utils/excel')> | null = null;
-const getExcelUtils = () => {
-  if (!excelUtilsPromise) excelUtilsPromise = import('../../utils/excel');
-  return excelUtilsPromise;
-};
+import { getExcelUtils } from '../../utils/excelLoader';
 
 interface ExportMenuProps {
   timetable: TimetableSlot[];

@@ -3,12 +3,7 @@ import { useStore, TimetableSlot } from '../store';
 import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List, Copy, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { format } from 'date-fns';
-
-let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
-const getExcelUtils = () => {
-  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
-  return excelUtilsPromise;
-};
+import { getExcelUtils } from '../utils/excelLoader';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WORK_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday

@@ -4,12 +4,7 @@ import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, FileSpre
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 import { useClickOutside } from '../hooks/useClickOutside';
-
-let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
-const getExcelUtils = () => {
-  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
-  return excelUtilsPromise;
-};
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function Roster() {
   const students = useStore((state) => state.students);

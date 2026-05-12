@@ -4,12 +4,7 @@ import { useStore } from '../store';
 import type { ExportOptions } from '../utils/excel';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Search, Settings, X } from 'lucide-react';
-
-let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
-const getExcelUtils = () => {
-  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
-  return excelUtilsPromise;
-};
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));

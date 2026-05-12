@@ -6,12 +6,7 @@ import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, Chevron
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { AttendanceGridSkeleton } from './Skeleton';
-
-let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
-const getExcelUtils = () => {
-  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
-  return excelUtilsPromise;
-};
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');

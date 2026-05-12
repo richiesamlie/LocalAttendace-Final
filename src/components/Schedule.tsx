@@ -5,12 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO 
 import { cn } from '../utils/cn';
 import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
-const getExcelUtils = () => {
-  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
-  return excelUtilsPromise;
-};
+import { getExcelUtils } from '../utils/excelLoader';
 
 export default function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
