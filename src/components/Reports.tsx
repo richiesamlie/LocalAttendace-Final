@@ -1,9 +1,15 @@
 import { useState, useRef } from 'react';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore } from '../store';
-import { exportMonthlyReportToExcel, ExportOptions } from '../utils/excel';
+import type { ExportOptions } from '../utils/excel';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Search, Settings, X } from 'lucide-react';
+
+let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
+const getExcelUtils = () => {
+  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
+  return excelUtilsPromise;
+};
 
 export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -26,9 +32,10 @@ export default function Reports() {
   const classes = useStore((state) => state.classes);
   const currentClassId = useStore((state) => state.currentClassId);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const currentClass = classes.find(c => c.id === currentClassId);
     const className = currentClass ? currentClass.name : 'Class';
+    const { exportMonthlyReportToExcel } = await getExcelUtils();
     exportMonthlyReportToExcel(month, students, records, className, exportOptions);
     setShowExportOptions(false);
   };

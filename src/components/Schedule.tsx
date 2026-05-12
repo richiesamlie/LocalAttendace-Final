@@ -4,8 +4,13 @@ import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
 import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree, FileSpreadsheet } from 'lucide-react';
-import { exportScheduleToExcel, importScheduleFromExcel } from '../utils/excel';
 import toast from 'react-hot-toast';
+
+let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
+const getExcelUtils = () => {
+  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
+  return excelUtilsPromise;
+};
 
 export default function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -79,9 +84,10 @@ export default function Schedule() {
   const classes = useStore((state) => state.classes);
   const currentClassId = useStore((state) => state.currentClassId);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const currentClass = classes.find(c => c.id === currentClassId);
     const className = currentClass ? currentClass.name : 'Class';
+    const { exportScheduleToExcel } = await getExcelUtils();
     exportScheduleToExcel(events, className);
   };
 
@@ -90,6 +96,7 @@ export default function Schedule() {
     if (!file) return;
 
     try {
+      const { importScheduleFromExcel } = await getExcelUtils();
       const importedEvents = await importScheduleFromExcel(file);
       if (importedEvents.length > 0) {
         addEvents(importedEvents);

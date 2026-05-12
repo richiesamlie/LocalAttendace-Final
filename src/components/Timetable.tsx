@@ -2,8 +2,13 @@ import { useState } from 'react';
 import { useStore, TimetableSlot } from '../store';
 import { Plus, Trash2, Clock, BookOpen, FileText, Edit2, X, Check, Download, Settings, LayoutGrid, List, Copy, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { exportTimetableToExcel } from '../utils/excel';
 import { format } from 'date-fns';
+
+let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
+const getExcelUtils = () => {
+  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
+  return excelUtilsPromise;
+};
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const WORK_DAYS = [1, 2, 3, 4, 5]; // Monday to Friday
@@ -120,9 +125,10 @@ export default function Timetable() {
   const classes = useStore((state) => state.classes);
   const currentClassId = useStore((state) => state.currentClassId);
 
-  const handleExport = (duration: 'weekly' | 'month' | 'semester') => {
+  const handleExport = async (duration: 'weekly' | 'month' | 'semester') => {
     const currentClass = classes.find(c => c.id === currentClassId);
     const className = currentClass ? currentClass.name : 'Class';
+    const { exportTimetableToExcel } = await getExcelUtils();
     exportTimetableToExcel(timetable, exportMonth, duration, className);
     setShowExportMenu(false);
   };
