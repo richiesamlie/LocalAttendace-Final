@@ -77,7 +77,7 @@ export default function QueryProfiler() {
     setIsAnalyzing(true);
     try {
       const response = await api.profileCustomQuery(customSQL);
-      setCustomResult(response as ProfileResult);
+      setCustomResult(response as unknown as ProfileResult);
     } catch (error) {
       console.error('Failed to analyze query:', error);
       setCustomResult(null);

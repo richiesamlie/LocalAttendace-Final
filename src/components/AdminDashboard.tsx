@@ -8,8 +8,8 @@ import type { ClassData, AttendanceRecord, CalendarEvent } from '../types/store'
 
 type TabType = 'classes' | 'students' | 'attendance' | 'events' | 'timetables' | 'notes' | 'teachers';
 
-type MassiveBackupClass = Pick<ClassData, 'id' | 'students' | 'records' | 'dailyNotes' | 'events' | 'timetable' | 'seatingLayout'> & Partial<ClassData>;
-type MassiveBackupSemester = { classes?: MassiveBackupClass[] };
+type MassiveBackupClass = ClassData;
+type MassiveBackupSemester = { classes?: ClassData[] };
 type MassiveBackupPayload = { metadata?: unknown; data?: Record<string, MassiveBackupSemester> };
 
 export default function AdminDashboard() {

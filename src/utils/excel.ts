@@ -499,19 +499,20 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
       const row = json[index] as Record<string, unknown>;
       const rowNum = index + 2;
 
-      let dateStr = row['Date (YYYY-MM-DD)'] || row['Date'] || row['date'];
-      if (!dateStr || String(dateStr).trim() === '') {
+      const rawDate = row['Date (YYYY-MM-DD)'] || row['Date'] || row['date'];
+      if (!rawDate || String(rawDate).trim() === '') {
         errors.push(`Row ${rowNum}: Missing date. Please ensure the 'Date' column is filled.`);
         continue;
       }
 
-      if (typeof dateStr === 'number') {
-        dateStr = format(excelSerialToDate(dateStr), 'yyyy-MM-dd');
+      let dateStr: string;
+      if (typeof rawDate === 'number') {
+        dateStr = format(excelSerialToDate(rawDate), 'yyyy-MM-dd');
+      } else if (rawDate instanceof Date) {
+        dateStr = format(rawDate, 'yyyy-MM-dd');
+      } else {
+        dateStr = String(rawDate).trim();
       }
-      if (dateStr instanceof Date) {
-        dateStr = format(dateStr, 'yyyy-MM-dd');
-      }
-      dateStr = String(dateStr).trim();
 
       if (dateStr.includes('/')) {
         const parts = dateStr.split('/');
@@ -535,27 +536,28 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
         continue;
       }
 
-      let type = row['Type'] || row['type'];
-      if (!type || String(type).trim() === '') {
+      const rawType = row['Type'] || row['type'];
+      if (!rawType || String(rawType).trim() === '') {
         errors.push(`Row ${rowNum}: Missing event type. Please ensure the 'Type' column is filled.`);
         continue;
       }
 
-      type = String(type).trim();
-      const validTypes = ['Classwork', 'Test', 'Exam', 'Other'];
-      const matchedType = validTypes.find(t => t.toLowerCase() === type.toLowerCase());
+      const typeStr = String(rawType).trim();
+      const validTypes: CalendarEvent['type'][] = ['Classwork', 'Test', 'Exam', 'Other'];
+      const matchedType = validTypes.find((t) => t.toLowerCase() === typeStr.toLowerCase());
 
       if (!matchedType) {
-        errors.push(`Row ${rowNum}: Invalid event type '${type}'. Valid types are: Classwork, Test, Exam, Other.`);
+        errors.push(`Row ${rowNum}: Invalid event type '${typeStr}'. Valid types are: Classwork, Test, Exam, Other.`);
         continue;
       }
 
+      const description = row['Description'] || row['description'];
       events.push({
         id: `evt_import_${Date.now()}_${index}`,
         date: dateStr,
         title: String(title).trim(),
-        type: matchedType as CalendarEvent['type'],
-        description: row['Description'] || row['description'] || '',
+        type: matchedType,
+        description: description ? String(description) : '',
       });
     }
 

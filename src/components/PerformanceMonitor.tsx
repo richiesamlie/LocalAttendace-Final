@@ -78,7 +78,7 @@ export default function PerformanceMonitor() {
   const { data: metricsData, isLoading, error, refetch } = useQuery<MetricsData>({
     queryKey: ['performance-metrics', timeWindow],
     queryFn: async () => {
-      return api.getPerformanceMetrics(timeWindow);
+      return await api.getPerformanceMetrics(timeWindow) as unknown as MetricsData;
     },
     refetchInterval: 10000, // Refresh every 10 seconds
   });

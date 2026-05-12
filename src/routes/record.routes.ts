@@ -24,8 +24,8 @@ export const recordRouter = express.Router();
 recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
-    const records = await recordService.getByClass(classId);
-    const mapped = records.map((r: AttendanceDbRow) => ({
+    const records = await recordService.getByClass(classId) as AttendanceDbRow[];
+    const mapped = records.map((r) => ({
       studentId: r.student_id,
       date: r.date,
       status: r.status,

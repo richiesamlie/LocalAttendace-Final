@@ -17,7 +17,7 @@ interface StudentDbRow {
 interface StudentSyncItem {
   id: string;
   name: string;
-  rollNumber?: string | null;
+  rollNumber: string;
   parentName?: string | null;
   parentPhone?: string | null;
   isFlagged?: boolean;
@@ -30,8 +30,8 @@ studentRouter.get('/:classId/students', requireClassAccess('classId'), async (re
   try {
     const classId = req.params.classId;
     const includeArchived = req.query.includeArchived === 'true';
-    const students = await studentService.getByClass(classId, includeArchived);
-    const mapped = students.map((s: StudentDbRow) => ({
+    const students = await studentService.getByClass(classId, includeArchived) as StudentDbRow[];
+    const mapped = students.map((s) => ({
       id: s.id,
       name: s.name,
       rollNumber: s.roll_number,
@@ -100,7 +100,7 @@ studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), pos
 
   const { students } = req.body as { students: StudentSyncItem[] };
 
-  const existing = await studentService.getByClass(classId);
+  const existing = await studentService.getByClass(classId) as StudentDbRow[];
   const existingMap = new Map<string, StudentDbRow>();
   for (const s of existing as StudentDbRow[]) {
     existingMap.set(s.id, s);

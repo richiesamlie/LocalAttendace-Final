@@ -7,7 +7,7 @@ import type { TimetableSlot } from '../../src/types/db';
 
 interface TimetableRow {
   id: string;
-  day_of_week: string;
+  day_of_week: number;
   start_time: string;
   end_time: string;
   subject: string;
@@ -19,8 +19,8 @@ export const timetableRouter = express.Router();
 timetableRouter.get('/classes/:classId/timetable', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
-    const slots = await timetableService.getByClass(classId);
-    const mapped = slots.map((s: TimetableRow) => ({
+    const slots = await timetableService.getByClass(classId) as TimetableRow[];
+    const mapped = slots.map((s) => ({
       id: s.id,
       dayOfWeek: s.day_of_week,
       startTime: s.start_time,

@@ -105,7 +105,7 @@ export default function ResourceMonitor() {
     queryFn: async () => {
       const windowMinutes = TIME_WINDOWS[timeWindow];
       const response = await api.getResourceAlerts(windowMinutes);
-      return response as AlertsData;
+      return response as unknown as AlertsData;
     },
     refetchInterval: 10000,
   });
