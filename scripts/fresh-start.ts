@@ -20,7 +20,7 @@ async function freshStart(options: FreshStartOptions = {}) {
         try {
           fs.unlinkSync(file);
           console.log(`  ✓ Deleted ${file}`);
-        } catch (e) {
+        } catch (_e) {
           console.log(`  ⚠ Could not delete ${file} (may be locked)`);
         }
       }
@@ -32,7 +32,7 @@ async function freshStart(options: FreshStartOptions = {}) {
       try {
         fs.rmSync(DATA_DIR, { recursive: true, force: true });
         console.log(`  ✓ Deleted ${DATA_DIR}`);
-      } catch (e) {
+      } catch (_e) {
         console.log(`  ⚠ Could not delete ${DATA_DIR}`);
       }
     }

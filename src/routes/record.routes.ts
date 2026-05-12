@@ -17,7 +17,7 @@ recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), asy
       reason: r.reason
     }));
     res.json(mapped);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch records' });
   }
 });

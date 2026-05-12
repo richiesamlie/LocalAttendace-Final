@@ -23,7 +23,7 @@ adminRouter.get('/settings', requireAuth, async (_req, res) => {
       }
     }
     return res.json(response);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch settings' });
   }
 });
@@ -67,7 +67,7 @@ adminRouter.post('/database/backup', requireAuth, async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="database.sqlite"');
     res.setHeader('Content-Type', 'application/octet-stream');
     return res.sendFile(dbPath);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ error: 'Failed to create backup' });
   }
 });
@@ -103,7 +103,7 @@ adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<voi
       db.restore(fileBuffer);
       res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to restore database' });
   }
 });

@@ -21,7 +21,7 @@ studentRouter.get('/:classId/students', requireClassAccess('classId'), async (re
       isArchived: !!s.is_archived
     }));
     res.json(mapped);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch students' });
   }
 });

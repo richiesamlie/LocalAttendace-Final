@@ -12,7 +12,7 @@ eventRouter.get('/classes/:classId/events', requireClassAccess('classId'), async
     const classId = req.params.classId;
     const events = await eventService.getByClass(classId);
     res.json(events);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch events' });
   }
 });

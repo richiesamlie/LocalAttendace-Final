@@ -11,7 +11,7 @@ inviteRouter.get('/classes/:classId/invites', requireRole('classId', 'teacher'),
     const classId = req.params.classId;
     const invites = await inviteService.getByClass(classId);
     res.json(invites);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch invites' });
   }
 });

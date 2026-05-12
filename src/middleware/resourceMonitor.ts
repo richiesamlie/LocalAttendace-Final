@@ -141,7 +141,7 @@ export class ResourceMonitor {
       // but we can check if WAL mode is enabled
       const walInfo = _db.pragma('journal_mode', { simple: true });
       walCheckpoint = walInfo === 'wal';
-    } catch (err) {
+    } catch (_err) {
       // Silent fail - not critical
     }
 

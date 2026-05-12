@@ -187,7 +187,7 @@ export const withWriteQueue = (handler: WriteHandler): RequestHandler => {
   return async (req, res) => {
     try {
       await db.enqueueWrite(() => handler(req, res));
-    } catch (error) {
+    } catch (_error) {
       if (!res.headersSent) {
         res.status(503).json({ error: 'Database write queue error' });
       }

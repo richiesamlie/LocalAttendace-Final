@@ -20,7 +20,7 @@ timetableRouter.get('/classes/:classId/timetable', requireClassAccess('classId')
       lesson: s.lesson
     }));
     res.json(mapped);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch timetable' });
   }
 });

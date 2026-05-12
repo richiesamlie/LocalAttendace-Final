@@ -236,7 +236,7 @@ export default function Sidebar({
         } else {
           setIsOnline(false);
         }
-      } catch (err) {
+      } catch (_err) {
         setIsOnline(false);
       }
     }, 5000);

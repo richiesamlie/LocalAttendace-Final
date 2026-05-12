@@ -14,7 +14,7 @@ initStatements();
 const checkpointInterval = setInterval(() => {
   try {
     _db.pragma('wal_checkpoint(TRUNCATE)');
-  } catch (e) {
+  } catch (_e) {
     // Ignore checkpoint errors during active transactions
   }
 }, 60000);
@@ -24,7 +24,7 @@ process.on('beforeExit', () => {
   try {
     _db.pragma('wal_checkpoint(TRUNCATE)');
     _db.close();
-  } catch (e) {
+  } catch (_e) {
     // Ignore close/checkpoint errors during shutdown.
   }
 });
@@ -43,7 +43,7 @@ const dbProxy = new Proxy({}, {
     if (prop === 'restore') {
       return (buffer: Buffer) => {
         clearInterval(checkpointInterval);
-        try { _db.close(); } catch(e) {
+        try { _db.close(); } catch(_e) {
           // Ignore close errors while restoring DB file.
         }
         fs.writeFileSync(DB_FILE, buffer);

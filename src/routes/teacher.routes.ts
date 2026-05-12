@@ -10,7 +10,7 @@ teacherRouter.get('/', requireAuth, async (_req, res) => {
   try {
     const teachers = await teacherService.getAll();
     return res.json(teachers);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch teachers' });
   }
 });

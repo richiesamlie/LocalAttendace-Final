@@ -16,7 +16,7 @@ noteRouter.get('/classes/:classId/daily-notes', requireClassAccess('classId'), a
       response[row.date] = row.note;
     }
     res.json(response);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch daily notes' });
   }
 });

@@ -25,7 +25,7 @@ classRouter.get('/', requireAuth, async (req, res) => {
 
     const classes = await classService.getByTeacher(teacherId);
     return res.json(classes);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch classes' });
   }
 });
@@ -87,7 +87,7 @@ classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req,
     const classId = req.params.classId;
     const teachers = await classService.getTeachers(classId);
     return res.json(teachers);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch class teachers' });
   }
 });
@@ -183,7 +183,7 @@ classRouter.get('/:classId/invites', requireRole('classId', 'teacher'), async (r
     await inviteService.deleteExpired();
     const codes = await inviteService.getByClass(req.params.classId);
     return res.json(codes);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch invite codes' });
   }
 });

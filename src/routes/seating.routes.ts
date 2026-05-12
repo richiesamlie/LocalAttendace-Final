@@ -16,7 +16,7 @@ seatingRouter.get('/classes/:classId/seating', requireClassAccess('classId'), as
       response[row.seat_id] = row.student_id ?? '';
     }
     res.json(response);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: 'Failed to fetch seating layout' });
   }
 });
