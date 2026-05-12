@@ -93,8 +93,6 @@ export default [
   },
   {
     files: [
-      'src/components/AdminDashboard.tsx',
-      'src/components/Gatekeeper.tsx',
       'src/components/Settings.tsx',
       'src/components/Sidebar.tsx',
     ],

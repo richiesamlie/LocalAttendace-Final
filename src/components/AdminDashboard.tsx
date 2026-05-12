@@ -4,8 +4,13 @@ import { useStore } from '../store';
 import { api } from '../lib/api';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import type { ClassData, AttendanceRecord, CalendarEvent } from '../types/store';
 
 type TabType = 'classes' | 'students' | 'attendance' | 'events' | 'timetables' | 'notes' | 'teachers';
+
+type MassiveBackupClass = Pick<ClassData, 'id' | 'students' | 'records' | 'dailyNotes' | 'events' | 'timetable' | 'seatingLayout'> & Partial<ClassData>;
+type MassiveBackupSemester = { classes?: MassiveBackupClass[] };
+type MassiveBackupPayload = { metadata?: unknown; data?: Record<string, MassiveBackupSemester> };
 
 export default function AdminDashboard() {
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -60,13 +65,13 @@ export default function AdminDashboard() {
       };
 
       const processClasses = (filterFn: (date: string) => boolean) =>
-        (state.classes || []).map((c: any) => ({
+        (state.classes || []).map((c: ClassData) => ({
           ...c,
-          records: (c.records || []).filter((r: any) => filterFn(r.date)),
+          records: (c.records || []).filter((r: AttendanceRecord) => filterFn(r.date)),
           dailyNotes: Object.fromEntries(
             Object.entries(c.dailyNotes || {}).filter(([date]) => filterFn(date))
           ),
-          events: (c.events || []).filter((e: any) => filterFn(e.date)),
+          events: (c.events || []).filter((e: CalendarEvent) => filterFn(e.date)),
         }));
 
       const massiveBackup = {
@@ -121,19 +126,20 @@ export default function AdminDashboard() {
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        const parsed = JSON.parse(content);
+        const parsed = JSON.parse(content) as MassiveBackupPayload;
 
         if (!parsed.metadata || !parsed.data) {
           throw new Error('Invalid backup format');
         }
 
-        const mergedClasses = new Map<string, any>();
+        const mergedClasses = new Map<string, MassiveBackupClass>();
         
-        Object.values(parsed.data).forEach((semester: any) => {
+        Object.values(parsed.data).forEach((semester: MassiveBackupSemester) => {
           if (semester.classes && Array.isArray(semester.classes)) {
-            semester.classes.forEach((c: any) => {
+            semester.classes.forEach((c: MassiveBackupClass) => {
               if (mergedClasses.has(c.id)) {
                 const existing = mergedClasses.get(c.id);
+                if (!existing) return;
                 existing.records = [...(existing.records || []), ...(c.records || [])];
                 existing.events = [...(existing.events || []), ...(c.events || [])];
                 existing.dailyNotes = { ...(existing.dailyNotes || {}), ...(c.dailyNotes || {}) };
@@ -308,9 +314,10 @@ function TeachersTabContent() {
       try {
         await registerMutation.mutateAsync({ username, name, password: defaultPassword });
         results.success++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         results.failed++;
-        results.errors.push(`"${username}" - ${err?.message || 'failed'}`);
+        const message = err instanceof Error ? err.message : 'failed';
+        results.errors.push(`"${username}" - ${message}`);
       }
     }
 

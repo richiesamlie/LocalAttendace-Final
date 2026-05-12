@@ -36,7 +36,7 @@ export default function Gatekeeper() {
     }))
   );
 
-  const safeString = (val: any) => (val ? String(val).toLowerCase() : '');
+  const safeString = (val: unknown) => (val ? String(val).toLowerCase() : '');
 
   const filteredStudents = debouncedQuery.trim() === '' 
     ? [] 
