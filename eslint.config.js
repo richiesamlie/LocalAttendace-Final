@@ -92,18 +92,6 @@ export default [
     },
   },
   {
-    files: [
-      'src/components/TakeAttendance.tsx',
-    ],
-    rules: {
-      'react-hooks/exhaustive-deps': 'off',
-      'react-hooks/set-state-in-effect': 'off',
-      'react-hooks/preserve-manual-memoization': 'off',
-      'no-control-regex': 'off',
-      '@typescript-eslint/no-namespace': 'off',
-    },
-  },
-  {
     files: ['src/routes/middleware.ts'],
     rules: {
       '@typescript-eslint/no-namespace': 'off',

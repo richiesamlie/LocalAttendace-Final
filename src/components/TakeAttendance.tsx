@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore, AttendanceStatus } from '../store';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
@@ -22,10 +22,7 @@ export default function TakeAttendance() {
   const isLoading = useStore((state) => state.isLoading);
   const currentClassId = useStore((state) => state.currentClassId);
   const allRecords = useStore((state) => state.records);
-  const records = useMemo(
-    () => allRecords.filter((r) => r.date === date),
-    [allRecords, date]
-  );
+  const records = allRecords.filter((r) => r.date === date);
   const setRecord = useStore((state) => state.setRecord);
   const markAllPresent = useStore((state) => state.markAllPresent);
   const undoLastAttendance = useStore((state) => state.undoLastAttendance);
@@ -91,18 +88,15 @@ export default function TakeAttendance() {
     markAllPresent(date);
   };
 
-  const filteredStudents = useMemo(() =>
-    students
-      .filter(student =>
-        !student.isArchived &&
-        (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-      .sort((a, b) =>
-        a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
-      ),
-    [students, searchQuery]
-  );
+  const filteredStudents = students
+    .filter(student =>
+      !student.isArchived &&
+      (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) =>
+      a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
