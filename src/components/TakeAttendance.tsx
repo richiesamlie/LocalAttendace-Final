@@ -5,8 +5,13 @@ import { cn } from '../utils/cn';
 import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download, Undo2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
-import { generateAttendanceTemplate, importAttendanceFromExcel } from '../utils/excel';
 import { AttendanceGridSkeleton } from './Skeleton';
+
+let excelUtilsPromise: Promise<typeof import('../utils/excel')> | null = null;
+const getExcelUtils = () => {
+  if (!excelUtilsPromise) excelUtilsPromise = import('../utils/excel');
+  return excelUtilsPromise;
+};
 
 export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
@@ -42,6 +47,7 @@ export default function TakeAttendance() {
 
     setIsImporting(true);
     try {
+      const { importAttendanceFromExcel } = await getExcelUtils();
       const importedRecords = await importAttendanceFromExcel(file, currentClassId, students);
       if (importedRecords.length === 0) {
         toast.error('No valid attendance records found in file.');
@@ -135,7 +141,10 @@ export default function TakeAttendance() {
             </button>
           </div>
           <button
-            onClick={generateAttendanceTemplate}
+            onClick={async () => {
+              const { generateAttendanceTemplate } = await getExcelUtils();
+              generateAttendanceTemplate();
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <Download className="w-4 h-4" />
