@@ -152,6 +152,7 @@ export default function Timetable() {
       {/* Add/Edit Form */}
       {(isAdding || editingId) && (
         <SlotForm
+          key={editingId ? `edit-${editingId}` : `add-${selectedDay}`}
           mode={editingId ? 'edit' : 'add'}
           editingSlot={editingSlot}
           selectedDay={selectedDay}

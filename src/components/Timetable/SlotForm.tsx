@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { TimetableSlot } from '../../store';
 import { DAYS } from './timetableUtils';
@@ -13,26 +13,26 @@ interface SlotFormProps {
   onCancel: () => void;
 }
 
-export default function SlotForm({ mode, editingSlot, selectedDay, onSave, onCancel }: SlotFormProps) {
-  const [formData, setFormData] = useState({
+const getInitialFormData = (mode: 'add' | 'edit', editingSlot?: TimetableSlot | null) => {
+  if (mode === 'edit' && editingSlot) {
+    return {
+      startTime: editingSlot.startTime,
+      endTime: editingSlot.endTime,
+      subject: editingSlot.subject,
+      lesson: editingSlot.lesson,
+    };
+  }
+
+  return {
     startTime: '08:00',
     endTime: '09:00',
     subject: '',
     lesson: '',
-  });
+  };
+};
 
-  useEffect(() => {
-    if (mode === 'edit' && editingSlot) {
-      setFormData({
-        startTime: editingSlot.startTime,
-        endTime: editingSlot.endTime,
-        subject: editingSlot.subject,
-        lesson: editingSlot.lesson,
-      });
-    } else {
-      setFormData({ startTime: '08:00', endTime: '09:00', subject: '', lesson: '' });
-    }
-  }, [mode, editingSlot]);
+export default function SlotForm({ mode, editingSlot, selectedDay, onSave, onCancel }: SlotFormProps) {
+  const [formData, setFormData] = useState(() => getInitialFormData(mode, editingSlot));
 
   const handleSave = () => {
     if (!formData.subject.trim() || !formData.startTime || !formData.endTime) return;

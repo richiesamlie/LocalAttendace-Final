@@ -94,7 +94,6 @@ export default [
   {
     files: [
       'src/components/TakeAttendance.tsx',
-      'src/components/Timetable/SlotForm.tsx',
     ],
     rules: {
       'react-hooks/exhaustive-deps': 'off',
