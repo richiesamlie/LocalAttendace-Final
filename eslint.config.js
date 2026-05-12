@@ -93,15 +93,6 @@ export default [
   },
   {
     files: [
-      'src/components/Settings.tsx',
-      'src/components/Sidebar.tsx',
-    ],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
-    },
-  },
-  {
-    files: [
       'src/components/ExamTimer.tsx',
       'src/components/Roster.tsx',
       'src/components/TakeAttendance.tsx',

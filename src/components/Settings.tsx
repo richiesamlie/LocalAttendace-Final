@@ -30,10 +30,11 @@ export default function Settings() {
       setImportStatus('success');
       setTimeout(() => window.location.reload(), 1500);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Import failed:', error);
       setImportStatus('error');
-      setErrorMessage(error.message || 'Failed to import backup file.');
+      const message = error instanceof Error ? error.message : 'Failed to import backup file.';
+      setErrorMessage(message);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }

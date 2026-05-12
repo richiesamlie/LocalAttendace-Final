@@ -203,7 +203,7 @@ interface SidebarProps {
   isMobileMenuOpen: boolean;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
-  logoutMutation: any;
+  logoutMutation: { mutate: () => void };
 }
 
 export default function Sidebar({
@@ -418,14 +418,14 @@ export default function Sidebar({
                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
                   Admin
                 </span>
-              ) : useStore.getState().classes.some((c: any) => c.role === 'owner') && (
+              ) : useStore.getState().classes.some((c) => c.role === 'owner') && (
                 <span className="px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">
                   Homeroom
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-              {useStore((state) => state.isAdmin) ? 'Administrator' : useStore.getState().classes.some((c: any) => c.role === 'owner') ? 'Homeroom Teacher' : 'Subject Teacher'}
+              {useStore((state) => state.isAdmin) ? 'Administrator' : useStore.getState().classes.some((c) => c.role === 'owner') ? 'Homeroom Teacher' : 'Subject Teacher'}
             </p>
           </div>
         </div>
