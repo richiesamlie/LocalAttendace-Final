@@ -4,7 +4,7 @@ import path from 'path';
 
 describe('API contract alignment', () => {
   const apiClientPath = path.join(process.cwd(), 'src', 'lib', 'api.ts');
-  const apiReferencePath = path.join(process.cwd(), 'API_REFERENCE.md');
+  const apiReferencePath = path.join(process.cwd(), 'docs', 'api-reference.md');
   const validationPath = path.join(process.cwd(), 'src', 'lib', 'validation.ts');
 
   it('uses /admin/settings endpoints in client API', () => {
