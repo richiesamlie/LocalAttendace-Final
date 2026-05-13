@@ -14,6 +14,13 @@
 
 import { _db } from './connection';
 
+function assertSafeIdentifier(identifier: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier)) {
+    throw new Error(`Unsafe SQL identifier: ${identifier}`);
+  }
+  return `"${identifier}"`;
+}
+
 export interface QueryPlan {
   id: number;
   parent: number;
@@ -251,7 +258,8 @@ export function getTableStats(): Array<{ table: string; rowCount: number }> {
   `).all() as Array<{ name: string }>;
   
   const stats = tables.map(({ name }) => {
-    const result = _db.prepare(`SELECT COUNT(*) as count FROM ${name}`).get() as { count: number };
+    const safeTableName = assertSafeIdentifier(name);
+    const result = _db.prepare(`SELECT COUNT(*) as count FROM ${safeTableName}`).get() as { count: number };
     return {
       table: name,
       rowCount: result.count,
