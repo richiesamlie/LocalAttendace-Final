@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff, Activity, Database, Server } from 'lucide-react';
+import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, ChevronDown, ChevronRight, Wrench, BookOpen, UserCircle, Timer, Plus, Edit2, Trash2, Shield, WifiOff } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
 import { api } from '../lib/api';
@@ -398,26 +398,6 @@ export default function Sidebar({
           onClick={() => navigate('admin')} 
         />
 
-        <NavItem 
-          icon={<Activity className="w-5 h-5" />} 
-          label="Performance" 
-          active={currentPage === 'performance'} 
-          onClick={() => navigate('performance')} 
-        />
-
-        <NavItem 
-          icon={<Database className="w-5 h-5" />} 
-          label="Query Profiler" 
-          active={currentPage === 'profiler'} 
-          onClick={() => navigate('profiler')} 
-        />
-
-        <NavItem 
-          icon={<Server className="w-5 h-5" />} 
-          label="Resources" 
-          active={currentPage === 'resources'} 
-          onClick={() => navigate('resources')} 
-        />
 
         <NavItem 
           icon={<Clock className="w-5 h-5" />} 

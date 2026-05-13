@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, UserPlus, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, UserPlus, AlertTriangle, Activity, Server } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../lib/api';
 import { useMutation } from '@tanstack/react-query';
@@ -12,7 +12,11 @@ type MassiveBackupClass = ClassData;
 type MassiveBackupSemester = { classes?: ClassData[] };
 type MassiveBackupPayload = { metadata?: unknown; data?: Record<string, MassiveBackupSemester> };
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+  navigate: (page: string) => void;
+}
+
+export default function AdminDashboard({ navigate }: AdminDashboardProps) {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [error, setError] = useState('');
@@ -538,6 +542,37 @@ function TeachersTabContent() {
           <Lock className="w-4 h-4" />
           Lock Dashboard
         </button>
+      </div>
+
+      {/* Admin Tools Navigation */}
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <Shield className="w-4 h-4 text-indigo-500" /> Admin Tools
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400">Monitoring tools dipindahkan dari sidebar ke dashboard admin.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button
+            onClick={() => navigate('performance')}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Activity className="w-4 h-4" />
+            Performance
+          </button>
+          <button
+            onClick={() => navigate('profiler')}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors"
+          >
+            <Database className="w-4 h-4" />
+            Query Profiler
+          </button>
+          <button
+            onClick={() => navigate('resources')}
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+          >
+            <Server className="w-4 h-4" />
+            Resources
+          </button>
+        </div>
       </div>
 
       {/* Admin Quick Actions */}

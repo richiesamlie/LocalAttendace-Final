@@ -152,7 +152,7 @@ export default function App() {
       case 'timer': return <ExamTimer />;
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
-      case 'admin': return <AdminDashboard />;
+      case 'admin': return <AdminDashboard navigate={setCurrentPage} />;
       case 'performance': return <PerformanceMonitor />;
       case 'profiler': return <QueryProfiler />;
       case 'resources': return <ResourceMonitor />;
