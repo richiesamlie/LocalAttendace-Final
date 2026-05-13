@@ -68,7 +68,9 @@ jobs:
         run: npm ci
 
       - name: Create .env file
-        run: echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+        run: |
+          echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+          echo "DEFAULT_ADMIN_PASSWORD=ci_test_admin_password" >> .env
 
       - name: Build application
         run: npm run build
@@ -90,7 +92,9 @@ jobs:
         run: npm ci
 
       - name: Create .env file
-        run: echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+        run: |
+          echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+          echo "DEFAULT_ADMIN_PASSWORD=ci_test_admin_password" >> .env
 
       - name: Run tests
         run: npx vitest run
@@ -113,7 +117,9 @@ jobs:
         run: npm ci
 
       - name: Create .env file
-        run: echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+        run: |
+          echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+          echo "DEFAULT_ADMIN_PASSWORD=ci_test_admin_password" >> .env
 
       - name: Run coverage
         run: npm run test:coverage
