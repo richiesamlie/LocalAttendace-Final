@@ -62,7 +62,7 @@ git rebase origin/develop
 # Good
 git commit -m "feat(roster): add student search filter"
 git commit -m "fix(attendance): prevent double-submit on mark all"
-git commit -m "docs: update API_REFERENCE.md with new endpoints"
+git commit -m "docs: update api-reference.md with new endpoints"
 
 # Bad
 git commit -m "fixed stuff"
@@ -345,6 +345,6 @@ Main files requiring review:
 
 ## Questions?
 
-- Check `TROUBLESHOOTING.md` for common issues
-- Check `DEVELOPER_GUIDE.md` for how-tos
-- Check `ARCHITECTURE.md` for system design
+- Check `troubleshooting.md` for common issues
+- Check `developer-guide.md` for how-tos
+- Check `architecture.md` for system design

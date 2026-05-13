@@ -9,7 +9,7 @@ A comprehensive, local-first web application designed to help teachers manage th
 - Login awal: gunakan akun `admin` dengan password dari `DEFAULT_ADMIN_PASSWORD` di file `.env`.
 - Untuk pemakaian sekolah harian: fokus ke Dashboard, Student Roster, Take Attendance, dan Monthly Reports.
 - Import Excel memakai `exceljs` dengan guardrails aktif (batas ukuran file/sheet).
-- Untuk masalah umum, cek `TROUBLESHOOTING.md` dulu sebelum eskalasi.
+- Untuk masalah umum, cek `docs/troubleshooting.md` dulu sebelum eskalasi.
 
 ## Key Features
 
@@ -50,7 +50,7 @@ A comprehensive, local-first web application designed to help teachers manage th
 
 ## 📖 User Guide
 
-For a complete beginner's guide with step-by-step instructions, see the full **[User Guide](USER_GUIDE.md)**.
+For a complete beginner's guide with step-by-step instructions, see the full **[User Guide](docs/user-guide.md)**.
 
 It covers:
 - Installation (Docker & Node.js methods)

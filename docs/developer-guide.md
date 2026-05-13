@@ -204,8 +204,8 @@ export async function createFeature(data: FeatureData) {
 ## State Management
 
 State architecture now lives in the active docs set:
-- High-level flow: `ARCHITECTURE.md`
-- API/state interaction patterns: this file (`DEVELOPER_GUIDE.md`)
+- High-level flow: `architecture.md`
+- API/state interaction patterns: this file (`developer-guide.md`)
 
 Quick reference:
 
@@ -332,7 +332,7 @@ gh pr create --title "feat: description"
 
 ## See Also
 
-- `ARCHITECTURE.md` — System design and data flow
-- `API_REFERENCE.md` — All API endpoints
-- `TROUBLESHOOTING.md` — Common issues and fixes
-- `DOCUMENTATION.md` — Active documentation index
+- `architecture.md` — System design and data flow
+- `api-reference.md` — All API endpoints
+- `troubleshooting.md` — Common issues and fixes
+- `documentation-map.md` — Active documentation index

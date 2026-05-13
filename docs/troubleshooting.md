@@ -230,6 +230,6 @@ curl http://localhost:3000/api/health
 
 ## See Also
 
-- `ARCHITECTURE.md` — System design
-- `DEVELOPER_GUIDE.md` — How to add features
-- `DOCUMENTATION.md` — Active documentation index
+- `architecture.md` — System design
+- `developer-guide.md` — How to add features
+- `documentation-map.md` — Active documentation index

@@ -217,6 +217,6 @@ db.cache.invalidate(`classes:${teacherId}`); // trailing colon for prefix match
 
 ## See Also
 
-- `API_REFERENCE.md` — All API endpoints with types
-- `DEVELOPER_GUIDE.md` — Coding conventions and workflows
-- `DOCUMENTATION.md` — Active documentation index
+- `api-reference.md` — All API endpoints with types
+- `developer-guide.md` — Coding conventions and workflows
+- `documentation-map.md` — Active documentation index

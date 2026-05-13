@@ -9,7 +9,7 @@ Catatan bahasa: Dokumen ini berbahasa Inggris sederhana agar konsisten, dengan i
 - Login awal pakai akun `admin` dengan password dari `DEFAULT_ADMIN_PASSWORD` di `.env`.
 - Alur harian yang direkomendasikan: Student Roster -> Take Attendance -> Monthly Reports.
 - Untuk restore data, selalu backup dulu sebelum upload file `.sqlite`.
-- Jika ada error, mulai dari section Troubleshooting di dokumen ini atau `TROUBLESHOOTING.md`.
+- Jika ada error, mulai dari section Troubleshooting di dokumen ini atau `troubleshooting.md`.
 
 ---
 
