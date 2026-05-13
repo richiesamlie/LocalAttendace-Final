@@ -60,14 +60,14 @@ jobs:
       - name: Build Docker image
         run: docker build -t teacher-assistant:${{ github.sha }} .
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (blocking on HIGH/CRITICAL)
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           image-ref: 'teacher-assistant:${{ github.sha }}'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          exit-code: '1'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
