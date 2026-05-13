@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 
+process.env.DEFAULT_ADMIN_PASSWORD ??= 'test-default-admin-password';
+
 vi.mock('../../server', () => ({
   io: {
     to: () => ({ emit: () => undefined }),
