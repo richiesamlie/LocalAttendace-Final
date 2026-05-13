@@ -124,6 +124,8 @@ jobs:
           echo "DEFAULT_ADMIN_PASSWORD=ci_test_admin_password" >> .env
 
       - name: Run coverage
+        env:
+          DEFAULT_ADMIN_PASSWORD: ci_test_admin_password
         run: npm run test:coverage
 
       - name: Upload coverage artifact
