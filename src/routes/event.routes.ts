@@ -1,6 +1,6 @@
 import express from 'express';
 import { eventService } from '../../services';
-import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, eventSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 import type { CalendarEvent } from '../../src/types/db';
@@ -37,7 +37,7 @@ eventRouter.post('/classes/:classId/events', requireClassAccess('classId'), post
   return;
 }));
 
-eventRouter.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
+eventRouter.put('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const eventId = req.params.id;
   const { date, title, type, description } = req.body;
@@ -53,7 +53,7 @@ eventRouter.put('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
   return;
 }));
 
-eventRouter.delete('/events/:id', postLimiter, withWriteQueue(async (req, res) => {
+eventRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const eventId = req.params.id;
 

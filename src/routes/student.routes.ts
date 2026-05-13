@@ -1,6 +1,6 @@
 import express from 'express';
 import { studentService } from '../../services';
-import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, studentSchema, studentUpdateSchema, studentSyncPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 
@@ -54,7 +54,7 @@ studentRouter.post('/:classId/students', requireClassAccess('classId'), postLimi
   io?.to(classId).emit('students_updated');
 }));
 
-studentRouter.put('/:id', postLimiter, validate(studentUpdateSchema), withWriteQueue(async (req, res) => {
+studentRouter.put('/:id', requireAuth, postLimiter, validate(studentUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const studentId = req.params.id;
 
@@ -79,7 +79,7 @@ studentRouter.put('/:id', postLimiter, validate(studentUpdateSchema), withWriteQ
   return;
 }));
 
-studentRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
+studentRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const studentId = req.params.id;
 

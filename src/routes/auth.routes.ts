@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { teacherService, sessionService } from '../../services';
 import { randomUUID } from 'crypto';
 import { validate, loginSchema } from '../../src/lib/validation';
-import { authLimiter, JWT_SECRET, getTeacherId, requireAuth } from './middleware';
+import { authLimiter, JWT_SECRET, requireAuth } from './middleware';
 import type { Teacher } from '../../src/types/db';
 
 export const authRouter = express.Router();
@@ -64,9 +64,8 @@ authRouter.post('/logout', async (req, res) => {
   return res.json({ success: true });
 });
 
-authRouter.get('/verify', async (req, res) => {
-  const teacherId = getTeacherId(req);
-  if (!teacherId) return res.status(401).json({ authenticated: false });
+authRouter.get('/verify', requireAuth, async (req, res) => {
+  const teacherId = req.teacherId;
   const teacher = await teacherService.getById(teacherId);
   if (!teacher) return res.status(401).json({ authenticated: false });
   return res.json({ authenticated: true, teacherId, name: teacher.name, isAdmin: !!teacher.is_admin });

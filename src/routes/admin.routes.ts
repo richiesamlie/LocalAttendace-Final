@@ -98,9 +98,31 @@ adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<voi
     if (fs.existsSync(dbPath)) {
       fs.copyFileSync(dbPath, preRestorePath);
     }
+    const maxRestoreBytes = 25 * 1024 * 1024;
+    const contentType = String(req.headers['content-type'] || '').toLowerCase();
+    if (!contentType.includes('application/octet-stream')) {
+      res.status(415).json({ error: 'Unsupported content type. Use application/octet-stream' });
+      return;
+    }
+
     const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    let totalBytes = 0;
+    req.on('data', (chunk: Buffer) => {
+      totalBytes += chunk.length;
+      if (totalBytes > maxRestoreBytes) {
+        res.status(413).json({ error: 'Backup file too large. Maximum 25MB' });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('error', () => {
+      if (!res.headersSent) {
+        res.status(400).json({ error: 'Failed to read restore payload' });
+      }
+    });
     req.on('end', () => {
+      if (res.headersSent) return;
       const fileBuffer = Buffer.concat(chunks);
       if (fileBuffer.length < 100 || fileBuffer.toString('utf8', 0, 15) !== 'SQLite format 3') {
         res.status(400).json({ error: 'Invalid SQLite database file' });
@@ -189,9 +211,14 @@ adminRouter.post('/profiling/query', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'SQL query is required' });
     }
 
-    const result = profileQuery(sql);
+    const trimmed = sql.trim();
+    if (!/^select\b/i.test(trimmed) || trimmed.includes(';')) {
+      return res.status(400).json({ error: 'Only single SELECT statements are allowed' });
+    }
+
+    const result = profileQuery(trimmed);
     const score = getOptimizationScore(result);
-    
+
     return res.json({ ...result, score });
   } catch (error) {
     console.error('Error profiling query:', error);
