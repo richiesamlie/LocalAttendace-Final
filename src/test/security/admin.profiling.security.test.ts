@@ -20,7 +20,7 @@ describe('Admin profiling endpoint security', () => {
   const app = createTestApp();
 
   async function adminCookie(): Promise<string> {
-    const admin = await teacherService.getByUsername('admin');
+    const admin = await teacherService.getByUsername('admin') as { id: string; username: string } | undefined;
     if (!admin) throw new Error('admin user not found in test database');
 
     const sessionId = `sess-${randomUUID()}`;

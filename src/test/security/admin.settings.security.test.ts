@@ -19,7 +19,7 @@ describe('Admin settings endpoint security', () => {
   const app = createTestApp();
 
   async function mintAdminCookie(): Promise<string> {
-    const admin = await teacherService.getByUsername('admin');
+    const admin = await teacherService.getByUsername('admin') as { id: string; username: string } | undefined;
     if (!admin) throw new Error('admin user not found');
 
     const token = jwt.sign({ teacherId: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: '1h' });

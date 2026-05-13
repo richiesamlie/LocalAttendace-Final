@@ -20,7 +20,7 @@ describe('Auth/session abuse scenarios', () => {
   const app = createTestApp();
 
   async function mintCookie(opts?: { expiresAt?: string; revoked?: boolean }): Promise<string> {
-    const admin = await teacherService.getByUsername('admin');
+    const admin = await teacherService.getByUsername('admin') as { id: string; username: string } | undefined;
     if (!admin) throw new Error('admin user not found');
 
     const sessionId = `sess-${randomUUID()}`;
