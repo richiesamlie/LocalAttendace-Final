@@ -97,6 +97,8 @@ jobs:
           echo "DEFAULT_ADMIN_PASSWORD=ci_test_admin_password" >> .env
 
       - name: Run tests
+        env:
+          DEFAULT_ADMIN_PASSWORD: ci_test_admin_password
         run: npx vitest run
 
   coverage:
