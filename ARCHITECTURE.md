@@ -126,7 +126,7 @@ Key patterns:
 1. **JWT cookie-only auth** — No Authorization header bypass
 2. **Session tracking** — Session revocation checked on every request
 3. **RBAC** — Global admin vs class-level roles (owner/teacher/assistant)
-4. **Rate limiting** — 5 login/15min, 100 POST/15min
+4. **Rate limiting** — 150 login attempts/15min, 500 POST/15min (test env bypassed)
 5. **Helmet** — Security headers (CSP, XSS, clickjacking)
 6. **SQL injection** — Prepared statements prevent injection
 7. **Input sanitization** — `safeString()` strips null bytes + trims whitespace
