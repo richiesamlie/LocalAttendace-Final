@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = process.cwd();
+const root = globalThis.process.cwd();
 const targets = [path.join(root, 'README.md'), path.join(root, 'docs')];
 
 const mdFiles = [];
@@ -56,11 +56,11 @@ for (const file of mdFiles) {
 }
 
 if (missing.length > 0) {
-  console.error(`❌ Doc link check failed: ${missing.length} broken links`);
+  globalThis.console.error(`❌ Doc link check failed: ${missing.length} broken links`);
   for (const item of missing) {
-    console.error(`- ${item.file}: (${item.link}) -> ${item.resolved}`);
+    globalThis.console.error(`- ${item.file}: (${item.link}) -> ${item.resolved}`);
   }
-  process.exit(1);
+  globalThis.process.exit(1);
 }
 
-console.log(`✅ Doc link check passed: ${checked} local links across ${mdFiles.length} markdown files`);
+globalThis.console.log(`✅ Doc link check passed: ${checked} local links across ${mdFiles.length} markdown files`);
