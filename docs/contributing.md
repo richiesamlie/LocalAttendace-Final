@@ -1,7 +1,17 @@
 # Contributing — Teacher Assistant
 
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-05-13
 **Branch:** `develop`
+
+---
+
+## Documentation Governance
+
+- Semua dokumentasi proyek harus berada di folder `docs/` (kecuali `README.md` di root).
+- Saat ada perubahan API, wajib update `docs/api-reference.md` di commit yang sama.
+- Saat ada perubahan arsitektur/security/performance, wajib update `docs/architecture.md` di commit yang sama.
+- Saat ada perubahan alur developer/user, wajib update `docs/developer-guide.md` atau `docs/user-guide.md` sesuai konteks.
+- Sebelum merge, pastikan checklist quality gate di `docs/index.md` sudah direview.
 
 ---
 
