@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated:** 2026-05-11  
+**Last Updated:** 2026-05-13  
 **Purpose:** Single source index for active project documentation only.
 **Bahasa / Language:** English as canonical text, with concise Indonesian guidance for key operational notes.
 
@@ -17,6 +17,9 @@
 | [architecture.md](architecture.md) | System architecture, backend/frontend data flow, security model | Developers |
 | [api-reference.md](api-reference.md) | API endpoint contracts and validation schemas | Developers |
 | [contributing.md](contributing.md) | Branching, commits, PR process, contribution standards | Contributors |
+| [dependency-governance.md](dependency-governance.md) | Dependency update cadence, validation, and rollback strategy | Maintainers |
+| [release-notes-template.md](release-notes-template.md) | Standard release note template for promote `develop` -> `main` | Maintainers |
+| [repository-artifact-policy.md](repository-artifact-policy.md) | Source vs runtime artifact boundaries for clean commits | Contributors |
 
 ---
 

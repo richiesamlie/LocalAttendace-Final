@@ -5,6 +5,10 @@ import path from 'path';
 describe('API contract alignment', () => {
   const apiClientPath = path.join(process.cwd(), 'src', 'lib', 'api.ts');
   const apiReferencePath = path.join(process.cwd(), 'docs', 'api-reference.md');
+  const architecturePath = path.join(process.cwd(), 'docs', 'architecture.md');
+  const developerGuidePath = path.join(process.cwd(), 'docs', 'developer-guide.md');
+  const docsIndexPath = path.join(process.cwd(), 'docs', 'index.md');
+  const readmePath = path.join(process.cwd(), 'README.md');
   const validationPath = path.join(process.cwd(), 'src', 'lib', 'validation.ts');
 
   it('uses /admin/settings endpoints in client API', () => {
@@ -76,5 +80,20 @@ describe('API contract alignment', () => {
     const content = readFileSync(apiReferencePath, 'utf-8');
     expect(content).not.toContain('"expiresIn"');
     expect(content).toContain('expiresInHours');
+  });
+
+  it('keeps core documentation paths aligned under docs/', () => {
+    expect(() => readFileSync(apiReferencePath, 'utf-8')).not.toThrow();
+    expect(() => readFileSync(architecturePath, 'utf-8')).not.toThrow();
+    expect(() => readFileSync(developerGuidePath, 'utf-8')).not.toThrow();
+
+    const docsIndexContent = readFileSync(docsIndexPath, 'utf-8');
+    expect(docsIndexContent).toContain('[API Reference](api-reference.md)');
+    expect(docsIndexContent).toContain('[Architecture](architecture.md)');
+    expect(docsIndexContent).toContain('[Developer Guide](developer-guide.md)');
+
+    const readmeContent = readFileSync(readmePath, 'utf-8');
+    expect(readmeContent).toContain('docs/user-guide.md');
+    expect(readmeContent).toContain('docs/troubleshooting.md');
   });
 });

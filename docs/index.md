@@ -10,6 +10,9 @@ Dokumentasi proyek dipusatkan di folder `docs/`.
 - [Architecture](architecture.md)
 - [API Reference](api-reference.md)
 - [Contributing](contributing.md)
+- [Dependency Governance](dependency-governance.md)
+- [Release Notes Template](release-notes-template.md)
+- [Repository Artifact Policy](repository-artifact-policy.md)
 - [Documentation Map](documentation-map.md)
 
 ## Documentation Quality Gate Checklist
