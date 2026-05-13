@@ -21,6 +21,9 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
+# Upgrade npm to include latest security fixes in bundled npm dependencies
+RUN npm install -g npm@11.14.1
+
 # Copy package files and install production dependencies only
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
