@@ -14,3 +14,4 @@ test-results/
 *.zip
 backups/
 server-error.log
+spikes/
