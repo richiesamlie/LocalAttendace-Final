@@ -9,7 +9,7 @@ import { parseTime } from './Timetable/timetableUtils';
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [userRole, setUserRole] = useState('teacher');
+  const [resolvedRole, setResolvedRole] = useState<{ key: string; role: string } | null>(null);
   const updateTimetableSlot = useStore((state) => state.updateTimetableSlot);
   const currentClassId = useStore((state) => state.currentClassId);
   const currentClass = useStore((state) => state.classes.find(c => c.id === state.currentClassId));
@@ -21,23 +21,37 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (isAdmin) {
-      setUserRole('administrator');
-      return;
-    }
+  const roleLookupKey = currentClassId && teacherId ? `${currentClassId}:${teacherId}` : '';
 
-    if (currentClassId && teacherId) {
-      import('../lib/api').then(({ api }) => {
-        api.getClassTeachers(currentClassId).then(teachers => {
-          const me = teachers.find(t => t.teacher_id === teacherId);
-          setUserRole(me?.role || 'teacher');
-        }).catch(() => setUserRole('teacher'));
+  useEffect(() => {
+    if (!roleLookupKey || isAdmin) return;
+
+    const classId = currentClassId;
+    if (!classId) return;
+
+    let cancelled = false;
+    import('../lib/api').then(({ api }) => {
+      api.getClassTeachers(classId).then(teachers => {
+        if (cancelled) return;
+        const me = teachers.find(t => t.teacher_id === teacherId);
+        setResolvedRole({ key: roleLookupKey, role: me?.role || 'teacher' });
+      }).catch(() => {
+        if (cancelled) return;
+        setResolvedRole({ key: roleLookupKey, role: 'teacher' });
       });
-    } else {
-      setUserRole('teacher');
-    }
-  }, [currentClassId, teacherId, isAdmin]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roleLookupKey, currentClassId, teacherId, isAdmin]);
+
+  const userRole = useMemo(() => {
+    if (isAdmin) return 'administrator';
+    if (!roleLookupKey) return 'teacher';
+    if (resolvedRole?.key === roleLookupKey) return resolvedRole.role;
+    return 'teacher';
+  }, [isAdmin, roleLookupKey, resolvedRole]);
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
   const currentDayOfWeek = currentTime.getDay();
