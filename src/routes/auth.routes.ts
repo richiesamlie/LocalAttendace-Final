@@ -2,8 +2,9 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { teacherService, sessionService } from '../../services';
-import { requireAuth, getTeacherId, JWT_SECRET, authLimiter } from './middleware';
+import { randomUUID } from 'crypto';
 import { validate, loginSchema } from '../../src/lib/validation';
+import { authLimiter, JWT_SECRET, getTeacherId, requireAuth } from './middleware';
 import type { Teacher } from '../../src/types/db';
 
 export const authRouter = express.Router();
@@ -25,7 +26,7 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  const sessionId = `sess-${crypto.randomUUID()}`;
+  const sessionId = `sess-${randomUUID()}`;
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
     await teacherService.updateLastLogin(teacher.id);
@@ -46,7 +47,19 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
   return res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
 });
 
-authRouter.post('/logout', (_req, res) => {
+authRouter.post('/logout', async (req, res) => {
+  const token = req.cookies?.auth_token;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { sessionId?: string };
+      if (decoded.sessionId) {
+        await sessionService.revoke(decoded.sessionId);
+      }
+    } catch {
+      // Ignore invalid/expired token on logout and continue clearing cookie.
+    }
+  }
+
   res.clearCookie('auth_token');
   return res.json({ success: true });
 });

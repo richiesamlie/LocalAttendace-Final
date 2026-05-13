@@ -13,7 +13,13 @@ import { resourceMonitor } from '../middleware/resourceMonitor';
 
 export const adminRouter = express.Router();
 
-adminRouter.get('/settings', requireAuth, async (_req, res) => {
+adminRouter.get('/settings', requireAuth, async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can access settings' });
+  }
+
   try {
     const settings = await settingService.getAll() as SettingRow[];
     const response: Record<string, string> = {};
@@ -28,15 +34,15 @@ adminRouter.get('/settings', requireAuth, async (_req, res) => {
   }
 });
 
-adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
+adminRouter.post('/settings', requireAuth, postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
+  const callerId = req.teacherId;
+  const caller = callerId ? await teacherService.getById(callerId) : null;
+  if (!caller || !(caller as Teacher).is_admin) {
+    return res.status(403).json({ error: 'Only administrators can change settings' });
+  }
+
   const { key, value } = req.body;
   if (key === 'adminPassword') {
-    const callerId = req.teacherId;
-    const caller = callerId ? await teacherService.getById(callerId) : null;
-    if (!caller || !(caller as Teacher).is_admin) {
-      return res.status(403).json({ error: 'Only administrators can change the admin password' });
-    }
-
     if (value.length < 4) {
       return res.status(400).json({ error: 'Password must be at least 4 characters' });
     }
