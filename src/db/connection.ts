@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-export const DB_FILE = path.join(process.cwd(), 'database.sqlite');
+export const DB_FILE = process.env.DB_FILE || path.join(process.cwd(), 'database.sqlite');
 
 export const DEFAULTS = {
   TEACHER_ID: 'teacher_default',

@@ -35,7 +35,7 @@ Logout current user, revoke active server-side session (when token valid), then 
 ---
 
 ### GET /auth/verify
-Check authentication status.
+Check authentication status. Requires a valid auth cookie/session.
 
 **Response (200):**
 ```json
@@ -571,9 +571,34 @@ Download database backup.
 ### POST /admin/database/restore
 Restore from backup.
 
-**Request:** Multipart form with `.sqlite` file
+**Request:** raw SQLite bytes (`Content-Type: application/octet-stream`)
+
+**Limits:** max payload 25MB
 
 **Response:** `{ "success": true }`
+
+**Errors:**
+- `415` unsupported content type
+- `413` backup too large
+- `400` invalid SQLite payload
+
+---
+
+### POST /admin/profiling/query
+Profile a SQL statement. Requires authentication and administrator role.
+
+**Restriction:** only a single `SELECT` statement is allowed (no semicolons).
+
+**Request:**
+```json
+{ "sql": "SELECT * FROM teachers LIMIT 10" }
+```
+
+**Response (200):** profile details plus optimization score.
+
+**Errors:**
+- `400` missing/invalid SQL
+- `400` non-SELECT or multi-statement SQL
 
 ---
 

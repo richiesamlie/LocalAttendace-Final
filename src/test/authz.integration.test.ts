@@ -16,13 +16,22 @@ describe('AuthZ Integration - unauthenticated requests', () => {
   const app = createTestApp();
 
   const cases: Array<{ method: 'get' | 'post' | 'put' | 'delete'; path: string; body?: unknown }> = [
+    { method: 'get', path: '/api/auth/verify' },
     { method: 'get', path: '/api/admin/settings' },
     { method: 'post', path: '/api/admin/settings', body: { key: 'siteName', value: 'x' } },
+    { method: 'post', path: '/api/admin/profiling/query', body: { sql: 'SELECT 1' } },
+    { method: 'post', path: '/api/admin/database/restore', body: 'not-a-sqlite' },
     { method: 'post', path: '/api/classes', body: { id: 'CLS-1', name: 'Class 1' } },
     { method: 'put', path: '/api/classes/CLS-1', body: { name: 'Class 1 Updated' } },
     { method: 'delete', path: '/api/classes/CLS-1' },
     { method: 'post', path: '/api/classes/CLS-1/teachers', body: { teacherId: 'teacher-1' } },
     { method: 'delete', path: '/api/classes/CLS-1/teachers/teacher-1' },
+    { method: 'put', path: '/api/students/student-1', body: { name: 'X' } },
+    { method: 'delete', path: '/api/students/student-1' },
+    { method: 'put', path: '/api/events/event-1', body: { title: 'X' } },
+    { method: 'delete', path: '/api/events/event-1' },
+    { method: 'put', path: '/api/timetable/slot-1', body: { subject: 'X' } },
+    { method: 'delete', path: '/api/timetable/slot-1' },
     { method: 'post', path: '/api/sessions/revoke', body: { sessionId: 'all' } },
   ];
 

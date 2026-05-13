@@ -262,7 +262,12 @@ npm run docker:build   # Rebuild image
 ## Database Options
 
 ### SQLite (Default)
-Uses local file `database.sqlite`. No configuration needed.
+Uses local file `database.sqlite` by default.
+
+Optional override with environment variable:
+- `DB_FILE=/absolute/path/to/database.sqlite`
+
+Docker images set `DB_FILE=/app/data/database.sqlite` to persist SQLite data on the mounted volume.
 
 ### PostgreSQL (Optional)
 For production or multi-user setups:
