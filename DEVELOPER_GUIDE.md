@@ -229,6 +229,7 @@ Quick reference:
 npm run vitest run     # Run tests
 npm run vitest --ui    # With UI
 npx vitest run src/test/validation.test.ts  # Specific file
+npx vitest run src/test/authz.integration.test.ts  # AuthZ guard regression tests
 ```
 
 ### E2E Tests (Playwright)

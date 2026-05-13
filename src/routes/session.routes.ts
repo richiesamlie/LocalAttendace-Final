@@ -17,7 +17,7 @@ sessionRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-sessionRouter.post('/revoke', postLimiter, validate(sessionRevokeSchema), withWriteQueue(async (req, res) => {
+sessionRouter.post('/revoke', requireAuth, postLimiter, validate(sessionRevokeSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { sessionId } = req.body;
 

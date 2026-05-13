@@ -1,6 +1,6 @@
 # API Reference — Teacher Assistant
 
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-05-13
 **Branch:** `develop`
 
 Base URL: `/api`
@@ -28,7 +28,7 @@ Sets `auth_token` cookie (httpOnly).
 ---
 
 ### POST /auth/logout
-Clear auth cookie.
+Logout current user, revoke active server-side session (when token valid), then clear auth cookie.
 
 **Response:** `{ "success": true }`
 
@@ -87,7 +87,7 @@ List classes for current teacher.
 ---
 
 ### POST /classes
-Create a new class.
+Create a new class. Requires authentication.
 
 **Request:**
 ```json
@@ -99,7 +99,7 @@ Create a new class.
 ---
 
 ### PUT /classes/:id
-Update class name.
+Update class name. Requires authentication.
 
 **Request:**
 ```json
@@ -111,7 +111,7 @@ Update class name.
 ---
 
 ### DELETE /classes/:id
-Delete a class.
+Delete a class. Requires authentication.
 
 **Response (200):** `{ "success": true }`
 
@@ -132,7 +132,7 @@ List teachers in a class.
 ---
 
 ### POST /classes/:classId/teachers
-Add teacher to class.
+Add teacher to class. Requires authentication.
 
 **Request:**
 ```json
@@ -144,7 +144,7 @@ Add teacher to class.
 ---
 
 ### DELETE /classes/:classId/teachers/:teacherId
-Remove teacher from class.
+Remove teacher from class. Requires authentication.
 
 **Response (200):** `{ "success": true }`
 
@@ -499,7 +499,7 @@ List active sessions.
 ---
 
 ### POST /sessions/revoke
-Revoke a session.
+Revoke a session. Requires authentication.
 
 **Request:**
 ```json
@@ -539,7 +539,7 @@ List all teachers.
 ## Admin
 
 ### GET /admin/settings
-Get all settings.
+Get all settings. Requires authentication and administrator role.
 
 **Response (200):**
 ```json
@@ -550,7 +550,7 @@ Get all settings.
 ---
 
 ### POST /admin/settings
-Update a setting.
+Update a setting. Requires authentication and administrator role.
 
 **Request:**
 ```json

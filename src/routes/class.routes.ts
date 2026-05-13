@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'crypto';
 import { classService, teacherService, inviteService } from '../../services';
 import { requireAuth, requireClassAccess, requireClassOwner, requireRole, withWriteQueue, postLimiter } from './middleware';
 import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classTeacherRoleUpdateSchema, classInviteCreateSchema } from '../../src/lib/validation';
@@ -30,7 +31,7 @@ classRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-classRouter.post('/', postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/', requireAuth, postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
@@ -46,7 +47,7 @@ classRouter.post('/', postLimiter, validate(classSchema), withWriteQueue(async (
   return res.json({ id, teacher_id: teacherId, name });
 }));
 
-classRouter.put('/:id', postLimiter, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
+classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { name } = req.body;
 
@@ -68,7 +69,7 @@ classRouter.put('/:id', postLimiter, validate(classUpdateSchema), withWriteQueue
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:id', postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
@@ -92,7 +93,7 @@ classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req,
   }
 });
 
-classRouter.post('/:classId/teachers', postLimiter, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
 
@@ -120,7 +121,7 @@ classRouter.post('/:classId/teachers', postLimiter, validate(classTeacherAddSche
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:classId/teachers/:teacherId', postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:classId/teachers/:teacherId', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
@@ -171,7 +172,7 @@ classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLim
   const expiryHours = Math.min(Math.max(Number(expiresInHours) || 48, 1), 720);
   const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000).toISOString();
 
-  const code = `inv-${crypto.randomUUID().slice(0, 12)}`;
+  const code = `inv-${randomUUID().slice(0, 12)}`;
   await inviteService.insert(code, classId, inviteRole, teacherId, expiresAt);
 
   const inviteUrl = `${req.protocol}://${req.get('host')}/invite/${code}`;
