@@ -41,15 +41,17 @@
   - N/A
 
 ## Validation Evidence
-- [ ] `npm run lint` pass
-- [ ] `npm run lint:eslint` pass
-- [x] `npm run test -- src/test/api.contract.test.ts` pass
+- [x] `npm run lint` pass
+- [x] `npm run lint:eslint` pass
+- [x] `npm test` pass
 - [ ] CI pass
-- [ ] Security Scan pass
+- [x] Security Scan pass (`npm audit --omit=dev --audit-level=high`)
 
-Detail test yang sudah dieksekusi lokal:
-- `npm run -s test -- src/test/api.contract.test.ts src/test/authz.integration.test.ts`
-- Hasil: 23 passed, 0 failed.
+Detail verifikasi lokal (2026-05-15):
+- `npm run lint` → pass
+- `npm run lint:eslint` → pass
+- `npm test` → 20 files passed, 317 tests passed, 0 failed
+- `npm audit --omit=dev --audit-level=high` → found 0 vulnerabilities
 
 ## Rollback Plan
 - Revert commit utama jika issue kritikal muncul:
