@@ -60,23 +60,25 @@ export default function TakeAttendance() {
     }
   };
 
-  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+  const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
     const existing = records.find(r => r.studentId === studentId);
-    setRecord({
+    await setRecord({
       studentId,
       date,
       status,
       reason: existing?.reason || '',
     });
+    toast.success('Attendance saved', { id: 'attendance-save' });
   };
 
-  const handleReasonChange = (studentId: string, reason: string) => {
+  const handleReasonChange = async (studentId: string, reason: string) => {
     const existing = records.find(r => r.studentId === studentId);
     if (existing) {
-      setRecord({
+      await setRecord({
         ...existing,
         reason,
       });
+      toast.success('Reason saved', { id: 'attendance-save' });
     }
   };
 
@@ -98,6 +100,10 @@ export default function TakeAttendance() {
     .sort((a, b) =>
       a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
     );
+
+  const unmarkedCount = filteredStudents.filter(
+    (student) => !records.some((r) => r.studentId === student.id)
+  ).length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -199,6 +205,12 @@ export default function TakeAttendance() {
         </button>
       </div>
 
+      {unmarkedCount > 0 && (
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          {unmarkedCount} student{unmarkedCount > 1 ? 's are' : ' is'} not marked yet for this date.
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="border-b border-slate-100 dark:border-slate-800">
           <button
@@ -273,8 +285,18 @@ export default function TakeAttendance() {
                 const record = records.find(r => r.studentId === student.id);
                 const status = record?.status;
 
+                const isUnmarked = !status;
+
                 return (
-                  <tr key={`${date}-${student.id}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr
+                    key={`${date}-${student.id}`}
+                    className={cn(
+                      "transition-colors",
+                      isUnmarked
+                        ? "bg-rose-50/60 dark:bg-rose-900/10 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                        : "hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+                    )}
+                  >
                     <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{student.name}</td>
                     <td className="px-6 py-4">
