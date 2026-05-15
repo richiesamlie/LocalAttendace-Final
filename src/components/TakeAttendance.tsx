@@ -12,6 +12,7 @@ export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
+  const [showUnmarkedOnly, setShowUnmarkedOnly] = useState(false);
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +106,10 @@ export default function TakeAttendance() {
     (student) => !records.some((r) => r.studentId === student.id)
   ).length;
 
+  const visibleStudents = showUnmarkedOnly
+    ? filteredStudents.filter((student) => !records.some((r) => r.studentId === student.id))
+    : filteredStudents;
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -161,6 +166,17 @@ export default function TakeAttendance() {
               aria-label="Select date"
             />
           )}
+          <button
+            onClick={() => setShowUnmarkedOnly((prev) => !prev)}
+            className={cn(
+              "px-4 py-2 rounded-xl border font-medium transition-colors",
+              showUnmarkedOnly
+                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            )}
+          >
+            {showUnmarkedOnly ? 'Show All' : 'Belum Ditandai'}
+          </button>
           <button
             onClick={markAllPresentHandler}
             className="px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors"
@@ -275,13 +291,17 @@ export default function TakeAttendance() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredStudents.length === 0 ? (
+              ) : visibleStudents.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    {searchQuery ? 'No students match your search' : 'No students in this class'}
+                    {searchQuery
+                      ? 'No students match your search'
+                      : showUnmarkedOnly
+                        ? 'Semua siswa sudah ditandai untuk tanggal ini'
+                        : 'No students in this class'}
                   </td>
                 </tr>
-              ) : filteredStudents.map((student) => {
+              ) : visibleStudents.map((student) => {
                 const record = records.find(r => r.studentId === student.id);
                 const status = record?.status;
 
