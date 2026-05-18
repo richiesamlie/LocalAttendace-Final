@@ -6,11 +6,17 @@
 # Change to script directory
 cd "$(dirname "$0")"
 
-# Check if node_modules exists, install if not
-if [ ! -d "node_modules" ]; then
-    echo "Installing dependencies..."
-    npm install
+# Ensure Bun is installed and install dependencies
+if ! command -v bun >/dev/null 2>&1; then
+    echo ""
+    echo "ERROR: Bun is not installed or not in PATH."
+    echo "Install Bun first: https://bun.sh/"
+    echo ""
+    exit 1
 fi
+
+echo "Installing dependencies with Bun..."
+bun install --frozen-lockfile
 
 # Check if .env file exists - required before the server can start
 if [ ! -f ".env" ]; then
@@ -61,14 +67,14 @@ for arg in "$@"; do
     fi
 done
 
-# Start the Node.js server
+# Start the app server
 if [ "$MODE" == "debug" ]; then
     echo "Starting Teacher Assistant Server in Debug Mode..."
-    npm run dev
+    bun run dev
 else
     echo "Building the application for production..."
-    npm run build
+    bun run build
     echo "Starting Teacher Assistant Server in Production Mode..."
     export NODE_ENV=production
-    npm run start
+    bun run start
 fi

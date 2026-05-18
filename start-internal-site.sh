@@ -8,11 +8,17 @@ echo ""
 # Change directory to the location of this script
 cd "$(dirname "$0")"
 
-# Check if node_modules exists, if not, install dependencies automatically
-if [ ! -d "node_modules" ]; then
-    echo "Installing dependencies..."
-    npm install
+# Ensure Bun is installed and install dependencies
+if ! command -v bun >/dev/null 2>&1; then
+    echo ""
+    echo "ERROR: Bun is not installed or not in PATH."
+    echo "Install Bun first: https://bun.sh/"
+    echo ""
+    exit 1
 fi
+
+echo "Installing dependencies with Bun..."
+bun install --frozen-lockfile
 
 # Check for debug param
 MODE="production"
@@ -24,10 +30,10 @@ done
 
 if [ "$MODE" == "debug" ]; then
     echo "Starting Teacher Assistant in Debug Mode (Network)..."
-    npx tsx server.ts --network
+    bun run dev:network
 else
     echo "Building the application for production..."
-    npm run build
+    bun run build
 
     echo ""
     echo "==================================================="
@@ -47,5 +53,5 @@ else
 
     # Set NODE_ENV to production and start the server
     export NODE_ENV=production
-    npx tsx server.ts --network
+    bun run start:network
 fi
