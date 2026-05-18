@@ -63,7 +63,10 @@ jobs:
       - name: Install dependencies (Bun lockfile)
         run: bun install --frozen-lockfile
 
-      - name: Bun audit (non-blocking report)
+      - name: Run Bun audit (prod deps only, blocking at high)
+        run: bun audit --audit-level=high
+
+      - name: Generate Bun audit report (including dev deps, non-blocking artifact)
         if: always()
         run: |
           bun audit --json > bun-audit.json || true
