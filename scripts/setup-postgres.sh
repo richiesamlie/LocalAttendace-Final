@@ -55,7 +55,7 @@ if [ -f "database.sqlite" ]; then
   read -r -p "Found SQLite database. Migrate data to PostgreSQL? (y/n): " response
   if [[ "$response" =~ ^[Yy]$ ]]; then
     echo "Migrating data from SQLite to PostgreSQL..."
-    npx tsx src/repositories/migrate.ts || echo "Warning: Migration command failed. Please check output above."
+    bun x tsx src/repositories/migrate.ts || echo "Warning: Migration command failed. Please check output above."
     echo "Migration complete."
     echo ""
   fi
@@ -84,4 +84,4 @@ echo "Setup complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Update DATABASE_URL password in .env"
-echo "  2. Run: npm run dev"
+echo "  2. Run: bun run dev"

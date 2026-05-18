@@ -102,7 +102,7 @@ else
     echo "✅ Database cleaned successfully!"
     echo ""
     echo "📝 Next steps:"
-    echo "   1. Run: npm run dev"
+    echo "   1. Run: bun run dev"
     echo "   2. Login with: admin / teacher123"
 fi
 

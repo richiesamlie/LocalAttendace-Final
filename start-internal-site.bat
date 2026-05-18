@@ -7,11 +7,19 @@ echo.
 :: Change directory to the location of this batch file
 cd /d "%~dp0"
 
-:: Check if node_modules exists, if not, install dependencies automatically
-IF NOT EXIST "node_modules\" (
-    echo Installing dependencies...
-    call npm install
+:: Ensure Bun is installed and dependencies are available
+where bun >nul 2>&1
+IF %errorlevel% NEQ 0 (
+    echo.
+    echo ERROR: Bun is not installed or not in PATH.
+    echo Install Bun first: https://bun.sh/
+    echo.
+    pause
+    exit /b 1
 )
+
+echo Installing dependencies with Bun...
+call bun install --frozen-lockfile
 
 :: Check if .env file exists - required before the server can start
 IF NOT EXIST ".env" (
@@ -50,10 +58,10 @@ if "%MODE%"=="debug" (
     echo.
     echo Starting in Debug Mode...
     echo.
-    call npx tsx server.ts --network
+    call bun run dev:network
 ) else (
     echo Building the application for production...
-    call npm run build
+    call bun run build
 
     echo.
     echo ===================================================
@@ -69,5 +77,5 @@ if "%MODE%"=="debug" (
 
     :: Set NODE_ENV to production and start the server
     set NODE_ENV=production
-    call npx tsx server.ts --network
+    call bun run start:network
 )

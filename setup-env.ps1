@@ -85,8 +85,8 @@ Write-Host "   The password is stored in the .env file" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Review and customize .env file if needed" -ForegroundColor White
-Write-Host "  2. Run: npm install" -ForegroundColor White
-Write-Host "  3. Run: npm run dev" -ForegroundColor White
+Write-Host "  2. Run: bun install" -ForegroundColor White
+Write-Host "  3. Run: bun run dev" -ForegroundColor White
 Write-Host ""
 Write-Host "💡 Tip: You can customize performance monitoring thresholds in .env" -ForegroundColor Gray
 Write-Host "   See PERFORMANCE.md for details" -ForegroundColor Gray
