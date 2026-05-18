@@ -14,6 +14,7 @@ Dokumentasi proyek dipusatkan di folder `docs/`.
 - [Release Notes Template](release-notes-template.md)
 - [Repository Artifact Policy](repository-artifact-policy.md)
 - [Documentation Map](documentation-map.md)
+- [Operations Runbook (Bun-first)](operations.md)
 
 ## Documentation Quality Gate Checklist
 
