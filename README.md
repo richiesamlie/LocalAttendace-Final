@@ -59,6 +59,10 @@ It covers:
 - Inviting teachers to classes
 - Backup, restore, and troubleshooting
 
+Additional docs:
+- [Documentation Index](docs/index.md)
+- [Operations Runbook](docs/operations.md)
+
 ## Prerequisites
 
 - **Node.js** (version 18 or higher)
