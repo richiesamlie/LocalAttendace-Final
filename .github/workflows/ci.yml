@@ -33,11 +33,11 @@ jobs:
         run: npm run lint
 
   bun-parity-smoke:
-    name: Bun Parity Smoke (develop, non-blocking)
+    name: Bun Parity Smoke (develop, blocking)
     runs-on: ubuntu-latest
     needs: typecheck
     if: github.ref == 'refs/heads/develop'
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v6
 

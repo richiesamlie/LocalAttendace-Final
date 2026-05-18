@@ -48,10 +48,10 @@ jobs:
           path: npm-audit.json
 
   bun-security-smoke:
-    name: Bun Security Smoke (develop, non-blocking)
+    name: Bun Security Smoke (develop, blocking)
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v6
 
