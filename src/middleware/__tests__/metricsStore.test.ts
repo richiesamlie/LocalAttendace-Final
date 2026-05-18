@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { metricsStore } from '../metricsStore';
 
 describe('MetricsStore', () => {
@@ -227,10 +227,19 @@ describe('MetricsStore', () => {
   });
 
   describe('Time Windows', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-05-18T04:20:30.000Z'));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('should filter metrics by time window', () => {
       const now = Date.now();
       const twoHoursAgo = now - (2 * 60 * 60 * 1000);
-      const oneHourAgo = now - (60 * 60 * 1000);
+      const thirtyMinutesAgo = now - (30 * 60 * 1000);
 
       // Add old metric
       metricsStore.addRequest({
@@ -243,7 +252,7 @@ describe('MetricsStore', () => {
 
       // Add recent metric
       metricsStore.addRequest({
-        timestamp: oneHourAgo,
+        timestamp: thirtyMinutesAgo,
         method: 'GET',
         url: '/api/recent',
         statusCode: 200,
