@@ -12,6 +12,7 @@ export default function TakeAttendance() {
   const [activeTab, setActiveTab] = useState<'today' | 'past'>('today');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
+  const [showUnmarkedOnly, setShowUnmarkedOnly] = useState(false);
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,23 +61,25 @@ export default function TakeAttendance() {
     }
   };
 
-  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+  const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
     const existing = records.find(r => r.studentId === studentId);
-    setRecord({
+    await setRecord({
       studentId,
       date,
       status,
       reason: existing?.reason || '',
     });
+    toast.success('Attendance saved', { id: 'attendance-save' });
   };
 
-  const handleReasonChange = (studentId: string, reason: string) => {
+  const handleReasonChange = async (studentId: string, reason: string) => {
     const existing = records.find(r => r.studentId === studentId);
     if (existing) {
-      setRecord({
+      await setRecord({
         ...existing,
         reason,
       });
+      toast.success('Reason saved', { id: 'attendance-save' });
     }
   };
 
@@ -98,6 +101,14 @@ export default function TakeAttendance() {
     .sort((a, b) =>
       a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
     );
+
+  const unmarkedCount = filteredStudents.filter(
+    (student) => !records.some((r) => r.studentId === student.id)
+  ).length;
+
+  const visibleStudents = showUnmarkedOnly
+    ? filteredStudents.filter((student) => !records.some((r) => r.studentId === student.id))
+    : filteredStudents;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -156,6 +167,17 @@ export default function TakeAttendance() {
             />
           )}
           <button
+            onClick={() => setShowUnmarkedOnly((prev) => !prev)}
+            className={cn(
+              "px-4 py-2 rounded-xl border font-medium transition-colors",
+              showUnmarkedOnly
+                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+            )}
+          >
+            {showUnmarkedOnly ? 'Show All' : 'Belum Ditandai'}
+          </button>
+          <button
             onClick={markAllPresentHandler}
             className="px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors"
           >
@@ -198,6 +220,12 @@ export default function TakeAttendance() {
           Past Data
         </button>
       </div>
+
+      {unmarkedCount > 0 && (
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+          {unmarkedCount} student{unmarkedCount > 1 ? 's are' : ' is'} not marked yet for this date.
+        </div>
+      )}
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="border-b border-slate-100 dark:border-slate-800">
@@ -263,18 +291,32 @@ export default function TakeAttendance() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredStudents.length === 0 ? (
+              ) : visibleStudents.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    {searchQuery ? 'No students match your search' : 'No students in this class'}
+                    {searchQuery
+                      ? 'No students match your search'
+                      : showUnmarkedOnly
+                        ? 'Semua siswa sudah ditandai untuk tanggal ini'
+                        : 'No students in this class'}
                   </td>
                 </tr>
-              ) : filteredStudents.map((student) => {
+              ) : visibleStudents.map((student) => {
                 const record = records.find(r => r.studentId === student.id);
                 const status = record?.status;
 
+                const isUnmarked = !status;
+
                 return (
-                  <tr key={`${date}-${student.id}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr
+                    key={`${date}-${student.id}`}
+                    className={cn(
+                      "transition-colors",
+                      isUnmarked
+                        ? "bg-rose-50/60 dark:bg-rose-900/10 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                        : "hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+                    )}
+                  >
                     <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
                     <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{student.name}</td>
                     <td className="px-6 py-4">

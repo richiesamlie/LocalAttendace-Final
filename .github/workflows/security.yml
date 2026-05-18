@@ -2,7 +2,7 @@ name: Security Scan
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -46,6 +46,38 @@ jobs:
         with:
           name: npm-audit-report
           path: npm-audit.json
+
+  bun-security-smoke:
+    name: Bun Security Smoke (develop, blocking)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Install dependencies (Bun lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Run Bun audit (prod deps only, blocking at high)
+        run: bun audit --audit-level=high
+
+      - name: Generate Bun audit report (including dev deps, non-blocking artifact)
+        if: always()
+        run: |
+          bun audit --json > bun-audit.json || true
+          echo "Bun audit report generated"
+
+      - name: Upload Bun audit results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bun-audit-report
+          path: bun-audit.json
 
 
   codeql-analysis:

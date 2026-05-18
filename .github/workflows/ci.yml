@@ -32,6 +32,42 @@ jobs:
       - name: Type check
         run: npm run lint
 
+  bun-parity-smoke:
+    name: Bun Parity Smoke (develop, blocking)
+    runs-on: ubuntu-latest
+    needs: typecheck
+    if: github.ref == 'refs/heads/develop'
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Install dependencies (Bun lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Create .env file
+        run: |
+          echo "JWT_SECRET=ci_test_secret_$(openssl rand -hex 16)" > .env
+          echo "DEFAULT_ADMIN_PASSWORD=ci_test_admin_password" >> .env
+
+      - name: Bun lint
+        run: bun run lint
+
+      - name: Bun ESLint
+        run: bun run lint:eslint -- --max-warnings=0
+
+      - name: Bun critical tests
+        env:
+          DEFAULT_ADMIN_PASSWORD: ci_test_admin_password
+        run: bun run test:critical
+
+      - name: Bun build
+        run: bun run build
+
   docs-link-check:
     name: Docs Link Check
     runs-on: ubuntu-latest

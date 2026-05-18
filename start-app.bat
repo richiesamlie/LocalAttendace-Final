@@ -23,11 +23,19 @@ exit /b
 :: Change directory to the location of this batch file
 cd /d "%~dp0"
 
-:: Check if node_modules exists, if not, install dependencies automatically
-IF NOT EXIST "node_modules\" (
-    echo Installing dependencies...
-    call npm install
+:: Ensure Bun is installed and dependencies are available
+where bun >nul 2>&1
+IF %errorlevel% NEQ 0 (
+    echo.
+    echo ERROR: Bun is not installed or not in PATH.
+    echo Install Bun first: https://bun.sh/
+    echo.
+    pause
+    exit /b 1
 )
+
+echo Installing dependencies with Bun...
+call bun install --frozen-lockfile
 
 :: Check if .env file exists - required before the server can start
 IF NOT EXIST ".env" (
@@ -59,15 +67,15 @@ IF %errorlevel% NEQ 0 (
 :: Open the web browser after a 5-second delay to give the server time to start
 start "" cmd /c "timeout /t 5 /nobreak > NUL && start http://127.0.0.1:3000"
 
-:: Start the Node.js server
+:: Start the app server
 if "%MODE%"=="debug" (
     echo Starting Teacher Assistant Server in Debug Mode...
-    call npm run dev
+    call bun run dev
 ) else (
     echo Building the application for production...
-    call npm run build
+    call bun run build
     echo Starting Teacher Assistant Server in Production Mode...
     set NODE_ENV=production
-    call npm run start
+    call bun run start
 )
 endlocal
