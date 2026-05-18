@@ -57,7 +57,7 @@ if exist "database.sqlite" (
     set /p migrate="Found SQLite database. Migrate data to PostgreSQL? (y/n): "
     if /i "%migrate%"=="y" (
         echo Migrating data from SQLite to PostgreSQL...
-        npx tsx src\repositories\migrate.ts
+        bun x tsx src\repositories\migrate.ts
         if %errorlevel% neq 0 (
             echo Warning: Migration command failed. Please check output above.
         ) else (
@@ -91,7 +91,7 @@ echo.
 echo Next steps:
 echo   1. Update DATABASE_URL password in .env
 if exist ".env" (
-    echo   2. Run: npm run dev
+    echo   2. Run: bun run dev
 ) else (
-    echo   2. Create .env then run: npm run dev
+    echo   2. Create .env then run: bun run dev
 )

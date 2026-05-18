@@ -146,14 +146,14 @@ if ($deletedCount -eq 0 -and $lockedFiles.Count -eq 0) {
     Write-Host "⚠️  Some files could not be deleted" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "💡 Try these steps:" -ForegroundColor Cyan
-    Write-Host "   1. Run: npm run kill" -ForegroundColor White
+    Write-Host "   1. Run: bun run kill" -ForegroundColor White
     Write-Host "   2. Wait a few seconds" -ForegroundColor White
     Write-Host "   3. Run this script again" -ForegroundColor White
 } else {
     Write-Host "✅ Database cleaned successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "📝 Next steps:" -ForegroundColor Cyan
-    Write-Host "   1. Run: npm run dev" -ForegroundColor White
+    Write-Host "   1. Run: bun run dev" -ForegroundColor White
     Write-Host "   2. Login with: admin / teacher123" -ForegroundColor White
 }
 
