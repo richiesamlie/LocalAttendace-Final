@@ -47,6 +47,16 @@ export const classService = {
     return db.stmt.getClassById.get(id, teacherId);
   },
 
+  async getExistingById(id: string) {
+    if (isPostgres()) {
+      return pgQueryOne<{ id: string; name: string; teacher_id: string }>(
+        'SELECT id, name, teacher_id FROM classes WHERE id = $1',
+        [id]
+      );
+    }
+    return db.prepare('SELECT id, name, teacher_id FROM classes WHERE id = ?').get(id);
+  },
+
   async getAll() {
     if (isPostgres()) {
       return pgQuery<{ id: string; teacher_id: string; name: string; teacher_name: string }>(

@@ -1,8 +1,8 @@
 import express from 'express';
 import { inviteService, classService } from '../../services';
 import type { Invite } from '../types/db';
-import { requireAuth, requireRole, withWriteQueue } from './middleware';
-import { validate, classInviteCreateSchema, inviteRedeemSchema } from '../../src/lib/validation';
+import { requireAuth, withWriteQueue } from './middleware';
+import { validate, inviteRedeemSchema } from '../../src/lib/validation';
 
 interface ClassNameCarrier {
   name: string;
@@ -10,34 +10,7 @@ interface ClassNameCarrier {
 
 export const inviteRouter = express.Router();
 
-inviteRouter.get('/classes/:classId/invites', requireRole('classId', 'teacher'), async (req, res) => {
-  try {
-    const classId = req.params.classId;
-    const invites = await inviteService.getByClass(classId);
-    res.json(invites);
-  } catch (_error) {
-    res.status(500).json({ error: 'Failed to fetch invites' });
-  }
-});
-
-inviteRouter.post('/classes/:classId/invites', requireRole('classId', 'teacher'), validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
-  const classId = req.params.classId;
-  const { role, expiresInHours } = req.body;
-
-  const code = `inv-${crypto.randomUUID().slice(0, 8)}`;
-  const expiresAt = new Date(Date.now() + (expiresInHours || 72) * 60 * 60 * 1000).toISOString();
-
-  await inviteService.insert(code, classId, role || 'teacher', classId, expiresAt);
-  res.json({ success: true, code, inviteUrl: `/invite/${code}`, role: role || 'teacher', expiresAt });
-}));
-
-inviteRouter.delete('/classes/:classId/invites/:code', requireRole('classId', 'teacher'), withWriteQueue(async (req, res) => {
-  const code = req.params.code;
-  await inviteService.delete(code);
-  return res.json({ success: true });
-}));
-
-inviteRouter.post('/invites/redeem', requireAuth, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
+inviteRouter.post('/redeem', requireAuth, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { code } = req.body;
 
@@ -54,7 +27,7 @@ inviteRouter.post('/invites/redeem', requireAuth, validate(inviteRedeemSchema), 
     return res.status(400).json({ error: 'This invite code has expired' });
   }
 
-  const classExists = await classService.getById(invite.class_id, teacherId);
+  const classExists = await classService.getExistingById(invite.class_id);
   if (!classExists) {
     return res.status(404).json({ error: 'This class no longer exists' });
   }
