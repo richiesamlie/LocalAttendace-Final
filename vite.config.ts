@@ -81,5 +81,39 @@ export default defineConfig(({mode}) => {
     esbuild: {
       pure: mode === 'production' ? ['console.log', 'console.debug', 'console.info'] : [],
     },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replaceAll('\\', '/');
+
+            if (id.includes('node_modules')) {
+              if (id.includes('exceljs')) return 'vendor-exceljs';
+              if (id.includes('jszip')) return 'vendor-jszip';
+              if (id.includes('@fast-csv') || id.includes('fast-csv')) return 'vendor-csv';
+              if (
+                id.includes('readable-stream') ||
+                id.includes('string_decoder') ||
+                id.includes('safe-buffer') ||
+                id.includes('buffer') ||
+                id.includes('process') ||
+                id.includes('events') ||
+                id.includes('inherits') ||
+                id.includes('util')
+              ) {
+                return 'vendor-node-compat';
+              }
+            }
+
+            if (normalizedId.endsWith('/src/utils/excel.ts')) {
+              return 'excel-tools';
+            }
+
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });
