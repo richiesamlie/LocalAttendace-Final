@@ -3,7 +3,7 @@
 interface ClassItem {
   id: string;
   name: string;
-  students?: any[];
+  students?: unknown[];
 }
 
 interface ClassesTabProps {
