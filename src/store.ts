@@ -8,8 +8,8 @@ import type {
   TimetableSlot,
   ClassData,
   AttendanceStatus,
-  EventType,
   Theme,
+  EventType,
 } from './types/store';
 
 type AttendanceRecordWithClassId = AttendanceRecord & { classId: string };
@@ -98,6 +98,38 @@ const updateCurrentClass = (
   };
 };
 
+const runSwallowedAction = async <T>(
+  actionFn: () => Promise<T>,
+  successMsg?: string | ((result: T) => string),
+  errorMsg?: string
+): Promise<T | null> => {
+  try {
+    const res = await actionFn();
+    if (successMsg) {
+      const msg = typeof successMsg === 'function' ? successMsg(res) : successMsg;
+      toast.success(msg);
+    }
+    return res;
+  } catch (_error) {
+    if (errorMsg) {
+      toast.error(errorMsg);
+    }
+    return null;
+  }
+};
+
+const fetchClassPayload = async (classId: string) => {
+  const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+    api.getStudents(classId, false),
+    api.getRecords(classId),
+    api.getEvents(classId),
+    api.getTimetable(classId),
+    api.getDailyNotes(classId),
+    api.getSeating(classId),
+  ]);
+  return { students, records, events, timetable, dailyNotes, seatingLayout };
+};
+
 export const useStore = create<AppState>()((set, get) => ({
   isInitialized: false,
   isAuthenticated: false,
@@ -130,21 +162,8 @@ export const useStore = create<AppState>()((set, get) => ({
 
       if (classesData.length > 0) {
         const first = classesData[0] as unknown as ClassData;
-        const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-          api.getStudents(first.id, false),
-          api.getRecords(first.id),
-          api.getEvents(first.id),
-          api.getTimetable(first.id),
-          api.getDailyNotes(first.id),
-          api.getSeating(first.id),
-        ]);
-        first.students = students;
-        first.records = records;
-        first.events = events;
-        first.timetable = timetable;
-        first.dailyNotes = dailyNotes;
-        first.seatingLayout = seatingLayout;
-        first.loaded = true;
+        const payload = await fetchClassPayload(first.id);
+        Object.assign(first, payload, { loaded: true });
       }
 
       const defaultClassId = classesData.length > 0 ? classesData[0].id : null;
@@ -175,18 +194,10 @@ export const useStore = create<AppState>()((set, get) => ({
     if (!cls || cls.loaded) return;
 
     try {
-      const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-        api.getStudents(classId, false),
-        api.getRecords(classId),
-        api.getEvents(classId),
-        api.getTimetable(classId),
-        api.getDailyNotes(classId),
-        api.getSeating(classId),
-      ]);
-
+      const payload = await fetchClassPayload(classId);
       set((state) => ({
         classes: state.classes.map(c =>
-          c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
+          c.id === classId ? { ...c, ...payload, loaded: true } : c
         ),
       }));
     } catch (error) {
@@ -196,29 +207,17 @@ export const useStore = create<AppState>()((set, get) => ({
 
   reloadClassData: async (classId: string) => {
     try {
-      const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-        api.getStudents(classId, false),
-        api.getRecords(classId),
-        api.getEvents(classId),
-        api.getTimetable(classId),
-        api.getDailyNotes(classId),
-        api.getSeating(classId),
-      ]);
+      const payload = await fetchClassPayload(classId);
 
       set((state) => {
         const updatedClasses = state.classes.map(c =>
-          c.id === classId ? { ...c, students, records, events, timetable, dailyNotes, seatingLayout, loaded: true } : c
+          c.id === classId ? { ...c, ...payload, loaded: true } : c
         );
         const isCurrentClass = state.currentClassId === classId;
         return {
           classes: updatedClasses,
           ...(isCurrentClass ? {
-            students,
-            records,
-            events,
-            timetable,
-            dailyNotes,
-            seatingLayout,
+            ...payload,
           } : {}),
         };
       });
@@ -228,78 +227,80 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   addClass: async (name) => {
-    try {
-      const newClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-      await api.createClass({ id: newClassId, name });
+    await runSwallowedAction(
+      async () => {
+        const newClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
+        await api.createClass({ id: newClassId, name });
 
-      set((state) => {
-        const newClass: ClassData = {
-          id: newClassId,
-          name,
-          students: [],
-          records: [],
-          dailyNotes: {},
-          events: [],
-          timetable: [],
-          seatingLayout: {},
-          loaded: true,
-        };
-        const newClasses = [...state.classes, newClass];
+        set((state) => {
+          const newClass: ClassData = {
+            id: newClassId,
+            name,
+            students: [],
+            records: [],
+            dailyNotes: {},
+            events: [],
+            timetable: [],
+            seatingLayout: {},
+            loaded: true,
+          };
+          const newClasses = [...state.classes, newClass];
 
-        return {
-          classes: newClasses,
-          currentClassId: newClass.id,
-          students: newClass.students,
-          records: newClass.records,
-          dailyNotes: newClass.dailyNotes,
-          events: newClass.events,
-          timetable: newClass.timetable,
-          seatingLayout: newClass.seatingLayout,
-        };
-      });
-      toast.success('Class created');
-    } catch (_error) {
-      toast.error('Failed to create class');
-    }
+          return {
+            classes: newClasses,
+            currentClassId: newClass.id,
+            students: newClass.students,
+            records: newClass.records,
+            dailyNotes: newClass.dailyNotes,
+            events: newClass.events,
+            timetable: newClass.timetable,
+            seatingLayout: newClass.seatingLayout,
+          };
+        });
+      },
+      'Class created',
+      'Failed to create class'
+    );
   },
 
   removeClass: async (id) => {
-    try {
-      await api.deleteClass(id);
-      set((state) => {
-        const newClasses = state.classes.filter(c => c.id !== id);
-        if (state.currentClassId === id) {
-          const nextClass = newClasses[0];
-          if (nextClass) {
-            return {
-              classes: newClasses,
-              currentClassId: nextClass.id,
-              students: nextClass.students,
-              records: nextClass.records,
-              dailyNotes: nextClass.dailyNotes,
-              events: nextClass.events,
-              timetable: nextClass.timetable,
-              seatingLayout: nextClass.seatingLayout,
-            };
-          } else {
-            return {
-              classes: newClasses,
-              currentClassId: null,
-              students: [],
-              records: [],
-              dailyNotes: {},
-              events: [],
-              timetable: [],
-              seatingLayout: {},
-            };
+    await runSwallowedAction(
+      async () => {
+        await api.deleteClass(id);
+        set((state) => {
+          const newClasses = state.classes.filter(c => c.id !== id);
+          if (state.currentClassId === id) {
+            const nextClass = newClasses[0];
+            if (nextClass) {
+              return {
+                classes: newClasses,
+                currentClassId: nextClass.id,
+                students: nextClass.students,
+                records: nextClass.records,
+                dailyNotes: nextClass.dailyNotes,
+                events: nextClass.events,
+                timetable: nextClass.timetable,
+                seatingLayout: nextClass.seatingLayout,
+              };
+            } else {
+              return {
+                classes: newClasses,
+                currentClassId: null,
+                students: [],
+                records: [],
+                dailyNotes: {},
+                events: [],
+                timetable: [],
+                seatingLayout: {},
+              };
+            }
           }
-        }
-        return { classes: newClasses };
-      });
-      toast.success('Class deleted');
-    } catch (_error) {
-      toast.error('Failed to delete class');
-    }
+          return { classes: newClasses };
+        });
+      },
+      'Class deleted',
+      'Failed to delete class'
+    );
   },
 
   setCurrentClass: async (id) => {
@@ -331,27 +332,29 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateClassName: async (id, name) => {
-    try {
-      await api.updateClass(id, name);
-      set((state) => ({
-        classes: state.classes.map(c => c.id === id ? { ...c, name } : c)
-      }));
-    } catch (_error) {
-      toast.error('Failed to rename class');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.updateClass(id, name);
+        set((state) => ({
+          classes: state.classes.map(c => c.id === id ? { ...c, name } : c)
+        }));
+      },
+      undefined,
+      'Failed to rename class'
+    );
   },
 
   setStudents: async (students) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.syncStudents(classId, students);
-      set((state) => updateCurrentClass(state, { students }));
-      toast.success('Students synced');
-    } catch (error) {
-      console.error('Failed to sync students', error);
-      toast.error('Failed to sync students with database');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.syncStudents(classId, students);
+        set((state) => updateCurrentClass(state, { students }));
+      },
+      'Students synced',
+      'Failed to sync students with database'
+    );
   },
 
   addStudent: async (student) => {
@@ -359,76 +362,82 @@ export const useStore = create<AppState>()((set, get) => ({
     if (!state.currentClassId) return;
     if (state.students.some(s => s.rollNumber === student.rollNumber && s.name === student.name)) return;
 
-    try {
-      await api.createStudent(state.currentClassId, student);
-      set((state) => updateCurrentClass(state, { students: [...state.students, student] }));
-      toast.success('Student added');
-    } catch (_error) {
-      toast.error('Failed to add student');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.createStudent(state.currentClassId, student);
+        set((state) => updateCurrentClass(state, { students: [...state.students, student] }));
+      },
+      'Student added',
+      'Failed to add student'
+    );
   },
 
   removeStudent: async (id) => {
-    try {
-      await api.deleteStudent(id);
-      set((state) => {
-        const newSeating = { ...state.seatingLayout };
-        Object.keys(newSeating).forEach(key => {
-          if (newSeating[key] === id) {
-            delete newSeating[key];
-          }
+    await runSwallowedAction(
+      async () => {
+        await api.deleteStudent(id);
+        set((state) => {
+          const newSeating = { ...state.seatingLayout };
+          Object.keys(newSeating).forEach(key => {
+            if (newSeating[key] === id) {
+              delete newSeating[key];
+            }
+          });
+          return updateCurrentClass(state, {
+            students: state.students.map((s) => s.id === id ? { ...s, isArchived: true } : s),
+            seatingLayout: newSeating
+          });
         });
-        return updateCurrentClass(state, {
-          students: state.students.map((s) => s.id === id ? { ...s, isArchived: true } : s),
-          seatingLayout: newSeating
-        });
-      });
-      toast.success('Student archived');
-    } catch (_error) {
-      toast.error('Failed to archive student');
-    }
+      },
+      'Student archived',
+      'Failed to archive student'
+    );
   },
 
   updateStudent: async (id, data) => {
-    try {
-      await api.updateStudent(id, data);
-      set((state) => updateCurrentClass(state, {
-        students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
-      }));
-    } catch (_error) {
-      toast.error('Failed to update student');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.updateStudent(id, data);
+        set((state) => updateCurrentClass(state, {
+          students: state.students.map((s) => (s.id === id ? { ...s, ...data } : s)),
+        }));
+      },
+      undefined,
+      'Failed to update student'
+    );
   },
 
   setRecord: async (record) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      const existingRecord = get().records.find(
-        (r) => r.studentId === record.studentId && r.date === record.date
-      );
-
-      await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
-
-      set((state) => {
-        const existingIndex = state.records.findIndex(
+    await runSwallowedAction(
+      async () => {
+        const existingRecord = get().records.find(
           (r) => r.studentId === record.studentId && r.date === record.date
         );
-        let newRecords: AttendanceRecord[];
-        if (existingIndex >= 0) {
-          newRecords = [...state.records];
-          newRecords[existingIndex] = record;
-        } else {
-          newRecords = [...state.records, record];
-        }
-        return {
-          ...updateCurrentClass(state, { records: newRecords }),
-          lastAttendanceChange: existingRecord || null,
-        };
-      });
-    } catch (_error) {
-      toast.error('Failed to save attendance record');
-    }
+
+        await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
+
+        set((state) => {
+          const existingIndex = state.records.findIndex(
+            (r) => r.studentId === record.studentId && r.date === record.date
+          );
+          let newRecords: AttendanceRecord[];
+          if (existingIndex >= 0) {
+            newRecords = [...state.records];
+            newRecords[existingIndex] = record;
+          } else {
+            newRecords = [...state.records, record];
+          }
+          return {
+            ...updateCurrentClass(state, { records: newRecords }),
+            lastAttendanceChange: existingRecord || null,
+          };
+        });
+      },
+      undefined,
+      'Failed to save attendance record'
+    );
   },
 
   undoLastAttendance: async () => {
@@ -438,32 +447,33 @@ export const useStore = create<AppState>()((set, get) => ({
     const classId = get().currentClassId;
     if (!classId) return;
 
-    try {
-      if (lastChange.status) {
-        await api.saveRecords([{ ...lastChange, classId }] as unknown as AttendanceRecordWithClassId[]);
-      } else {
-        await api.saveRecords([{ ...lastChange, classId, status: 'Present', reason: undefined }] as unknown as AttendanceRecordWithClassId[]);
-      }
-
-      set((state) => {
-        const existingIndex = state.records.findIndex(
-          (r) => r.studentId === lastChange.studentId && r.date === lastChange.date
-        );
-        let newRecords: AttendanceRecord[];
-        if (existingIndex >= 0 && lastChange.status) {
-          newRecords = [...state.records];
-          newRecords[existingIndex] = lastChange;
-        } else if (existingIndex >= 0 && !lastChange.status) {
-          newRecords = state.records.filter((_, i) => i !== existingIndex);
+    await runSwallowedAction(
+      async () => {
+        if (lastChange.status) {
+          await api.saveRecords([{ ...lastChange, classId }] as unknown as AttendanceRecordWithClassId[]);
         } else {
-          newRecords = state.records;
+          await api.saveRecords([{ ...lastChange, classId, status: 'Present', reason: undefined }] as unknown as AttendanceRecordWithClassId[]);
         }
-        return updateCurrentClass(state, { records: newRecords, lastAttendanceChange: null });
-      });
-      toast.success('Attendance undone');
-    } catch (_error) {
-      toast.error('Failed to undo attendance');
-    }
+
+        set((state) => {
+          const existingIndex = state.records.findIndex(
+            (r) => r.studentId === lastChange.studentId && r.date === lastChange.date
+          );
+          let newRecords: AttendanceRecord[];
+          if (existingIndex >= 0 && lastChange.status) {
+            newRecords = [...state.records];
+            newRecords[existingIndex] = lastChange;
+          } else if (existingIndex >= 0 && !lastChange.status) {
+            newRecords = state.records.filter((_, i) => i !== existingIndex);
+          } else {
+            newRecords = state.records;
+          }
+          return updateCurrentClass(state, { records: newRecords, lastAttendanceChange: null });
+        });
+      },
+      'Attendance undone',
+      'Failed to undo attendance'
+    );
   },
 
   markAllPresent: async (date) => {
@@ -478,161 +488,183 @@ export const useStore = create<AppState>()((set, get) => ({
 
     if (newRecords.length === 0) return;
 
-    try {
-      await api.saveRecords(newRecords.map(r => ({ ...r, classId })));
-      set((state) => updateCurrentClass(state, {
-        records: [...state.records, ...newRecords]
-      }));
-      toast.success(`${newRecords.length} students marked present`);
-    } catch (_error) {
-      toast.error('Failed to mark all present');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.saveRecords(newRecords.map(r => ({ ...r, classId })));
+        set((state) => updateCurrentClass(state, {
+          records: [...state.records, ...newRecords]
+        }));
+      },
+      `${newRecords.length} students marked present`,
+      'Failed to mark all present'
+    );
   },
 
   setDailyNote: async (date, note) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.saveDailyNote(classId, date, note);
-      set((state) => updateCurrentClass(state, {
-        dailyNotes: { ...state.dailyNotes, [date]: note },
-      }));
-    } catch (_error) {
-      toast.error('Failed to save daily note');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.saveDailyNote(classId, date, note);
+        set((state) => updateCurrentClass(state, {
+          dailyNotes: { ...state.dailyNotes, [date]: note },
+        }));
+      },
+      undefined,
+      'Failed to save daily note'
+    );
   },
 
   addEvent: async (event) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.createEvents(classId, [event]);
-      set((state) => updateCurrentClass(state, { events: [...state.events, event] }));
-      toast.success('Event added');
-    } catch (_error) {
-      toast.error('Failed to add event');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.createEvents(classId, [event]);
+        set((state) => updateCurrentClass(state, { events: [...state.events, event] }));
+      },
+      'Event added',
+      'Failed to add event'
+    );
   },
 
   addEvents: async (newEvents) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.createEvents(classId, newEvents);
-      set((state) => updateCurrentClass(state, { events: [...state.events, ...newEvents] }));
-    } catch (_error) {
-      toast.error('Failed to import events');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.createEvents(classId, newEvents);
+        set((state) => updateCurrentClass(state, { events: [...state.events, ...newEvents] }));
+      },
+      undefined,
+      'Failed to import events'
+    );
   },
 
   updateEvent: async (id, data) => {
-    try {
-      await api.updateEvent(id, data);
-      set((state) => updateCurrentClass(state, {
-        events: state.events.map((e) => (e.id === id ? { ...e, ...data } : e)),
-      }));
-    } catch (_error) {
-      toast.error('Failed to update event');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.updateEvent(id, data);
+        set((state) => updateCurrentClass(state, {
+          events: state.events.map((e) => (e.id === id ? { ...e, ...data } : e)),
+        }));
+      },
+      undefined,
+      'Failed to update event'
+    );
   },
 
   removeEvent: async (id) => {
-    try {
-      await api.deleteEvent(id);
-      set((state) => updateCurrentClass(state, { events: state.events.filter((e) => e.id !== id) }));
-      toast.success('Event removed');
-    } catch (_error) {
-      toast.error('Failed to remove event');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.deleteEvent(id);
+        set((state) => updateCurrentClass(state, { events: state.events.filter((e) => e.id !== id) }));
+      },
+      'Event removed',
+      'Failed to remove event'
+    );
   },
 
   addTimetableSlot: async (slot) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.createTimetableSlot(classId, slot);
-      set((state) => updateCurrentClass(state, { timetable: [...state.timetable, slot] }));
-    } catch (_error) {
-      toast.error('Failed to add timetable slot');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.createTimetableSlot(classId, slot);
+        set((state) => updateCurrentClass(state, { timetable: [...state.timetable, slot] }));
+      },
+      undefined,
+      'Failed to add timetable slot'
+    );
   },
 
   updateTimetableSlot: async (id, data) => {
-    try {
-      await api.updateTimetableSlot(id, data);
-      set((state) => updateCurrentClass(state, {
-        timetable: state.timetable.map((s) => (s.id === id ? { ...s, ...data } : s)),
-      }));
-    } catch (_error) {
-      toast.error('Failed to update timetable slot');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.updateTimetableSlot(id, data);
+        set((state) => updateCurrentClass(state, {
+          timetable: state.timetable.map((s) => (s.id === id ? { ...s, ...data } : s)),
+        }));
+      },
+      undefined,
+      'Failed to update timetable slot'
+    );
   },
 
   removeTimetableSlot: async (id) => {
-    try {
-      await api.deleteTimetableSlot(id);
-      set((state) => updateCurrentClass(state, { timetable: state.timetable.filter((s) => s.id !== id) }));
-    } catch (_error) {
-      toast.error('Failed to remove timetable slot');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.deleteTimetableSlot(id);
+        set((state) => updateCurrentClass(state, { timetable: state.timetable.filter((s) => s.id !== id) }));
+      },
+      undefined,
+      'Failed to remove timetable slot'
+    );
   },
 
   updateSeat: async (seatId, studentId) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.updateSeat(classId, seatId, studentId);
+    await runSwallowedAction(
+      async () => {
+        await api.updateSeat(classId, seatId, studentId);
 
-      set((state) => {
-        const newSeating = { ...state.seatingLayout };
-        if (studentId === null) {
-          delete newSeating[seatId];
-        } else {
-          Object.keys(newSeating).forEach(key => {
-            if (newSeating[key] === studentId) {
-              delete newSeating[key];
-            }
-          });
-          newSeating[seatId] = studentId;
-        }
-        return updateCurrentClass(state, { seatingLayout: newSeating });
-      });
-    } catch (_error) {
-      toast.error('Failed to update seating chart');
-    }
+        set((state) => {
+          const newSeating = { ...state.seatingLayout };
+          if (studentId === null) {
+            delete newSeating[seatId];
+          } else {
+            Object.keys(newSeating).forEach(key => {
+              if (newSeating[key] === studentId) {
+                delete newSeating[key];
+              }
+            });
+            newSeating[seatId] = studentId;
+          }
+          return updateCurrentClass(state, { seatingLayout: newSeating });
+        });
+      },
+      undefined,
+      'Failed to update seating chart'
+    );
   },
 
   setSeatingLayout: async (layout) => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.saveSeatingLayout(classId, layout);
-      set((state) => updateCurrentClass(state, { seatingLayout: layout }));
-      toast.success('Seating layout saved');
-    } catch (_error) {
-      toast.error('Failed to save layout');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.saveSeatingLayout(classId, layout);
+        set((state) => updateCurrentClass(state, { seatingLayout: layout }));
+      },
+      'Seating layout saved',
+      'Failed to save layout'
+    );
   },
 
   clearSeatingLayout: async () => {
     const classId = get().currentClassId;
     if (!classId) return;
-    try {
-      await api.clearSeating(classId);
-      set((state) => updateCurrentClass(state, { seatingLayout: {} }));
-    } catch (_error) {
-      toast.error('Failed to clear seating');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.clearSeating(classId);
+        set((state) => updateCurrentClass(state, { seatingLayout: {} }));
+      },
+      undefined,
+      'Failed to clear seating'
+    );
   },
 
   toggleTheme: async () => {
     const newTheme = get().theme === 'light' ? 'dark' : 'light';
-    try {
-      await api.saveSetting('theme', newTheme);
-      set({ theme: newTheme });
-    } catch (_error) {
-      toast.error('Failed to update theme');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.saveSetting('theme', newTheme);
+        set({ theme: newTheme });
+      },
+      undefined,
+      'Failed to update theme'
+    );
   },
 
   clearData: async () => {
@@ -641,123 +673,128 @@ export const useStore = create<AppState>()((set, get) => ({
 
     const className = get().classes.find(c => c.id === classId)?.name || 'Class';
 
-    try {
-      await api.deleteClass(classId);
-      await api.createClass({ id: classId, name: className });
+    await runSwallowedAction(
+      async () => {
+        await api.deleteClass(classId);
+        await api.createClass({ id: classId, name: className });
 
-      set((state) => updateCurrentClass(state, { students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }));
-      toast.success('Class data cleared');
-    } catch (_error) {
-      toast.error('Failed to clear class data');
-    }
+        set((state) => updateCurrentClass(state, { students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }));
+      },
+      'Class data cleared',
+      'Failed to clear class data'
+    );
   },
 
   clearAllData: async () => {
-    try {
-      const currentTeacherId = get().teacherId;
-      const classes = get().classes;
-      const failed: string[] = [];
+    await runSwallowedAction(
+      async () => {
+        const currentTeacherId = get().teacherId;
+        const classes = get().classes;
+        const failed: string[] = [];
 
-      await Promise.allSettled(
-        classes.map(async (c) => {
-          try {
-            await api.deleteClass(c.id);
-          } catch {
-            failed.push(c.name);
-          }
-        })
-      );
+        await Promise.allSettled(
+          classes.map(async (c) => {
+            try {
+              await api.deleteClass(c.id);
+            } catch {
+              failed.push(c.name);
+            }
+          })
+        );
 
-      if (failed.length > 0 && failed.length === classes.length) {
-        throw new Error('All deletions failed');
-      }
+        if (failed.length > 0 && failed.length === classes.length) {
+          throw new Error('All deletions failed');
+        }
 
-      const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-      await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
+        const defaultClassId = `class_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
+        await api.createClass({ id: defaultClassId, name: DEFAULT_CLASS_NAME });
 
-      let currentIsAdmin = get().isAdmin;
-      try {
-        const me = await api.getMe();
-        currentIsAdmin = me.isAdmin;
-      } catch {
-        // Keep existing admin flag if profile refresh fails.
-      }
+        let currentIsAdmin = get().isAdmin;
+        try {
+          const me = await api.getMe();
+          currentIsAdmin = me.isAdmin;
+        } catch {
+          // Keep existing admin flag if profile refresh fails.
+        }
 
-      set(() => {
-        const defaultClass: ClassData = {
-          id: defaultClassId,
-          name: DEFAULT_CLASS_NAME,
-          students: [],
-          records: [],
-          dailyNotes: {},
-          events: [],
-          timetable: [],
-          seatingLayout: {},
-        };
-        return {
-          isAuthenticated: currentTeacherId !== null,
-          teacherId: currentTeacherId,
-          isAdmin: currentIsAdmin,
-          classes: [defaultClass],
-          currentClassId: defaultClass.id,
-          students: [],
-          records: [],
-          dailyNotes: {},
-          events: [],
-          timetable: [],
-          seatingLayout: {},
-        };
-      });
+        set(() => {
+          const defaultClass: ClassData = {
+            id: defaultClassId,
+            name: DEFAULT_CLASS_NAME,
+            students: [],
+            records: [],
+            dailyNotes: {},
+            events: [],
+            timetable: [],
+            seatingLayout: {},
+          };
+          return {
+            isAuthenticated: currentTeacherId !== null,
+            teacherId: currentTeacherId,
+            isAdmin: currentIsAdmin,
+            classes: [defaultClass],
+            currentClassId: defaultClass.id,
+            students: [],
+            records: [],
+            dailyNotes: {},
+            events: [],
+            timetable: [],
+            seatingLayout: {},
+          };
+        });
 
-      const msg = failed.length > 0
+        return failed;
+      },
+      (failed) => failed.length > 0
         ? `All data cleared (${failed.length} classes failed to delete)`
-        : 'All data cleared successfully';
-      toast.success(msg);
-    } catch (_error) {
-      toast.error('Failed to clear all data');
-    }
+        : 'All data cleared successfully',
+      'Failed to clear all data'
+    );
   },
 
   updateAdminPassword: async (password) => {
-    try {
-      await api.saveSetting('adminPassword', password);
-      toast.success('Admin password updated');
-    } catch (_error) {
-      toast.error('Failed to update admin password');
-    }
+    await runSwallowedAction(
+      async () => {
+        await api.saveSetting('adminPassword', password);
+      },
+      'Admin password updated',
+      'Failed to update admin password'
+    );
   },
 
   setRecordForClass: async (classId, record) => {
-    try {
-      await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
+    await runSwallowedAction(
+      async () => {
+        await api.saveRecords([{ ...record, classId }] as AttendanceRecordWithClassId[]);
 
-      set((state) => {
-        const newClasses = state.classes.map(c => {
-          if (c.id === classId) {
-            const existingIndex = c.records.findIndex(
-              (r) => r.studentId === record.studentId && r.date === record.date
-            );
-            let newRecords = [...c.records];
-            if (existingIndex >= 0) {
-              newRecords[existingIndex] = record;
-            } else {
-              newRecords.push(record);
+        set((state) => {
+          const newClasses = state.classes.map(c => {
+            if (c.id === classId) {
+              const existingIndex = c.records.findIndex(
+                (r) => r.studentId === record.studentId && r.date === record.date
+              );
+              let newRecords = [...c.records];
+              if (existingIndex >= 0) {
+                newRecords[existingIndex] = record;
+              } else {
+                newRecords.push(record);
+              }
+              return { ...c, records: newRecords };
             }
-            return { ...c, records: newRecords };
+            return c;
+          });
+
+          if (state.currentClassId === classId) {
+            const targetClass = newClasses.find(c => c.id === classId);
+            return { classes: newClasses, records: targetClass?.records || [] };
           }
-          return c;
+
+          return { classes: newClasses };
         });
-
-        if (state.currentClassId === classId) {
-          const targetClass = newClasses.find(c => c.id === classId);
-          return { classes: newClasses, records: targetClass?.records || [] };
-        }
-
-        return { classes: newClasses };
-      });
-    } catch (_error) {
-      toast.error('Failed to save attendance record');
-    }
+      },
+      undefined,
+      'Failed to save attendance record'
+    );
   },
 }));
 

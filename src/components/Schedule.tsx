@@ -3,6 +3,7 @@ import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO } from 'date-fns';
 import { cn } from '../utils/cn';
+import { useCurrentClassName } from '../hooks/useCurrentClass';
 import { Calendar as CalendarIcon, Plus, X, Trash2, BookOpen, PenTool, GraduationCap, Bell, Edit2, Download, Upload, Palmtree, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getExcelUtils } from '../utils/excelLoader';
@@ -76,12 +77,9 @@ export default function Schedule() {
     setSelectedEvent(null);
   };
 
-  const classes = useStore((state) => state.classes);
-  const currentClassId = useStore((state) => state.currentClassId);
+  const className = useCurrentClassName();
 
   const handleExport = async () => {
-    const currentClass = classes.find(c => c.id === currentClassId);
-    const className = currentClass ? currentClass.name : 'Class';
     const { exportScheduleToExcel } = await getExcelUtils();
     exportScheduleToExcel(events, className);
   };

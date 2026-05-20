@@ -1,10 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useStore, Student } from '../store';
-import { Upload, Download, Plus, Trash2, Edit2, X, Check, Flag, Search, FileSpreadsheet, RefreshCcw, CheckSquare, Square } from 'lucide-react';
+import { Upload, Download, Plus, Trash2, Search, FileSpreadsheet, CheckSquare, Square, Flag, Check, X } from 'lucide-react';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { getExcelUtils } from '../utils/excelLoader';
+import { useCurrentClassName } from '../hooks/useCurrentClass';
+import { useStudentForm } from '../hooks/useStudentForm';
+import StudentRow from './Roster/StudentRow';
 
 export default function Roster() {
   const students = useStore((state) => state.students);
@@ -14,62 +17,33 @@ export default function Roster() {
   const removeStudent = useStore((state) => state.removeStudent);
   const updateStudent = useStore((state) => state.updateStudent);
   
+  const className = useCurrentClassName();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null);
 
-  // Archive confirmation via toast
-  React.useEffect(() => {
-    if (!archiveConfirmId) return;
-    const student = students.find(s => s.id === archiveConfirmId);
-    if (!student) return;
-    const toastId = toast(
-      (t) => (
-        <div>
-          <p className="font-medium">Archive &quot;{student.name}&quot;?</p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">They will be hidden from attendance and reports but their records will be preserved.</p>
-          <div className="flex gap-2 mt-3">
-            <button
-              className="px-3 py-1 text-sm bg-rose-600 text-white rounded hover:bg-rose-700"
-              onClick={() => { removeStudent(archiveConfirmId); toast.dismiss(t.id); setArchiveConfirmId(null); }}
-            >
-              Archive
-            </button>
-            <button
-              className="px-3 py-1 text-sm bg-slate-200 dark:bg-slate-700 rounded hover:bg-slate-300 dark:hover:bg-slate-600"
-              onClick={() => { toast.dismiss(t.id); setArchiveConfirmId(null); }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ),
-      { duration: 10000 }
-    );
-    return () => toast.dismiss(toastId);
-  }, [archiveConfirmId, students, removeStudent]);
-
-  // States for adding/editing
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu);
-  // Separate state for add mode vs edit mode to prevent value leakage
-  const [addName, setAddName] = useState('');
-  const [addRoll, setAddRoll] = useState('');
-  const [addParentName, setAddParentName] = useState('');
-  const [addParentPhone, setAddParentPhone] = useState('');
-  const [addIsFlagged, setAddIsFlagged] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editRoll, setEditRoll] = useState('');
-  const [editParentName, setEditParentName] = useState('');
-  const [editParentPhone, setEditParentPhone] = useState('');
-  const [editIsFlagged, setEditIsFlagged] = useState(false);
+
+  const {
+    isAdding,
+    editingId,
+    addName, setAddName,
+    addRoll, setAddRoll,
+    addParentName, setAddParentName,
+    addParentPhone, setAddParentPhone,
+    addIsFlagged, setAddIsFlagged,
+    startAddStudent,
+    saveAddStudent,
+    startEditStudent,
+    saveEditStudent,
+    cancelAdd,
+    cancelEdit
+  } = useStudentForm(currentClassId, addStudent, updateStudent);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,55 +68,6 @@ export default function Roster() {
       setIsImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  };
-
-  const startAddStudent = () => {
-    if (!currentClassId) {
-      toast.error('Please create or select a class from the sidebar first before adding students.');
-      return;
-    }
-    setAddName('');
-    setAddRoll('');
-    setAddParentName('');
-    setAddParentPhone('');
-    setAddIsFlagged(false);
-    setIsAdding(true);
-    setEditingId(null);
-  };
-
-  const saveAddStudent = () => {
-    if (!addName.trim() || !addRoll.trim()) return;
-    addStudent({
-      id: `std_${Date.now()}`,
-      name: addName,
-      rollNumber: addRoll,
-      parentName: addParentName,
-      parentPhone: addParentPhone,
-      isFlagged: addIsFlagged,
-    });
-    setIsAdding(false);
-  };
-
-  const startEditStudent = (student: Student) => {
-    setEditingId(student.id);
-    setEditName(student.name);
-    setEditRoll(student.rollNumber);
-    setEditParentName(student.parentName || '');
-    setEditParentPhone(student.parentPhone || '');
-    setEditIsFlagged(student.isFlagged || false);
-    setIsAdding(false);
-  };
-
-  const saveEditStudent = () => {
-    if (!editingId || !editName.trim() || !editRoll.trim()) return;
-    updateStudent(editingId, { 
-      name: editName, 
-      rollNumber: editRoll,
-      parentName: editParentName,
-      parentPhone: editParentPhone,
-      isFlagged: editIsFlagged
-    });
-    setEditingId(null);
   };
 
   const toggleFlag = (student: Student) => {
@@ -196,14 +121,13 @@ export default function Roster() {
 
   const handleExportClass = async () => {
     const state = useStore.getState();
-    const currentClass = state.classes.find(c => c.id === state.currentClassId);
-    if (!currentClass) {
+    if (!state.currentClassId) {
       toast.error('No class selected');
       return;
     }
     const { exportClassData } = await getExcelUtils();
     exportClassData(
-      currentClass.name,
+      className,
       state.students,
       state.records,
       state.events,
@@ -417,7 +341,7 @@ export default function Roster() {
                         <Check className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={() => setIsAdding(false)}
+                        onClick={cancelAdd}
                         className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
                         title="Cancel"
                       >
@@ -429,159 +353,20 @@ export default function Roster() {
               )}
               
               {filteredStudents.map((student, index) => (
-                <tr key={student.id} className={cn(
-                  "hover:bg-slate-100/50 dark:hover:bg-slate-800/80 transition-colors",
-                  student.isArchived ? "opacity-60 bg-slate-50 dark:bg-slate-800/40" : 
-                  (index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/50 dark:bg-slate-800/30")
-                )}>
-                  {editingId === student.id ? (
-                    <>
-                      <td colSpan={6} className="px-4 py-3 bg-indigo-50/60 dark:bg-indigo-900/20">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <div className="flex flex-col gap-1 w-24 shrink-0">
-                            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Roll No</label>
-                            <input
-                              type="text"
-                              value={editRoll}
-                              onChange={(e) => setEditRoll(e.target.value)}
-                              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
-                              aria-label="Roll number"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Student Name</label>
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              autoFocus
-                              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
-                              aria-label="Student name"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-                            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Parent Name</label>
-                            <input
-                              type="text"
-                              value={editParentName}
-                              onChange={(e) => setEditParentName(e.target.value)}
-                              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
-                              aria-label="Parent name"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1 flex-1 min-w-[130px]">
-                            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Parent Phone</label>
-                            <input
-                              type="text"
-                              value={editParentPhone}
-                              onChange={(e) => setEditParentPhone(e.target.value)}
-                              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white w-full"
-                              aria-label="Parent phone"
-                            />
-                          </div>
-                          <div className="flex items-end gap-2 pb-0.5">
-                            <button
-                              onClick={() => setEditIsFlagged(!editIsFlagged)}
-                              className={cn(
-                                "p-2 rounded-lg transition-colors",
-                                editIsFlagged 
-                                  ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50" 
-                                  : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-                              )}
-                              title={editIsFlagged ? "Remove Flag" : "Flag Student"}
-                            >
-                              <Flag className={cn("w-5 h-5", editIsFlagged && "fill-current")} />
-                            </button>
-                            <button
-                              onClick={saveEditStudent}
-                              className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
-                              title="Save"
-                            >
-                              <Check className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                              title="Cancel"
-                            >
-                              <X className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => !student.isArchived && toggleSelect(student.id)}
-                          disabled={student.isArchived}
-                          className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          {selectedIds.has(student.id) ? (
-                            <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-400" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
-                      <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <span className={student.isArchived ? "line-through text-slate-500" : ""}>{student.name}</span>
-                          {student.isFlagged && <Flag className="w-3 h-3 text-rose-500 fill-rose-500" />}
-                          {student.isArchived && <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">Archived</span>}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{student.parentName || '-'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{student.parentPhone || '-'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {student.isArchived ? (
-                            <button
-                              onClick={() => updateStudent(student.id, { isArchived: false })}
-                              className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors flex items-center gap-1"
-                              title="Restore Student"
-                            >
-                              <RefreshCcw className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => toggleFlag(student)}
-                                className={cn(
-                                  "p-2 rounded-lg transition-colors",
-                                  student.isFlagged 
-                                    ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50" 
-                                    : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-                                )}
-                                title={student.isFlagged ? "Remove Flag" : "Flag Student"}
-                              >
-                                <Flag className={cn("w-4 h-4", student.isFlagged && "fill-current")} />
-                              </button>
-                              <button
-                                onClick={() => startEditStudent(student)}
-                                className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                                title="Edit Student"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setArchiveConfirmId(student.id);
-                                }}
-                                title="Archive Student"
-                                className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
+                <StudentRow
+                  key={student.id}
+                  student={student}
+                  index={index}
+                  editingId={editingId}
+                  selectedIds={selectedIds}
+                  toggleSelect={toggleSelect}
+                  toggleFlag={toggleFlag}
+                  startEditStudent={startEditStudent}
+                  saveEditStudent={saveEditStudent}
+                  cancelEdit={cancelEdit}
+                  removeStudent={removeStudent}
+                  updateStudent={updateStudent}
+                />
               ))}
               {filteredStudents.length === 0 && !isAdding && students.length > 0 && (
                 <tr>

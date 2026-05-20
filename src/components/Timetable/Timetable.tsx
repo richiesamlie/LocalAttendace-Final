@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore, TimetableSlot } from '../../store';
 import { Plus, LayoutGrid, List, Calendar as CalendarIcon, Copy, Clock } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useCurrentClassName } from '../../hooks/useCurrentClass';
 
 import DaySelector from './DaySelector';
 import SlotForm from './SlotForm';
@@ -21,8 +22,7 @@ export default function Timetable() {
   const addTimetableSlot = useStore((s) => s.addTimetableSlot);
   const updateTimetableSlot = useStore((s) => s.updateTimetableSlot);
   const removeTimetableSlot = useStore((s) => s.removeTimetableSlot);
-  const classes = useStore((s) => s.classes);
-  const currentClassId = useStore((s) => s.currentClassId);
+  const className = useCurrentClassName();
 
   const [selectedDay, setSelectedDay] = useState<number>(
     new Date().getDay() === 0 || new Date().getDay() === 6 ? 1 : new Date().getDay()
@@ -77,8 +77,6 @@ export default function Timetable() {
     });
   };
 
-  const currentClass = classes.find(c => c.id === currentClassId);
-  const className = currentClass ? currentClass.name : 'Class';
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   return (

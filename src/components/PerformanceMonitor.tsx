@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import toast from 'react-hot-toast';
 import { cn } from '../utils/cn';
+import { isRecord } from '../utils/typeGuards';
 
 interface MetricsData {
   summary: {
@@ -71,9 +72,6 @@ const timeWindows = [
   { label: 'All', value: undefined },
 ] as const;
 
-const isRecord = (value: unknown): value is Record<string, unknown> => (
-  typeof value === 'object' && value !== null
-);
 
 const isMetricsData = (value: unknown): value is MetricsData => {
   if (!isRecord(value)) return false;

@@ -1,117 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Play, Pause, RotateCcw, Timer, Clock } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useTimer } from '../hooks/useTimer';
+import { useStopwatch } from '../hooks/useStopwatch';
 
 export default function ExamTimer() {
   const [activeTab, setActiveTab] = useState<'timer' | 'stopwatch'>('timer');
   
-  // Timer State
-  const [timerDuration, setTimerDuration] = useState(60 * 60); // Default 60 minutes
-  const [timerRemaining, setTimerRemaining] = useState(60 * 60);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerInputHours, setTimerInputHours] = useState('1');
-  const [timerInputMinutes, setTimerInputMinutes] = useState('0');
-  const [timerInputSeconds, setTimerInputSeconds] = useState('0');
+  const {
+    timerDuration,
+    timerRemaining,
+    isTimerRunning,
+    timerInputHours,
+    setTimerInputHours,
+    timerInputMinutes,
+    setTimerInputMinutes,
+    timerInputSeconds,
+    setTimerInputSeconds,
+    handleSetTimer,
+    toggleTimer,
+    resetTimer,
+  } = useTimer(60 * 60);
 
-  // Stopwatch State
-  const [stopwatchTime, setStopwatchTime] = useState(0);
-  const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
-
-  // Refs for intervals
-  const timerIntervalRef = useRef<number | null>(null);
-  const stopwatchIntervalRef = useRef<number | null>(null);
-  const timerRemainingRef = useRef(timerRemaining);
-  const stopwatchStartRef = useRef<number>(0);
-  const stopwatchAccumRef = useRef<number>(0);
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    timerRemainingRef.current = timerRemaining;
-  }, [timerRemaining]);
-
-  // --- Timer Logic (ref-based to avoid interval recreation) ---
-  useEffect(() => {
-    if (isTimerRunning && timerRemainingRef.current > 0) {
-      timerIntervalRef.current = window.setInterval(() => {
-        timerRemainingRef.current -= 1;
-        setTimerRemaining(timerRemainingRef.current);
-        if (timerRemainingRef.current <= 0) {
-          setIsTimerRunning(false);
-          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-        }
-      }, 1000);
-    } else if (!isTimerRunning && timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
-  }, [isTimerRunning]);
-
-  const handleSetTimer = () => {
-    const h = parseInt(timerInputHours) || 0;
-    const m = parseInt(timerInputMinutes) || 0;
-    const s = parseInt(timerInputSeconds) || 0;
-    const totalSeconds = (h * 3600) + (m * 60) + s;
-    
-    if (totalSeconds > 0) {
-      setTimerDuration(totalSeconds);
-      setTimerRemaining(totalSeconds);
-      setIsTimerRunning(false);
-    }
-  };
-
-  const toggleTimer = () => {
-    if (timerRemaining > 0) {
-      setIsTimerRunning(!isTimerRunning);
-    }
-  };
-
-  const resetTimer = () => {
-    setIsTimerRunning(false);
-    setTimerRemaining(timerDuration);
-  };
-
-  // --- Stopwatch Logic (Date.now() delta to prevent drift) ---
-  useEffect(() => {
-    if (isStopwatchRunning) {
-      stopwatchStartRef.current = Date.now();
-      stopwatchIntervalRef.current = window.setInterval(() => {
-        const elapsed = Date.now() - stopwatchStartRef.current;
-        setStopwatchTime(stopwatchAccumRef.current + elapsed);
-      }, 50);
-    } else if (!isStopwatchRunning && stopwatchIntervalRef.current) {
-      clearInterval(stopwatchIntervalRef.current);
-      stopwatchIntervalRef.current = null;
-    }
-
-    return () => {
-      if (stopwatchIntervalRef.current) {
-        clearInterval(stopwatchIntervalRef.current);
-        stopwatchIntervalRef.current = null;
-      }
-    };
-  }, [isStopwatchRunning]);
-
-  const toggleStopwatch = () => {
-    if (isStopwatchRunning) {
-      // Pausing: accumulate elapsed time
-      stopwatchAccumRef.current += Date.now() - stopwatchStartRef.current;
-    }
-    setIsStopwatchRunning(!isStopwatchRunning);
-  };
-
-  const resetStopwatch = () => {
-    setIsStopwatchRunning(false);
-    stopwatchAccumRef.current = 0;
-    stopwatchStartRef.current = 0;
-    setStopwatchTime(0);
-  };
+  const {
+    stopwatchTime,
+    isStopwatchRunning,
+    toggleStopwatch,
+    resetStopwatch,
+  } = useStopwatch();
 
   // --- Formatting Helpers ---
   const formatTime = (totalSeconds: number) => {
