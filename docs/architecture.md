@@ -1,223 +1,223 @@
-     1|# Architecture — Teacher Assistant
-     2|
-     3|**Last Updated:** 2026-05-11
-     4|**Branch:** `develop`
-     5|
-     6|---
-     7|
-     8|## Tech Stack
-     9|
-    10|| Layer | Technology |
-    11||-------|------------|
-    12|| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
-    13|| State | Zustand 5 (primary), React Query 5 (caching) |
-    14|| Backend | Express 4.21, better-sqlite3 12.4 |
-    15|| Auth | JWT (7-day expiry), httpOnly cookies, session tracking |
-    16|| Validation | Zod 4.3.6 |
-    17|| Security | Helmet, express-rate-limit, prepared statements |
-    18|
-    19|---
-    20|
-    21|## Architecture Overview
-    22|
-    23|```
-    24|Browser ──── JWT Cookie ──── Express API ──── SQLite/PostgreSQL
-    25|                │                   │
-    26|                ▼                   ▼
-    27|         React Query          services.ts
-    28|         (caching)               │
-    29|                │           db.stmt.*
-    30|                ▼               │
-    31|          Zustand Store    prepared statements
-    32|               │
-    33|               ▼
-    34|         Components (15+ pages)
-    35|```
-    36|
-    37|### Frontend State (src/store.ts + src/hooks/useData.ts)
-    38|
-    39|**Hybrid approach** — Zustand is the primary state source, React Query provides caching/deduplication.
-    40|
-    41|---
-    42|
-    43|## Backend Structure
-    44|
-    45|### routes.ts (now split into src/routes/)
-    46|
-    47|All API endpoints + middleware. Routes delegate to modules:
-    48|
-    49|| Module | Route Prefix | Purpose |
-    50||--------|-------------|---------|
-    51|| auth.routes.ts | /auth | Login, logout, verify, me |
-    52|| class.routes.ts | /classes | Class CRUD + teacher management |
-    53|| student.routes.ts | /students, /:classId/students | Student CRUD + sync |
-    54|| record.routes.ts | /records | Attendance records |
-    55|| event.routes.ts | /events | Calendar events |
-    56|| note.routes.ts | /daily-notes | Daily notes |
-    57|| timetable.routes.ts | /timetable | Weekly schedule |
-    58|| seating.routes.ts | /seating | Seating chart |
-    59|| invite.routes.ts | /invites, /invites/redeem | Invite system |
-    60|| session.routes.ts | /sessions | Session management |
-    61|| teacher.routes.ts | /teachers | Teacher list + register |
-    62|| admin.routes.ts | /settings, /database | Admin ops |
-    63|| health.routes.ts | /health | Health check |
-    64|
-    65|### Middleware Stack
-    66|
-    67|1. `requireAuth` — Validates JWT cookie, checks session revocation
-    68|2. `requireClassAccess(param)` — Verifies teacher has access via class_teachers
-    69|3. `requireClassOwner(param)` — Verifies teacher is class owner (role=owner)
-    70|4. `requireRole(param, minRole)` — Verifies minimum role level
-    71|5. `withWriteQueue(handler)` — Serializes write operations
-    72|
-    73|### services.ts (715 lines)
-    74|
-    75|Service layer with 11 service objects (teacherService, classService, etc.). All DB access flows through here. Uses `db.stmt.*` for prepared statements.
-    76|
-    77|### db.ts (now src/db/)
-    78|
-    79|```
-    80|src/db/
-    81|├── connection.ts — DB file, pragmas, _db instance
-    82|├── schema.ts — initSchema + migrations
-    83|├── statements.ts — 57 prepared statements
-    84|├── cache.ts — TTL cache functions (5s default, 60s for static)
-    85|├── writeQueue.ts — Serialized write queue
-    86|└── index.ts — Re-exports dbProxy with restore support
-    87|```
-    88|
-    89|Key patterns:
-    90|- `db.stmt.*` — Pre-compiled prepared statements (teacher isolation via class_teachers)
-    91|- `db.enqueueWrite(fn)` — Queue write operations (prevents "database is locked")
-    92|- `db.cache` — { get, set, invalidate, cached }
-    93|- `db.restore(buffer)` — Safely replace database file
-    94|
-    95|---
-    96|
-    97|## Database Schema
-    98|
-    99|### Tables
-   100|
-   101|| Table | Purpose | Key Columns |
-   102||-------|---------|-------------|
-   103|| teachers | Teacher accounts | id, username, password_hash, is_admin, last_login |
-   104|| classes | Class metadata | id, teacher_id (owner), name |
-   105|| students | Student records | id, class_id, name, roll_number, is_flagged, is_archived |
-   106|| attendance_records | Daily attendance | student_id, date (composite PK), status, reason |
-   107|| events | Calendar events | id, class_id, date, title, type, description |
-   108|| timetable_slots | Weekly schedule | id, day_of_week(0-6), start/end time, subject, lesson |
-   109|| seating_layout | Seating chart | class_id, seat_id, student_id |
-   110|| class_teachers | Teacher-class access | class_id, teacher_id, role |
-   111|| invite_codes | Invite system | code, class_id, role, expires_at, used_by |
-   112|| user_sessions | Session tracking | id, teacher_id, expires_at, is_revoked |
-   113|| admin_settings | Key-value settings | key, value |
-   114|
-   115|### Key Patterns
-   116|
-   117|- **Teacher isolation:** All data-modifying statements include `class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)`
-   118|- **Triggers:** SQLite triggers auto-populate `updated_at` on UPDATE for 7 tables
-   119|- **Indexes:** 20+ indexes including compound indexes for common query patterns
-   120|- **Foreign keys:** CASCADE delete prevents orphaned data
-   121|
-   122|---
-   123|
-   124|## Security Model
-   125|
-   126|1. **JWT cookie-only auth** — No Authorization header bypass
-   127|2. **Session tracking** — Session revocation checked on every request
-   128|3. **RBAC** — Global admin vs class-level roles (owner/teacher/assistant)
-   129|4. **Rate limiting** — 150 login attempts/15min, 500 POST/15min (test env bypassed)
-   130|5. **Helmet** — Security headers (CSP, XSS, clickjacking)
-   131|6. **SQL injection** — Prepared statements prevent injection
-   132|7. **Input sanitization** — `safeString()` strips null bytes + trims whitespace
-   133|
-   134|---
-   135|
-   136|## File Structure
-   137|
-   138|```
-   139|├── db.ts (→ src/db/) ─ Database: schema, statements, cache, queue
-   140|├── routes.ts (→ src/routes/) ─ API endpoints + middleware
-   141|├── services.ts ─ Service layer (11 service objects)
-   142|├── server.ts ─ Express setup, Vite integration
-   143|├── src/
-   144|│   ├── store.ts ─ Zustand state management
-   145|│   ├── App.tsx ─ Main app: auth routing, layout, sync
-   146|│   ├── lib/
-   147|│   │   ├── api.ts ─ Frontend fetch wrapper (30+ methods)
-   148|│   │   ├── validation.ts ─ Zod schemas
-   149|│   │   └── errorHandler.ts ─ Express error middleware
-   150|│   ├── hooks/
-   151|│   │   ├── useData.ts ─ React Query hooks + useClassSync
-   152|│   │   └── useClickOutside.ts ─ Dropdown handler
-   153|│   ├── components/ (15+ pages)
-   154|│   └── types/
-   155|│       ├── db.ts ─ Database row types
-   156|│       └── store.ts ─ Store types (ClassData, Student, etc.)
-   157|```
-   158|
-   159|---
-   160|
-   161|## Multi-Teacher Support
-   162|
-   163|**Role hierarchy:** administrator > owner > teacher > assistant
-   164|
-   165|| Role | Scope | Permissions |
-   166||------|-------|-------------|
-   167|| Administrator | Global | Access any class, register teachers, unlimited classes |
-   168|| Owner (Homeroom) | Class | Full control of their class |
-   169|| Subject Teacher | Class | Students, attendance, events, timetable, invites |
-   170|| Assistant | Class | Limited helper access |
-   171|
-   172|**Invite system:** Teachers create invite codes with role (teacher/assistant). Other teachers redeem codes to join classes.
-   173|
-   174|---
-   175|
-   176|## PostgreSQL Support
-   177|
-   178|App auto-detects PostgreSQL when `DATABASE_URL` is set. See `.env.example` for setup. To switch:
-   179|
-   180|```bash
-   181|export DATABASE_URL=postgresql://user:***@localhost:5432/teacher_assistant
-   182|bun run dev
-   183|```
-   184|
-   185|---
-   186|
-   187|## Key Patterns
-   188|
-   189|### Store Action Pattern
-   190|```typescript
-   191|addStudent: async (student) => {
-   192|  try {
-   193|    await api.createStudent(classId, student);
-   194|    set(state => updateCurrentClass(state, { students: [...state.students, student] }));
-   195|    toast.success('Student added');
-   196|  } catch {
-   197|    toast.error('Failed to add student');
-   198|  }
-   199|}
-   200|```
-   201|
-   202|### API Error Handling
-   203|```typescript
-   204|if (!response.ok) {
-   205|  const body = await response.json().catch(() => ({}));
-   206|  throw new Error(body.error || response.statusText);
-   207|}
-   208|```
-   209|
-   210|### Cache Key Pattern
-   211|```typescript
-   212|db.cache.set(`classes:${teacherId}`, value);
-   213|db.cache.invalidate(`classes:${teacherId}`); // trailing colon for prefix match
-   214|```
-   215|
-   216|---
-   217|
-   218|## See Also
-   219|
-   220|- `api-reference.md` — All API endpoints with types
-   221|- `developer-guide.md` — Coding conventions and workflows
-   222|- `documentation-map.md` — Active documentation index
-   223|
+﻿# Architecture â€” Teacher Assistant
+
+**Last Updated:** 2026-05-11
+**Branch:** `develop`
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
+| State | Zustand 5 (primary), React Query 5 (caching) |
+| Backend | Express 4.21, better-sqlite3 12.4 |
+| Auth | JWT (7-day expiry), httpOnly cookies, session tracking |
+| Validation | Zod 4.3.6 |
+| Security | Helmet, express-rate-limit, prepared statements |
+
+---
+
+## Architecture Overview
+
+```
+Browser â”€â”€â”€â”€ JWT Cookie â”€â”€â”€â”€ Express API â”€â”€â”€â”€ SQLite/PostgreSQL
+                â”‚                   â”‚
+                â–¼                   â–¼
+         React Query          services.ts
+         (caching)               â”‚
+                â”‚           db.stmt.*
+                â–¼               â”‚
+          Zustand Store    prepared statements
+               â”‚
+               â–¼
+         Components (15+ pages)
+```
+
+### Frontend State (src/store.ts + src/hooks/useData.ts)
+
+**Hybrid approach** â€” Zustand is the primary state source, React Query provides caching/deduplication.
+
+---
+
+## Backend Structure
+
+### routes.ts (now split into src/routes/)
+
+All API endpoints + middleware. Routes delegate to modules:
+
+| Module | Route Prefix | Purpose |
+|--------|-------------|---------|
+| auth.routes.ts | /auth | Login, logout, verify, me |
+| class.routes.ts | /classes | Class CRUD + teacher management |
+| student.routes.ts | /students, /:classId/students | Student CRUD + sync |
+| record.routes.ts | /records | Attendance records |
+| event.routes.ts | /events | Calendar events |
+| note.routes.ts | /daily-notes | Daily notes |
+| timetable.routes.ts | /timetable | Weekly schedule |
+| seating.routes.ts | /seating | Seating chart |
+| invite.routes.ts | /invites, /invites/redeem | Invite system |
+| session.routes.ts | /sessions | Session management |
+| teacher.routes.ts | /teachers | Teacher list + register |
+| admin.routes.ts | /settings, /database | Admin ops |
+| health.routes.ts | /health | Health check |
+
+### Middleware Stack
+
+1. `requireAuth` â€” Validates JWT cookie, checks session revocation
+2. `requireClassAccess(param)` â€” Verifies teacher has access via class_teachers
+3. `requireClassOwner(param)` â€” Verifies teacher is class owner (role=owner)
+4. `requireRole(param, minRole)` â€” Verifies minimum role level
+5. `withWriteQueue(handler)` â€” Serializes write operations
+
+### services.ts (715 lines)
+
+Service layer with 11 service objects (teacherService, classService, etc.). All DB access flows through here. Uses `db.stmt.*` for prepared statements.
+
+### db.ts (now src/db/)
+
+```
+src/db/
+â”œâ”€â”€ connection.ts â€” DB file, pragmas, _db instance
+â”œâ”€â”€ schema.ts â€” initSchema + migrations
+â”œâ”€â”€ statements.ts â€” 57 prepared statements
+â”œâ”€â”€ cache.ts â€” TTL cache functions (5s default, 60s for static)
+â”œâ”€â”€ writeQueue.ts â€” Serialized write queue
+â””â”€â”€ index.ts â€” Re-exports dbProxy with restore support
+```
+
+Key patterns:
+- `db.stmt.*` â€” Pre-compiled prepared statements (teacher isolation via class_teachers)
+- `db.enqueueWrite(fn)` â€” Queue write operations (prevents "database is locked")
+- `db.cache` â€” { get, set, invalidate, cached }
+- `db.restore(buffer)` â€” Safely replace database file
+
+---
+
+## Database Schema
+
+### Tables
+
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| teachers | Teacher accounts | id, username, password_hash, is_admin, last_login |
+| classes | Class metadata | id, teacher_id (owner), name |
+| students | Student records | id, class_id, name, roll_number, is_flagged, is_archived |
+| attendance_records | Daily attendance | student_id, date (composite PK), status, reason |
+| events | Calendar events | id, class_id, date, title, type, description |
+| timetable_slots | Weekly schedule | id, day_of_week(0-6), start/end time, subject, lesson |
+| seating_layout | Seating chart | class_id, seat_id, student_id |
+| class_teachers | Teacher-class access | class_id, teacher_id, role |
+| invite_codes | Invite system | code, class_id, role, expires_at, used_by |
+| user_sessions | Session tracking | id, teacher_id, expires_at, is_revoked |
+| admin_settings | Key-value settings | key, value |
+
+### Key Patterns
+
+- **Teacher isolation:** All data-modifying statements include `class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)`
+- **Triggers:** SQLite triggers auto-populate `updated_at` on UPDATE for 7 tables
+- **Indexes:** 20+ indexes including compound indexes for common query patterns
+- **Foreign keys:** CASCADE delete prevents orphaned data
+
+---
+
+## Security Model
+
+1. **JWT cookie-only auth** â€” No Authorization header bypass
+2. **Session tracking** â€” Session revocation checked on every request
+3. **RBAC** â€” Global admin vs class-level roles (owner/teacher/assistant)
+4. **Rate limiting** â€” 150 login attempts/15min, 500 POST/15min (test env bypassed)
+5. **Helmet** â€” Security headers (CSP, XSS, clickjacking)
+6. **SQL injection** â€” Prepared statements prevent injection
+7. **Input sanitization** â€” `safeString()` strips null bytes + trims whitespace
+
+---
+
+## File Structure
+
+```
+â”œâ”€â”€ db.ts (â†’ src/db/) â”€ Database: schema, statements, cache, queue
+â”œâ”€â”€ routes.ts (â†’ src/routes/) â”€ API endpoints + middleware
+â”œâ”€â”€ services.ts â”€ Service layer (11 service objects)
+â”œâ”€â”€ server.ts â”€ Express setup, Vite integration
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ store.ts â”€ Zustand state management
+â”‚   â”œâ”€â”€ App.tsx â”€ Main app: auth routing, layout, sync
+â”‚   â”œâ”€â”€ lib/
+â”‚   â”‚   â”œâ”€â”€ api.ts â”€ Frontend fetch wrapper (30+ methods)
+â”‚   â”‚   â”œâ”€â”€ validation.ts â”€ Zod schemas
+â”‚   â”‚   â””â”€â”€ errorHandler.ts â”€ Express error middleware
+â”‚   â”œâ”€â”€ hooks/
+â”‚   â”‚   â”œâ”€â”€ useData.ts â”€ React Query hooks + useClassSync
+â”‚   â”‚   â””â”€â”€ useClickOutside.ts â”€ Dropdown handler
+â”‚   â”œâ”€â”€ components/ (15+ pages)
+â”‚   â””â”€â”€ types/
+â”‚       â”œâ”€â”€ db.ts â”€ Database row types
+â”‚       â””â”€â”€ store.ts â”€ Store types (ClassData, Student, etc.)
+```
+
+---
+
+## Multi-Teacher Support
+
+**Role hierarchy:** administrator > owner > teacher > assistant
+
+| Role | Scope | Permissions |
+|------|-------|-------------|
+| Administrator | Global | Access any class, register teachers, unlimited classes |
+| Owner (Homeroom) | Class | Full control of their class |
+| Subject Teacher | Class | Students, attendance, events, timetable, invites |
+| Assistant | Class | Limited helper access |
+
+**Invite system:** Teachers create invite codes with role (teacher/assistant). Other teachers redeem codes to join classes.
+
+---
+
+## PostgreSQL Support
+
+App auto-detects PostgreSQL when `DATABASE_URL` is set. See `.env.example` for setup. To switch:
+
+```bash
+export DATABASE_URL=postgresql://user:***@localhost:5432/teacher_assistant
+bun run dev
+```
+
+---
+
+## Key Patterns
+
+### Store Action Pattern
+```typescript
+addStudent: async (student) => {
+  try {
+    await api.createStudent(classId, student);
+    set(state => updateCurrentClass(state, { students: [...state.students, student] }));
+    toast.success('Student added');
+  } catch {
+    toast.error('Failed to add student');
+  }
+}
+```
+
+### API Error Handling
+```typescript
+if (!response.ok) {
+  const body = await response.json().catch(() => ({}));
+  throw new Error(body.error || response.statusText);
+}
+```
+
+### Cache Key Pattern
+```typescript
+db.cache.set(`classes:${teacherId}`, value);
+db.cache.invalidate(`classes:${teacherId}`); // trailing colon for prefix match
+```
+
+---
+
+## See Also
+
+- `api-reference.md` â€” All API endpoints with types
+- `developer-guide.md` â€” Coding conventions and workflows
+- `documentation-map.md` â€” Active documentation index
+

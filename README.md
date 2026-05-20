@@ -53,7 +53,7 @@ A comprehensive, local-first web application designed to help teachers manage th
 For a complete beginner's guide with step-by-step instructions, see the full **[User Guide](docs/user-guide.md)**.
 
 It covers:
-- Installation (Docker & Node.js methods)
+- Installation (Docker & Bun methods)
 - First login and setup
 - Adding students and taking attendance
 - Inviting teachers to classes
@@ -65,8 +65,7 @@ Additional docs:
 
 ## Prerequisites
 
-- **Node.js** (version 18 or higher)
-- **Bun** (version 1.3+ recommended)
+- **Bun** (version 1.1 or higher)
 
 ## Getting Started
 
