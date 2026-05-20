@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Flag, Edit2, Trash2, RefreshCcw, CheckSquare, Square, X, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { confirmToast } from '../../utils/confirmToast';
@@ -40,8 +40,13 @@ export default function StudentRow({
   const [editParentPhone, setEditParentPhone] = useState(student.parentPhone || '');
   const [editIsFlagged, setEditIsFlagged] = useState(student.isFlagged || false);
 
-  // Sync state if student changes
-  useEffect(() => {
+  // Track previous student and editing state to adjust state during render
+  const [prevStudent, setPrevStudent] = useState(student);
+  const [prevIsEditing, setPrevIsEditing] = useState(isEditing);
+
+  if (student !== prevStudent || isEditing !== prevIsEditing) {
+    setPrevStudent(student);
+    setPrevIsEditing(isEditing);
     if (isEditing) {
       setEditName(student.name);
       setEditRoll(student.rollNumber);
@@ -49,7 +54,7 @@ export default function StudentRow({
       setEditParentPhone(student.parentPhone || '');
       setEditIsFlagged(student.isFlagged || false);
     }
-  }, [isEditing, student]);
+  }
 
   const handleSave = () => {
     if (!editName.trim() || !editRoll.trim()) return;
