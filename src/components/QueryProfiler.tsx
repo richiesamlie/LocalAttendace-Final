@@ -3,6 +3,7 @@ import { Database, Search, AlertTriangle, CheckCircle, AlertCircle, TrendingUp, 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { cn } from '../utils/cn';
+import { isRecord } from '../utils/typeGuards';
 
 interface QueryPlan {
   id: number;
@@ -41,9 +42,6 @@ interface TableStat {
   rowCount: number;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => (
-  typeof value === 'object' && value !== null
-);
 
 const isQueryPlan = (value: unknown): value is QueryPlan => {
   if (!isRecord(value)) return false;

@@ -1,16 +1,19 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, UserPlus, AlertTriangle, Activity, Server } from 'lucide-react';
+import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, Activity, Server } from 'lucide-react';
 import { useStore } from '../store';
-import { api } from '../lib/api';
-import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import type { ClassData, AttendanceRecord, CalendarEvent } from '../types/store';
+import StatCard from './AdminDashboard/StatCard';
+import TabButton from './AdminDashboard/TabButton';
+import { buildMassiveBackup, downloadJson, mergeBackupClasses } from './AdminDashboard/adminUtils';
+import type { MassiveBackupPayload } from './AdminDashboard/adminUtils';
+import TeachersTab from './AdminDashboard/TeachersTab';
+import ClassesTab from './AdminDashboard/ClassesTab';
+import StudentsTab from './AdminDashboard/StudentsTab';
+import AttendanceTab from './AdminDashboard/AttendanceTab';
+import EventsTab from './AdminDashboard/EventsTab';
 
 type TabType = 'classes' | 'students' | 'attendance' | 'events' | 'timetables' | 'notes' | 'teachers';
 
-type MassiveBackupClass = ClassData;
-type MassiveBackupSemester = { classes?: ClassData[] };
-type MassiveBackupPayload = { metadata?: unknown; data?: Record<string, MassiveBackupSemester> };
 
 interface AdminDashboardProps {
   navigate: (page: string) => void;
@@ -58,47 +61,8 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
     setIsMassiveBackingUp(true);
     try {
       const state = useStore.getState();
-
-      const isSem1 = (dateStr: string) => {
-        const month = new Date(dateStr).getMonth();
-        return month >= 6 && month <= 11; // Jul (6) to Dec (11)
-      };
-      const isSem2 = (dateStr: string) => {
-        const month = new Date(dateStr).getMonth();
-        return month >= 0 && month <= 5; // Jan (0) to Jun (5)
-      };
-
-      const processClasses = (filterFn: (date: string) => boolean) =>
-        (state.classes || []).map((c: ClassData) => ({
-          ...c,
-          records: (c.records || []).filter((r: AttendanceRecord) => filterFn(r.date)),
-          dailyNotes: Object.fromEntries(
-            Object.entries(c.dailyNotes || {}).filter(([date]) => filterFn(date))
-          ),
-          events: (c.events || []).filter((e: CalendarEvent) => filterFn(e.date)),
-        }));
-
-      const massiveBackup = {
-        metadata: {
-          exportDate: new Date().toISOString(),
-          type: 'Massive Semester Backup',
-          version: '1.1',
-        },
-        data: {
-          'Semester 1 (Jul-Dec)': { classes: processClasses(isSem1) },
-          'Semester 2 (Jan-Jun)': { classes: processClasses(isSem2) },
-        },
-      };
-
-      const blob = new Blob([JSON.stringify(massiveBackup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const backup = buildMassiveBackup(state.classes || []);
+      downloadJson(backup, `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`);
     } catch (error) {
       console.error('Massive backup failed:', error);
       toast.error('Failed to generate massive backup.');
@@ -136,25 +100,7 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
           throw new Error('Invalid backup format');
         }
 
-        const mergedClasses = new Map<string, MassiveBackupClass>();
-        
-        Object.values(parsed.data).forEach((semester: MassiveBackupSemester) => {
-          if (semester.classes && Array.isArray(semester.classes)) {
-            semester.classes.forEach((c: MassiveBackupClass) => {
-              if (mergedClasses.has(c.id)) {
-                const existing = mergedClasses.get(c.id);
-                if (!existing) return;
-                existing.records = [...(existing.records || []), ...(c.records || [])];
-                existing.events = [...(existing.events || []), ...(c.events || [])];
-                existing.dailyNotes = { ...(existing.dailyNotes || {}), ...(c.dailyNotes || {}) };
-              } else {
-                mergedClasses.set(c.id, { ...c });
-              }
-            });
-          }
-        });
-
-        const finalClasses = Array.from(mergedClasses.values());
+        const finalClasses = mergeBackupClasses(parsed);
         
         if (finalClasses.length === 0) {
           throw new Error('No classes found in backup');
@@ -291,112 +237,6 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
   );
 }
 
-function TeachersTabContent() {
-  const [bulkInput, setBulkInput] = useState('');
-  const [defaultPassword, setDefaultPassword] = useState('password123');
-
-  const registerMutation = useMutation({
-    mutationFn: ({ username, name, password }: { username: string; name: string; password: string }) => 
-      api.registerTeacher(username, password, name),
-  });
-
-  const handleBulkAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bulkInput.trim()) return;
-
-    const lines = bulkInput.split('\n').filter(line => line.trim());
-    const results: { success: number; failed: number; errors: string[] } = { success: 0, failed: 0, errors: [] };
-
-    for (const line of lines) {
-      const parts = line.split(',').map(s => s.trim());
-      if (parts.length < 2) {
-        results.failed++;
-        results.errors.push(`"${line}" - needs username,name`);
-        continue;
-      }
-      const [username, name] = parts;
-      try {
-        await registerMutation.mutateAsync({ username, name, password: defaultPassword });
-        results.success++;
-      } catch (err: unknown) {
-        results.failed++;
-        const message = err instanceof Error ? err.message : 'failed';
-        results.errors.push(`"${username}" - ${message}`);
-      }
-    }
-
-    if (results.success > 0) {
-      toast.success(`Added ${results.success} teacher(s)`);
-      setBulkInput('');
-    }
-    if (results.errors.length > 0) {
-      toast.error(`${results.failed} failed: ${results.errors[0]}`);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-          <UserPlus className="w-5 h-5" />
-          Bulk Add Teachers
-        </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Enter one teacher per line: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">username,name</code>
-        </p>
-        
-        <form onSubmit={handleBulkAdd} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Default Password for All New Teachers
-            </label>
-            <input
-              type="text"
-              value={defaultPassword}
-              onChange={(e) => setDefaultPassword(e.target.value)}
-              className="w-full max-w-xs px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-              placeholder="Enter default password"
-              aria-label="Default password for new teachers"
-            />
-          </div>
-          
-          <textarea
-            value={bulkInput}
-            onChange={(e) => setBulkInput(e.target.value)}
-            placeholder="johnsmith,John Smith&#10;jane Doe,jane@example.com"
-            className="w-full h-40 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
-          />
-          
-          <button
-            type="submit"
-            disabled={registerMutation.isPending || !bulkInput.trim()}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-          >
-            {registerMutation.isPending ? (
-              <>Adding...</>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4" />
-                Add Teachers
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-
-      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800 dark:text-amber-200">
-            <p className="font-medium">Important</p>
-            <p className="mt-1">Each teacher has their own separate classes and data. They cannot see or modify other teachers&apos; data.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
   const allStudents = classes.flatMap(c => (c.students || []).map(s => ({ ...s, classId: c.id, className: c.name })));
   const allAttendance = classes.flatMap(c => (c.records || []).map(r => ({ ...r, classId: c.id, className: c.name })));
   const allEvents = classes.flatMap(c => (c.events || []).map(e => ({ ...e, classId: c.id, className: c.name })));
@@ -408,122 +248,20 @@ function TeachersTabContent() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'classes':
-        return (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
-                  <th className="pb-3 font-medium">ID</th>
-                  <th className="pb-3 font-medium">Class Name</th>
-                  <th className="pb-3 font-medium">Students</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {classes.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map(c => (
-                  <tr key={c.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-3 font-mono text-xs text-slate-500">{c.id}</td>
-                    <td className="py-3 font-medium text-slate-900 dark:text-white">{c.name}</td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300">{(c.students || []).length}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+        return <ClassesTab classes={classes} searchTerm={searchTerm} />;
       case 'students':
-        return (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
-                  <th className="pb-3 font-medium">ID</th>
-                  <th className="pb-3 font-medium">Name</th>
-                  <th className="pb-3 font-medium">Class</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {allStudents.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map(s => (
-                  <tr key={`${s.classId}-${s.id}`} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-3 font-mono text-xs text-slate-500">{s.id}</td>
-                    <td className="py-3 font-medium text-slate-900 dark:text-white">{s.name}</td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300">
-                      <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-md text-xs">
-                        {s.className}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+        return <StudentsTab students={allStudents} searchTerm={searchTerm} />;
       case 'attendance':
-        return (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Class</th>
-                  <th className="pb-3 font-medium">Student ID</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {allAttendance.filter(a => a.date.includes(searchTerm) || a.studentId.includes(searchTerm)).slice(0, 100).map((a, i) => (
-                  <tr key={`${a.classId}-${a.date}-${a.studentId}-${i}`} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-3 text-slate-900 dark:text-white">{a.date}</td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300">{a.className}</td>
-                    <td className="py-3 font-mono text-xs text-slate-500">{a.studentId}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                        a.status === 'Present' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' :
-                        a.status === 'Absent' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' :
-                        'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'
-                      }`}>
-                        {a.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {allAttendance.length > 100 && (
-              <p className="text-xs text-slate-500 mt-4 text-center">Showing first 100 records. Use search to filter.</p>
-            )}
-          </div>
-        );
+        return <AttendanceTab attendance={allAttendance} searchTerm={searchTerm} />;
       case 'events':
-        return (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Class</th>
-                  <th className="pb-3 font-medium">Title</th>
-                  <th className="pb-3 font-medium">Type</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {allEvents.filter(e => e.title.toLowerCase().includes(searchTerm.toLowerCase())).map((e, i) => (
-                  <tr key={`${e.classId}-${e.id}-${i}`} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-3 text-slate-900 dark:text-white">{e.date}</td>
-                    <td className="py-3 text-slate-600 dark:text-slate-300">{e.className}</td>
-                    <td className="py-3 font-medium text-slate-900 dark:text-white">{e.title}</td>
-                    <td className="py-3 capitalize text-slate-600 dark:text-slate-400">{e.type}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+        return <EventsTab events={allEvents} searchTerm={searchTerm} />;
       case 'teachers':
-        return <TeachersTabContent />;
+        return <TeachersTab />;
       default:
         return <div className="p-8 text-center text-slate-500">Select a tab to view data</div>;
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -689,48 +427,3 @@ function TeachersTabContent() {
   );
 }
 
-function StatCard({ icon, label, value, color }: { icon: React.ReactElement<{ className?: string }>, label: string, value: number, color: string }) {
-  const colors: Record<string, string> = {
-    indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400',
-    emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
-    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
-    rose: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
-  };
-
-  return (
-    <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
-      <div className={`p-4 rounded-xl ${colors[color]}`}>
-        {React.cloneElement(icon, { className: 'w-6 h-6' })}
-      </div>
-      <div>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function TabButton({ active, onClick, icon, label, count }: { active: boolean, onClick: () => void, icon: React.ReactElement<{ className?: string }>, label: string, count: number }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-        active 
-          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
-          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        {React.cloneElement(icon, { className: 'w-4 h-4' })}
-        {label}
-      </div>
-      <span className={`px-2 py-0.5 rounded-full text-xs ${
-        active 
-          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' 
-          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-      }`}>
-        {count}
-      </span>
-    </button>
-  );
-}

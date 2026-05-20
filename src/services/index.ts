@@ -25,15 +25,7 @@ export { seatingService as seatingBackendService } from './seating.service';
 export { settingService } from './setting.service';
 export { inviteService } from './invite.service';
 
-// Frontend API client services (existing)
-export { classService, type ClassSummary } from './classService';
-export { studentService } from './studentService';
-export { recordService } from './recordService';
-export { eventService } from './eventService';
-export { timetableService } from './timetableService';
-export { seatingService } from './seatingService';
-export { noteService } from './noteService';
-
 // Utilities
+
 export { isPostgres } from './utils';
 
