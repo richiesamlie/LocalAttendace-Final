@@ -86,7 +86,7 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Review and customize .env file if needed" -ForegroundColor White
 Write-Host "  2. Run: bun install" -ForegroundColor White
-Write-Host "  3. Run: bun run dev" -ForegroundColor White
+Write-Host "  3. Run: .\start-app.bat --mode debug  (or: npx tsx server.ts)" -ForegroundColor White
 Write-Host ""
 Write-Host "💡 Tip: You can customize performance monitoring thresholds in .env" -ForegroundColor Gray
 Write-Host "   See PERFORMANCE.md for details" -ForegroundColor Gray

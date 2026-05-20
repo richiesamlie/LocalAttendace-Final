@@ -23,12 +23,24 @@ exit /b
 :: Change directory to the location of this batch file
 cd /d "%~dp0"
 
-:: Ensure Bun is installed and dependencies are available
+:: Ensure Bun is installed (used for package management and building the frontend)
 where bun >nul 2>&1
 IF %errorlevel% NEQ 0 (
     echo.
     echo ERROR: Bun is not installed or not in PATH.
-    echo Install Bun first: https://bun.sh/
+    echo Install Bun first (required for frontend tooling): https://bun.sh/
+    echo.
+    pause
+    exit /b 1
+)
+
+:: Ensure Node.js is installed (required for executing the Express backend on Windows)
+where node >nul 2>&1
+IF %errorlevel% NEQ 0 (
+    echo.
+    echo ERROR: Node.js is not installed or not in PATH.
+    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations (better-sqlite3).
+    echo Install Node.js first: https://nodejs.org/
     echo.
     pause
     exit /b 1
@@ -69,13 +81,13 @@ start "" cmd /c "timeout /t 5 /nobreak > NUL && start http://127.0.0.1:3000"
 
 :: Start the app server
 if "%MODE%"=="debug" (
-    echo Starting Teacher Assistant Server in Debug Mode...
-    call bun run dev
+    echo Starting Teacher Assistant Server in Debug Mode via Node.js...
+    call npx tsx server.ts
 ) else (
     echo Building the application for production...
     call bun run build
-    echo Starting Teacher Assistant Server in Production Mode...
+    echo Starting Teacher Assistant Server in Production Mode via Node.js...
     set NODE_ENV=production
-    call bun run start
+    call npx tsx server.ts
 )
 endlocal

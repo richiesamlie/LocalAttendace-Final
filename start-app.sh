@@ -6,11 +6,21 @@
 # Change to script directory
 cd "$(dirname "$0")"
 
-# Ensure Bun is installed and install dependencies
+# Ensure Bun is installed (used for package management and building the frontend)
 if ! command -v bun >/dev/null 2>&1; then
     echo ""
     echo "ERROR: Bun is not installed or not in PATH."
-    echo "Install Bun first: https://bun.sh/"
+    echo "Install Bun first (required for frontend tooling): https://bun.sh/"
+    echo ""
+    exit 1
+fi
+
+# Ensure Node.js is installed (required for executing the Express backend consistently)
+if ! command -v node >/dev/null 2>&1; then
+    echo ""
+    echo "ERROR: Node.js is not installed or not in PATH."
+    echo "Node.js is required to execute the backend server."
+    echo "Install Node.js first: https://nodejs.org/"
     echo ""
     exit 1
 fi
@@ -69,12 +79,12 @@ done
 
 # Start the app server
 if [ "$MODE" == "debug" ]; then
-    echo "Starting Teacher Assistant Server in Debug Mode..."
-    bun run dev
+    echo "Starting Teacher Assistant Server in Debug Mode via Node.js..."
+    npx tsx server.ts
 else
     echo "Building the application for production..."
     bun run build
-    echo "Starting Teacher Assistant Server in Production Mode..."
+    echo "Starting Teacher Assistant Server in Production Mode via Node.js..."
     export NODE_ENV=production
-    bun run start
+    npx tsx server.ts
 fi

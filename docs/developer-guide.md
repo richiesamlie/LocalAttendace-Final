@@ -8,7 +8,8 @@
 ## Getting Started
 
 ### Prerequisites
-- Bun (v1.1+ recommended)
+- **Bun** (v1.1+ recommended) — For package installation and building frontend production assets.
+- **Node.js** (v18+ recommended) — For executing the Express backend server (strictly required due to Windows Bun native C++ binding limitations with `better-sqlite3`).
 
 ### Setup
 
@@ -22,8 +23,8 @@ bun install
 .\setup-env.ps1  # Windows
 bash setup-env.sh  # Linux/macOS
 
-# Start dev server
-bun run dev
+# Start backend dev server via Node.js
+npx tsx server.ts
 ```
 
 ### Environment Variables

@@ -27,12 +27,23 @@ const router = express.Router();
 // Mount all route modules
 router.use('/auth', authRouter);
 router.use('/classes', classRouter);
+router.use('/classes', studentRouter); // Handle class-based student paths under /classes
+
+// Mount routers that define /classes/:classId/... internally on the root path
+router.use('/', recordRouter);
+router.use('/', noteRouter);
+router.use('/', eventRouter);
+router.use('/', timetableRouter);
+router.use('/', seatingRouter);
+
+// Mount routers under their direct resource names for direct member access
 router.use('/students', studentRouter);
 router.use('/records', recordRouter);
 router.use('/notes', noteRouter);
 router.use('/events', eventRouter);
 router.use('/timetable', timetableRouter);
 router.use('/seating', seatingRouter);
+
 router.use('/invites', inviteRouter);
 router.use('/sessions', sessionRouter);
 router.use('/teachers', teacherRouter);
