@@ -1,4 +1,4 @@
-﻿# Troubleshooting â€” Teacher Assistant
+# Troubleshooting â€” Teacher Assistant
 
 **Last Updated:** 2026-05-11
 **Branch:** `develop`
@@ -41,6 +41,17 @@ DEFAULT_ADMIN_PASSWORD=your_password
 **Fix:**
 ```bash
 bun install
+```
+
+---
+
+### "ERR_DLOPEN_FAILED" or "'better-sqlite3' is not yet supported in Bun" (Windows)
+
+**Cause:** Bun on Windows does not support loading native C++ Node.js addons (like the `better-sqlite3` driver) directly yet.
+
+**Fix:** Start the Express server using Node.js instead of Bun:
+```bash
+npx tsx server.ts
 ```
 
 ---

@@ -65,7 +65,8 @@ Additional docs:
 
 ## Prerequisites
 
-- **Bun** (version 1.1 or higher)
+- **Bun** (version 1.1 or higher) — Used for frontend dependency installation and Vite builds.
+- **Node.js** (version 18 or higher) — Required to execute the Express/SQLite backend server (specifically due to Bun's native binding limitations with `better-sqlite3` on Windows).
 
 ## Getting Started
 
@@ -136,27 +137,40 @@ DEFAULT_ADMIN_PASSWORD=your_admin_password
 
 ### 4. Start the Server
 
+> [!NOTE]
+> The Express server relies on `better-sqlite3` which has native C++ bindings. Since Bun on Windows does not support loading this addon natively (`ERR_DLOPEN_FAILED`), **Node.js** (via `npx tsx`) is strictly required to execute the backend server. The scripts check for both Bun (frontend) and Node.js (backend) and orchestrate this automatically.
+
+To make launching as simple as possible, you can double-click **`start-app.bat`** (Windows) or run **`bash start-app.sh`** (Linux/macOS) in the root directory. This will automatically check prerequisites, install dependencies, build the frontend, and boot the server in production mode.
+
+Or, to launch manually:
+
 #### 🔒 Local Mode (Production)
 Only accessible from this computer:
 ```bash
+# Build the frontend assets using Bun
 bun run build
+
+# Start the Express server using Node.js
 export NODE_ENV=production
-bun run start
+npx tsx server.ts
 ```
 Open `http://127.0.0.1:3000`
 
-*(To run in debug mode with hot reloading: `bun run dev`)*
+*(To run in debug/development mode with hot reloading, use: `npx tsx server.ts`)*
 
 #### 🌍 Network Mode (Shared on Wi-Fi)
 Accessible from other devices on the same network (Production):
 ```bash
+# Build the frontend assets using Bun
 bun run build
+
+# Start the Express server on network using Node.js
 export NODE_ENV=production
-bun run start:network
+npx tsx server.ts --network
 ```
 Open the displayed IP address (e.g., `http://192.168.1.50:3000`) on other devices.
 
-*(To run in debug mode: `bun run dev:network`)*
+*(To run in debug/development mode on network, use: `npx tsx server.ts --network`)*
 
 ### 5. First Login
 

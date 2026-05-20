@@ -102,7 +102,11 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 export const requireClassAccess = (paramName: string = 'classId'): RequestHandler => {
   return async (req, res, next) => {
     if (!req.teacherId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      const teacherId = getTeacherId(req);
+      if (!teacherId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      req.teacherId = teacherId;
     }
     const teacherId = req.teacherId;
     const classId = req.params[paramName];
@@ -130,7 +134,11 @@ export const requireClassAccess = (paramName: string = 'classId'): RequestHandle
 export const requireClassOwner = (paramName: string = 'classId'): RequestHandler => {
   return async (req, res, next) => {
     if (!req.teacherId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      const teacherId = getTeacherId(req);
+      if (!teacherId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      req.teacherId = teacherId;
     }
     const teacherId = req.teacherId;
     const classId = req.params[paramName];
@@ -158,7 +166,11 @@ export const ROLE_HIERARCHY: Record<string, number> = { administrator: 5, owner:
 export const requireRole = (paramName: string = 'classId', minRole: string = 'teacher'): RequestHandler => {
   return async (req, res, next) => {
     if (!req.teacherId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      const teacherId = getTeacherId(req);
+      if (!teacherId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      req.teacherId = teacherId;
     }
     const teacherId = req.teacherId;
     const classId = req.params[paramName];

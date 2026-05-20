@@ -155,10 +155,17 @@ export const useStore = create<AppState>()((set, get) => ({
   initializeStore: async () => {
     try {
       set({ isLoading: true });
-      const [classesData, settings] = await Promise.all([
-        api.getClasses(),
-        api.getSettings(),
-      ]);
+      const classesData = await api.getClasses();
+
+      let settings: Record<string, string> = { theme: 'light' };
+      try {
+        const fetchedSettings = await api.getSettings();
+        if (fetchedSettings) {
+          settings = fetchedSettings;
+        }
+      } catch (err) {
+        console.warn('[store] Could not load settings (expected for non-admins):', err);
+      }
 
       if (classesData.length > 0) {
         const first = classesData[0] as unknown as ClassData;

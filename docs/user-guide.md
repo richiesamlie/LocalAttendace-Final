@@ -102,31 +102,38 @@ You have two options to install the app. Choose the one that works best for you.
 
 ---
 
-### Option B: Using Bun (Traditional Method)
+### Option B: Using Bun & Node.js (Traditional Method)
 
 > **Best for:** Users who prefer direct control and don't want to install Docker.
+
+> [!NOTE]
+> This application uses **Bun** for rapid frontend package management and asset compilation (Vite), and **Node.js** to execute the Express/SQLite backend server (since Bun on Windows cannot load native C++ modules like `better-sqlite3` yet).
 
 #### Step 1: Download the App
 1. Download the ZIP file from: `https://github.com/richiesamlie/LocalAttendace-Final`
 2. Click the green **Code** button → **Download ZIP**
 3. Extract the ZIP to a folder (e.g., `C:\TeacherAssistant`)
 
-#### Step 2: Install Bun
-1. Open PowerShell on Windows.
-2. Run this command to install Bun:
+#### Step 2: Install Prerequisites
+1. **Install Bun**: Open PowerShell on Windows and run this command:
    ```powershell
    powershell -c "irm bun.sh/install.ps1 | iex"
    ```
-3. Restart your computer (or open a new Command Prompt/PowerShell window) after installation.
+2. **Install Node.js**: Download and install Node.js (v18 or higher) from `https://nodejs.org/`.
+3. Restart your computer after both installations complete.
 
 #### Step 3: Install Dependencies & Start the App
-1. Open the extracted folder
-2. Double-click `start-app.bat` to launch the app in optimized Production Mode.
-   - *Optional:* To run in Debug mode instead, open a Command Prompt in the folder and type `start-app.bat --debug`
-3. A command line window will appear and automatically install all necessary dependencies using Bun.
-4. Wait until you see "Starting Teacher Assistant Server in Production Mode..."
+1. Open the extracted folder.
+2. Double-click **`start-app.bat`** to launch the app in optimized Production Mode.
+   - *Optional:* To run in Debug mode instead, open a Command Prompt in the folder and type `start-app.bat --debug`.
+3. A command line window will appear and automatically:
+   - Verify both Bun and Node.js are available.
+   - Install all necessary dependencies using Bun.
+   - Build the high-performance production assets using Bun.
+   - Boot the backend server safely using Node.js/npx.
+4. Wait until you see "Starting Teacher Assistant Server in Production Mode via Node.js..."
 
-> **Note:** Dependency installation only happens once. Future starts will be instant.
+> **Note:** Dependency installation and building only happen on the first run. Subsequent starts will be nearly instant.
 
 ---
 
