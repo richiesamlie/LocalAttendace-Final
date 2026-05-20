@@ -359,12 +359,13 @@ export const useStore = create<AppState>()((set, get) => ({
 
   addStudent: async (student) => {
     const state = get();
-    if (!state.currentClassId) return;
+    const classId = state.currentClassId;
+    if (!classId) return;
     if (state.students.some(s => s.rollNumber === student.rollNumber && s.name === student.name)) return;
 
     await runSwallowedAction(
       async () => {
-        await api.createStudent(state.currentClassId, student);
+        await api.createStudent(classId, student);
         set((state) => updateCurrentClass(state, { students: [...state.students, student] }));
       },
       'Student added',
