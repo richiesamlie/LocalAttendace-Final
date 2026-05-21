@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Student } from '../store';
 import toast from 'react-hot-toast';
 
@@ -24,7 +24,7 @@ export function useStudentForm(
   const [editParentPhone, setEditParentPhone] = useState('');
   const [editIsFlagged, setEditIsFlagged] = useState(false);
 
-  const startAddStudent = () => {
+  const startAddStudent = useCallback(() => {
     if (!currentClassId) {
       toast.error('Please create or select a class from the sidebar first before adding students.');
       return;
@@ -36,9 +36,9 @@ export function useStudentForm(
     setAddIsFlagged(false);
     setIsAdding(true);
     setEditingId(null);
-  };
+  }, [currentClassId]);
 
-  const saveAddStudent = () => {
+  const saveAddStudent = useCallback(() => {
     if (!addName.trim() || !addRoll.trim()) return;
     addStudent({
       id: `std_${Date.now()}`,
@@ -49,9 +49,9 @@ export function useStudentForm(
       isFlagged: addIsFlagged,
     });
     setIsAdding(false);
-  };
+  }, [addName, addRoll, addParentName, addParentPhone, addIsFlagged, addStudent]);
 
-  const startEditStudent = (student: Student) => {
+  const startEditStudent = useCallback((student: Student) => {
     setEditingId(student.id);
     setEditName(student.name);
     setEditRoll(student.rollNumber);
@@ -59,9 +59,9 @@ export function useStudentForm(
     setEditParentPhone(student.parentPhone || '');
     setEditIsFlagged(student.isFlagged || false);
     setIsAdding(false);
-  };
+  }, []);
 
-  const saveEditStudent = () => {
+  const saveEditStudent = useCallback(() => {
     if (!editingId || !editName.trim() || !editRoll.trim()) return;
     updateStudent(editingId, { 
       name: editName, 
@@ -71,10 +71,10 @@ export function useStudentForm(
       isFlagged: editIsFlagged
     });
     setEditingId(null);
-  };
+  }, [editingId, editName, editRoll, editParentName, editParentPhone, editIsFlagged, updateStudent]);
 
-  const cancelAdd = () => setIsAdding(false);
-  const cancelEdit = () => setEditingId(null);
+  const cancelAdd = useCallback(() => setIsAdding(false), []);
+  const cancelEdit = useCallback(() => setEditingId(null), []);
 
   return {
     isAdding,

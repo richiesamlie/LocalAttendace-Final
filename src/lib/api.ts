@@ -66,6 +66,7 @@ export const api = {
   updateTimetableSlot: (slotId: string, data: Partial<TimetableSlot>) => fetchApi<{success: boolean}>(`/timetable/${slotId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTimetableSlot: (slotId: string) => fetchApi<{success: boolean}>(`/timetable/${slotId}`, { method: 'DELETE' }),
 
+  getDashboardPayload: (classId: string) => fetchApi<{students: Student[], records: AttendanceRecord[], events: CalendarEvent[], timetable: TimetableSlot[], dailyNotes: Record<string, string>, seatingLayout: Record<string, string>}>(`/classes/${classId}/dashboard-payload`),
   getSeating: (classId: string) => fetchApi<Record<string, string>>(`/classes/${classId}/seating`),
   updateSeat: (classId: string, seatId: string, studentId: string | null) => fetchApi<{success: boolean}>(`/classes/${classId}/seating`, { method: 'POST', body: JSON.stringify({ seatId, studentId }) }),
   saveSeatingLayout: (classId: string, layout: Record<string, string>) => fetchApi<{success: boolean}>(`/classes/${classId}/seating`, { method: 'PUT', body: JSON.stringify(layout) }),

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { useStore, Student } from '../store';
 import { Upload, Download, Plus, Trash2, Search, FileSpreadsheet, CheckSquare, Square, Flag, Check, X } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -24,7 +24,13 @@ export default function Roster() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
+  const [searchVal, setSearchVal] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const id = setTimeout(() => setSearchQuery(searchVal), 150);
+    return () => clearTimeout(id);
+  }, [searchVal]);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(moreMenuRef, () => setShowMoreMenu(false), showMoreMenu);
@@ -70,11 +76,11 @@ export default function Roster() {
     }
   };
 
-  const toggleFlag = (student: Student) => {
+  const toggleFlag = useCallback((student: Student) => {
     updateStudent(student.id, { isFlagged: !student.isFlagged });
-  };
+  }, [updateStudent]);
 
-  const filteredStudents = students
+  const filteredStudents = useMemo(() => students
     .filter(student => 
       (showArchived ? true : !student.isArchived) &&
       (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -82,16 +88,17 @@ export default function Roster() {
       (student.parentName && student.parentName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (student.parentPhone && student.parentPhone.toLowerCase().includes(searchQuery.toLowerCase())))
     )
-    .sort((a, b) => a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' }));
+    .sort((a, b) => a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })),
+  [students, searchQuery, showArchived]);
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  };
+  }, []);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredStudents.length) {
@@ -151,8 +158,8 @@ export default function Roster() {
             <input
               type="text"
               placeholder="Search students..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
               className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
             />
           </div>
@@ -358,7 +365,7 @@ export default function Roster() {
                   student={student}
                   index={index}
                   editingId={editingId}
-                  selectedIds={selectedIds}
+                  isSelected={selectedIds.has(student.id)}
                   toggleSelect={toggleSelect}
                   toggleFlag={toggleFlag}
                   startEditStudent={startEditStudent}
@@ -371,7 +378,7 @@ export default function Roster() {
               {filteredStudents.length === 0 && !isAdding && students.length > 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    No students found matching &quot;{searchQuery}&quot;.
+                    No students found matching &quot;{searchVal}&quot;.
                   </td>
                 </tr>
               )}
