@@ -83,15 +83,6 @@ export default function TakeAttendance() {
     }
   };
 
-  const markAllPresentHandler = () => {
-    const unmarked = filteredStudents.filter(s => !records.some(r => r.studentId === s.id));
-    if (unmarked.length === 0) {
-      toast('All students are already marked present.');
-      return;
-    }
-    markAllPresent(date);
-  };
-
   const filteredStudents = useMemo(() => students
     .filter(student =>
       !student.isArchived &&
@@ -102,6 +93,15 @@ export default function TakeAttendance() {
       a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
     ),
   [students, searchQuery]);
+
+  const markAllPresentHandler = () => {
+    const unmarked = filteredStudents.filter(s => !records.some(r => r.studentId === s.id));
+    if (unmarked.length === 0) {
+      toast('All students are already marked present.');
+      return;
+    }
+    markAllPresent(date);
+  };
 
   const unmarkedCount = filteredStudents.filter(
     (student) => !records.some((r) => r.studentId === student.id)
