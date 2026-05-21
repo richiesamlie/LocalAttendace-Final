@@ -1,6 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { classService, teacherService, inviteService } from '../../services';
+import { classService, teacherService, inviteService, studentService, recordService, eventService, timetableService, noteService, seatingService } from '../../services';
 import { requireAuth, requireClassAccess, requireClassOwner, requireRole, withWriteQueue, postLimiter } from './middleware';
 import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classTeacherRoleUpdateSchema, classInviteCreateSchema } from '../../src/lib/validation';
 import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
@@ -82,6 +82,23 @@ classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, 
   await classService.delete(req.params.id, teacherId);
   return res.json({ success: true });
 }));
+
+classRouter.get('/:classId/dashboard-payload', requireClassAccess('classId'), async (req, res) => {
+  try {
+    const classId = req.params.classId;
+    const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
+      studentService.getByClass(classId, false),
+      recordService.getByClass(classId),
+      eventService.getByClass(classId),
+      timetableService.getByClass(classId),
+      noteService.getByClass(classId),
+      seatingService.getByClass(classId),
+    ]);
+    return res.json({ students, records, events, timetable, dailyNotes, seatingLayout });
+  } catch (_error) {
+    return res.status(500).json({ error: 'Failed to fetch dashboard payload' });
+  }
+});
 
 classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req, res) => {
   try {

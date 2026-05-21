@@ -119,15 +119,7 @@ const runSwallowedAction = async <T>(
 };
 
 const fetchClassPayload = async (classId: string) => {
-  const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
-    api.getStudents(classId, false),
-    api.getRecords(classId),
-    api.getEvents(classId),
-    api.getTimetable(classId),
-    api.getDailyNotes(classId),
-    api.getSeating(classId),
-  ]);
-  return { students, records, events, timetable, dailyNotes, seatingLayout };
+  return await api.getDashboardPayload(classId);
 };
 
 export const useStore = create<AppState>()((set, get) => ({

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Flag, Edit2, Trash2, RefreshCcw, CheckSquare, Square, X, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { confirmToast } from '../../utils/confirmToast';
@@ -8,7 +8,7 @@ interface StudentRowProps {
   student: Student;
   index: number;
   editingId: string | null;
-  selectedIds: Set<string>;
+  isSelected: boolean;
   toggleSelect: (id: string) => void;
   toggleFlag: (student: Student) => void;
   startEditStudent: (student: Student) => void;
@@ -18,11 +18,11 @@ interface StudentRowProps {
   updateStudent: (id: string, updates: Partial<Student>) => void;
 }
 
-export default function StudentRow({
+function StudentRow({
   student,
   index,
   editingId,
-  selectedIds,
+  isSelected,
   toggleSelect,
   toggleFlag,
   startEditStudent,
@@ -155,7 +155,7 @@ export default function StudentRow({
               disabled={student.isArchived}
               className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              {selectedIds.has(student.id) ? (
+              {isSelected ? (
                 <CheckSquare className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               ) : (
                 <Square className="w-4 h-4 text-slate-400" />
@@ -226,3 +226,4 @@ export default function StudentRow({
     </tr>
   );
 }
+export default React.memo(StudentRow);
