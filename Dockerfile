@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy package files first for better layer caching
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -26,7 +26,7 @@ RUN npm install -g npm@11.14.1
 
 # Copy package files and install production dependencies only
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts
+RUN npm ci --omit=dev
 
 # Copy built frontend from builder
 COPY --from=builder /app/dist ./dist
@@ -38,9 +38,13 @@ COPY --from=builder /app/routes.ts ./
 COPY --from=builder /app/services.ts ./
 COPY --from=builder /app/tsconfig.json ./
 
-# Copy server-side lib modules required by routes.ts and server.ts
-COPY --from=builder /app/src/lib/validation.ts ./src/lib/
-COPY --from=builder /app/src/lib/errorHandler.ts ./src/lib/
+# Copy server-side modules required by routes.ts, services.ts, db.ts, and server.ts
+COPY --from=builder /app/src/db ./src/db
+COPY --from=builder /app/src/lib ./src/lib
+COPY --from=builder /app/src/middleware ./src/middleware
+COPY --from=builder /app/src/routes ./src/routes
+COPY --from=builder /app/src/services ./src/services
+COPY --from=builder /app/src/types ./src/types
 
 # Create directories with proper permissions
 RUN mkdir -p /app/data /app/backups && \
@@ -61,4 +65,4 @@ ENV DB_FILE=/app/data/database.sqlite
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-CMD ["npx", "tsx", "server.ts"]
+CMD ["npx", "tsx", "server.ts", "--network"]

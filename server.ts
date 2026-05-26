@@ -3,7 +3,6 @@ import express from "express";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import { createServer as createViteServer } from "vite";
 import { createServer as createHttpServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import path from "path";
@@ -127,6 +126,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
