@@ -4,7 +4,7 @@ import fs from 'fs';
 import { teacherService, sessionService, settingService } from '../../services';
 import { hashPassword } from '../../src/lib/bcrypt';
 import { safeLog } from '../../src/lib/log-redact';
-import { requireAuth, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireAdmin, withWriteQueue, postLimiter } from './middleware';
 import { validate, settingSchema } from '../../src/lib/validation';
 import db from '../../db';
 import type { Teacher, SettingRow } from '../../src/types/db';
@@ -14,13 +14,14 @@ import { resourceMonitor } from '../middleware/resourceMonitor';
 
 export const adminRouter = express.Router();
 
-adminRouter.get('/settings', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can access settings' });
-  }
+// F-011: apply requireAuth + requireAdmin ONCE at the router level.
+// Every admin route below now requires an authenticated admin session
+// without needing per-handler is_admin checks. The previous pattern
+// duplicated this check in 14 handlers and was error-prone if a new
+// admin endpoint forgot the check.
+adminRouter.use(requireAuth, requireAdmin);
 
+adminRouter.get('/settings', async (_req, res) => {
   try {
     const settings = await settingService.getAll() as SettingRow[];
     const response: Record<string, string> = {};
@@ -35,14 +36,7 @@ adminRouter.get('/settings', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.post('/settings', requireAuth, postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can change settings' });
-  }
-
-  const { key, value } = req.body;
+adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {  const { key, value } = req.body;
   if (key === 'adminPassword') {
     if (value.length < 4) {
       return res.status(400).json({ error: 'Password must be at least 4 characters' });
@@ -60,13 +54,7 @@ adminRouter.post('/settings', requireAuth, postLimiter, validate(settingSchema),
   return res.json({ success: true });
 }));
 
-adminRouter.post('/database/backup', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can perform database operations' });
-  }
-  try {
+adminRouter.post('/database/backup', async (_req, res) => {  try {
     const dbPath = path.join(process.cwd(), 'database.sqlite');
     // F-016: async fs.access instead of sync existsSync
     try {
@@ -82,13 +70,7 @@ adminRouter.post('/database/backup', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<void> => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    res.status(403).json({ error: 'Only administrators can perform database operations' });
-    return;
-  }
+adminRouter.post('/database/restore', async (req, res): Promise<void> => {
   try {
     await db.enqueueWrite(() => {});
 
@@ -144,14 +126,7 @@ adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<voi
 });
 
 // Performance metrics endpoints (admin only)
-adminRouter.get('/metrics', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view metrics' });
-  }
-
-  try {
+adminRouter.get('/metrics', async (req, res) => {  try {
     // Get time window from query param (in minutes), default to last hour
     const windowMinutes = parseInt(req.query.window as string || '60', 10);
     const windowMs = windowMinutes * 60 * 1000;
@@ -171,14 +146,7 @@ adminRouter.get('/metrics', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.get('/metrics/summary', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view metrics' });
-  }
-
-  try {
+adminRouter.get('/metrics/summary', async (_req, res) => {  try {
     const summary = metricsStore.getSummary();
     const bufferInfo = metricsStore.getBufferInfo();
     return res.json({ summary, bufferInfo });
@@ -188,14 +156,7 @@ adminRouter.get('/metrics/summary', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.delete('/metrics', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can clear metrics' });
-  }
-
-  try {
+adminRouter.delete('/metrics', async (_req, res) => {  try {
     metricsStore.clear();
     return res.json({ success: true, message: 'Metrics cleared' });
   } catch (error) {
@@ -205,14 +166,7 @@ adminRouter.delete('/metrics', requireAuth, async (req, res) => {
 });
 
 // Query profiling endpoints (admin only)
-adminRouter.post('/profiling/query', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can profile queries' });
-  }
-
-  try {
+adminRouter.post('/profiling/query', async (req, res) => {  try {
     const { sql } = req.body;
     if (!sql || typeof sql !== 'string') {
       return res.status(400).json({ error: 'SQL query is required' });
@@ -237,14 +191,7 @@ adminRouter.post('/profiling/query', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.get('/profiling/statements', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view profiling data' });
-  }
-
-  try {
+adminRouter.get('/profiling/statements', async (_req, res) => {  try {
     const results = profileAllStatements();
     const profilesWithScores = Array.from(results.entries()).map(([name, result]) => ({
       name,
@@ -259,14 +206,7 @@ adminRouter.get('/profiling/statements', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.get('/profiling/indexes', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view indexes' });
-  }
-
-  try {
+adminRouter.get('/profiling/indexes', async (_req, res) => {  try {
     const indexes = getAllIndexes();
     return res.json({ indexes });
   } catch (error) {
@@ -275,14 +215,7 @@ adminRouter.get('/profiling/indexes', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.get('/profiling/stats', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view stats' });
-  }
-
-  try {
+adminRouter.get('/profiling/stats', async (_req, res) => {  try {
     const stats = getTableStats();
     const indexes = getAllIndexes();
     
@@ -298,14 +231,7 @@ adminRouter.get('/profiling/stats', requireAuth, async (req, res) => {
 });
 
 // Resource monitoring endpoints (admin only)
-adminRouter.get('/resources', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view resources' });
-  }
-
-  try {
+adminRouter.get('/resources', async (_req, res) => {  try {
     const current = resourceMonitor.getCurrent();
     const status = resourceMonitor.getStatus();
     return res.json({ current, status });
@@ -315,14 +241,7 @@ adminRouter.get('/resources', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.get('/resources/history', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view resource history' });
-  }
-
-  try {
+adminRouter.get('/resources/history', async (req, res) => {  try {
     // Get time window from query param (in minutes), default to last hour
     const windowMinutes = parseInt(req.query.window as string || '60', 10);
     const windowMs = windowMinutes * 60 * 1000;
@@ -338,14 +257,7 @@ adminRouter.get('/resources/history', requireAuth, async (req, res) => {
   }
 });
 
-adminRouter.get('/resources/alerts', requireAuth, async (req, res) => {
-  const callerId = req.teacherId;
-  const caller = callerId ? await teacherService.getById(callerId) : null;
-  if (!caller || !(caller as Teacher).is_admin) {
-    return res.status(403).json({ error: 'Only administrators can view resource alerts' });
-  }
-
-  try {
+adminRouter.get('/resources/alerts', async (req, res) => {  try {
     // Get time window from query param (in minutes), default to last hour
     const windowMinutes = parseInt(req.query.window as string || '60', 10);
     const windowMs = windowMinutes * 60 * 1000;

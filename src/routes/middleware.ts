@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { randomBytes } from 'crypto';
 import * as svc from '../../services';
 import db from '../../db';
-import type { Session, ClassTeacher } from '../types/db';
+import type { Session, ClassTeacher, Teacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
 const testBypassHandler: RequestHandler = (_req, _res, next) => next();
@@ -129,6 +129,40 @@ export const getTeacherId = (req: express.Request): string | null => {
     return decoded.teacherId;
   } catch {
     return null;
+  }
+};
+
+// F-011: requireAdmin middleware — defense-in-depth for admin endpoints.
+// MUST be chained AFTER requireAuth (which populates req.teacherId).
+// Looks up the teacher record and verifies is_admin=1; returns 403
+// otherwise. Replaces the per-handler `caller = await teacherService.
+// getById(...)` pattern that was duplicated in 14 admin handlers.
+//
+// Performance: admin operations are infrequent (metrics, profiling,
+// database backup) so the per-request teacher lookup is acceptable.
+// For very high-traffic admin paths, consider caching by teacherId.
+export const requireAdmin: RequestHandler = async (req, res, next) => {
+  if (!req.teacherId) {
+    const teacherId = getTeacherId(req);
+    if (!teacherId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    req.teacherId = teacherId;
+  }
+  try {
+    const caller = await svc.teacherService.getById(req.teacherId) as
+      | (Teacher & { is_admin?: number | boolean })
+      | null;
+    if (!caller || !caller.is_admin) {
+      return res.status(403).json({ error: 'Administrator access required' });
+    }
+    // Expose the admin teacher record on the request for handlers
+    // that want to log/audit who triggered the action.
+    (req as express.Request & { adminTeacher?: Teacher }).adminTeacher = caller as Teacher;
+    return next();
+  } catch (error) {
+    console.error('[admin] Failed to verify admin status:', error);
+    return res.status(503).json({ error: 'Authentication service unavailable' });
   }
 };
 
