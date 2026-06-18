@@ -27,7 +27,24 @@ const router = express.Router();
 // Mount all route modules
 router.use('/auth', authRouter);
 router.use('/classes', classRouter);
-router.use('/classes', studentRouter); // Handle class-based student paths under /classes
+
+// F-022: studentRouter is mounted on TWO prefixes by design.
+//   - /classes/:classId/students — canonical REST shape (resource under parent)
+//   - /students/:classId/students — legacy shape from earlier versions
+//
+// Both mounts route through the SAME router instance and the SAME RBAC:
+//   - requireClassAccess('classId') on class-scoped routes reads
+//     req.params.classId regardless of mount prefix.
+//   - :id routes call studentService.getById(id, teacherId) which
+//     scopes the lookup at the SERVICE layer (not just middleware),
+//     so a teacher cannot access another teacher's students regardless
+//     of which prefix the request used.
+//
+// DO NOT remove the legacy /students mount without a coordinated
+// frontend migration — clients depend on it. If/when the frontend
+// is updated to use /classes exclusively, this mount can be removed.
+router.use('/classes', studentRouter); // class-scoped student paths (canonical)
+router.use('/students', studentRouter); // legacy alias — see F-022 comment above
 
 // Mount routers that define /classes/:classId/... internally on the root path
 router.use('/', recordRouter);
@@ -37,7 +54,6 @@ router.use('/', timetableRouter);
 router.use('/', seatingRouter);
 
 // Mount routers under their direct resource names for direct member access
-router.use('/students', studentRouter);
 router.use('/records', recordRouter);
 router.use('/notes', noteRouter);
 router.use('/events', eventRouter);
