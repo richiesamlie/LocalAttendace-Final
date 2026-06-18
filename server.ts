@@ -154,7 +154,11 @@ async function startServer() {
   // Performance monitoring and request logging
   app.use(performanceMonitor);
 
-  app.use(express.json({ limit: '10mb' }));
+  // F-009: JSON body size limit. Default 100kb is enough for bulk
+  // attendance marking and student lists (largest realistic payload is
+  // ~30 student records = ~3kb). Override via JSON_BODY_LIMIT env var.
+  // Without this limit, an attacker can DoS by sending huge bodies.
+  app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
   app.use(cookieParser());
 
   // Use separated API routes
