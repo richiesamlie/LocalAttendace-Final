@@ -3,5 +3,17 @@ dist
 .git
 *.log
 .env
+.env.*
+.env.backup*
 database.sqlite
 data
+backups
+coverage
+test-results
+.github
+docs
+*.md
+.vscode
+.idea
+.DS_Store
+spikes
