@@ -68,7 +68,10 @@ adminRouter.post('/database/backup', requireAuth, async (req, res) => {
   }
   try {
     const dbPath = path.join(process.cwd(), 'database.sqlite');
-    if (!fs.existsSync(dbPath)) {
+    // F-016: async fs.access instead of sync existsSync
+    try {
+      await fs.promises.access(dbPath);
+    } catch {
       return res.status(404).json({ error: 'Database file not found' });
     }
     res.setHeader('Content-Disposition', 'attachment; filename="database.sqlite"');
@@ -91,13 +94,16 @@ adminRouter.post('/database/restore', requireAuth, async (req, res): Promise<voi
 
     const dbPath = path.join(process.cwd(), 'database.sqlite');
     const backupDir = path.join(process.cwd(), 'backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
+    // F-016: async fs.mkdir (recursive) instead of sync existsSync+mkdirSync
+    await fs.promises.mkdir(backupDir, { recursive: true });
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const preRestorePath = path.join(backupDir, `pre-restore-${timestamp}.sqlite`);
-    if (fs.existsSync(dbPath)) {
-      fs.copyFileSync(dbPath, preRestorePath);
+    // F-016: async fs.copyFile instead of sync copyFileSync
+    try {
+      await fs.promises.access(dbPath);
+      await fs.promises.copyFile(dbPath, preRestorePath);
+    } catch (_ignore) {
+      // source DB doesn't exist; skip pre-restore backup
     }
     const maxRestoreBytes = 25 * 1024 * 1024;
     const contentType = String(req.headers['content-type'] || '').toLowerCase();

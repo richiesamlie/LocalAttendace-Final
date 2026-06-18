@@ -245,17 +245,36 @@ async function startServer() {
   });
 }
 
+// F-017: open the error log as a write stream ONCE at module init.
+// This replaces per-call fs.appendFileSync (which would block the
+// event loop under an error storm) with buffered async writes.
+// The stream is closed automatically on process exit by Node.js.
+const errorLogPath = process.env.SERVER_ERROR_LOG || 'server-error.log';
+const errorLogStream = fs.createWriteStream(errorLogPath, { flags: 'a' });
+errorLogStream.on('error', (err) => {
+  // Last-resort: if the stream itself errors, don't crash the process.
+  console.error('[server-error.log] stream error:', err.message);
+});
+
+function logServerError(label: string, payload: unknown): void {
+  const timestamp = new Date().toISOString();
+  const entry = `[${timestamp}] ${label}\n${payload instanceof Error ? `${payload.message}\n${payload.stack ?? ''}` : String(payload)}\n\n`;
+  errorLogStream.write(entry);
+}
+
 // Handle uncaught errors
 process.on('uncaughtException', (err) => {
   const timestamp = new Date().toISOString();
   console.error(`\n\x1b[31m[${timestamp}] UNCAUGHT EXCEPTION:\x1b[0m`, err.message);
-  fs.appendFileSync('server-error.log', `${timestamp} UNCAUGHT EXCEPTION: ${err.message}\n${err.stack}\n\n`);
+  // F-017: async write via stream (no longer blocks event loop)
+  logServerError('UNCAUGHT EXCEPTION', err);
 });
 
 process.on('unhandledRejection', (reason) => {
   const timestamp = new Date().toISOString();
   console.error(`\n\x1b[31m[${timestamp}] UNHANDLED REJECTION:\x1b[0m`, reason);
-  fs.appendFileSync('server-error.log', `${timestamp} UNHANDLED REJECTION: ${reason}\n\n`);
+  // F-017: async write via stream (no longer blocks event loop)
+  logServerError('UNHANDLED REJECTION', reason);
 });
 
 startServer();
