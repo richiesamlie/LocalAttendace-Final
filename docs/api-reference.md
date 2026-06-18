@@ -1,6 +1,6 @@
 # API Reference — Teacher Assistant
 
-**Last Updated:** 2026-05-13
+**Last Updated:** 2026-06-18
 **Branch:** `develop`
 
 Base URL: `/api`
@@ -21,16 +21,35 @@ Login with credentials.
 ```json
 { "success": true, "teacherId": "...", "name": "Administrator", "isAdmin": true }
 ```
-Sets `auth_token` cookie (httpOnly).
+Sets `access_token` (1h) and `refresh_token` (7d) cookies (HttpOnly, `__Host-` prefix in production).
 
 **Errors:** 401 — Invalid credentials
 
 ---
 
 ### POST /auth/logout
-Logout current user, revoke active server-side session (when token valid), then clear auth cookie.
+Logout current user, revoke the active refresh-token family, then clear auth cookies.
 
 **Response:** `{ "success": true }`
+
+---
+
+### POST /auth/refresh
+Exchange a valid refresh token for a fresh access+refresh pair. Added in F-004 to enable short-lived access tokens (1h) without forcing re-login.
+
+**Request:** No body. Reads `refresh_token` cookie.
+
+**Response (200):**
+```json
+{ "success": true, "teacherId": "...", "name": "...", "isAdmin": false }
+```
+Sets new `access_token` (1h) and `refresh_token` (7d) cookies.
+
+**Errors:**
+- `404` — refresh token missing, invalid, or expired
+- `401` — refresh token has been used before (reuse detected → entire token family revoked)
+
+**Security:** Refresh tokens are SHA-256 hashed at rest. Reuse of an already-rotated token triggers family-wide revocation as defense against stolen-token replay.
 
 ---
 
@@ -52,19 +71,15 @@ Get current teacher info.
 { "id": "...", "username": "admin", "name": "Administrator", "isAdmin": 1 }
 ```
 
----
-
 ## Health
 
 ### GET /health
-Database health check.
+Database health check. Constant-time response, no DB-type info leak (F-024).
 
 **Response (200):**
 ```json
-{ "status": "ok" }
+{ "status": "ok", "uptime": 12345, "timestamp": "2026-06-18T12:00:00.000Z" }
 ```
-
----
 
 ## Classes
 
@@ -78,10 +93,23 @@ List classes for current teacher.
     "id": "class_123",
     "teacher_id": "...",
     "name": "Math Class",
-    "owner_name": "Administrator",
-    "role": "owner"
   }
 ]
+```
+
+---
+
+### GET /classes/:classId/dashboard-payload
+Get dashboard data (students, attendance, events, notes) for a class in a single response. RBAC enforced via requireClassAccess.
+
+**Response (200):**
+```json
+{
+  "students": [...],
+  "attendance": [...],
+  "events": [...],
+  "notes": {...}
+}
 ```
 
 ---
@@ -94,16 +122,16 @@ Create a new class. Requires authentication.
 { "id": "class_123", "name": "Math Class" }
 ```
 
-**Response (201):** `{ "success": true }`
+**Response (201):** `{ "success": true, "id": "class_123" }`
 
 ---
 
 ### PUT /classes/:id
-Update class name. Requires authentication.
+Update class name. Requires authentication and class owner role.
 
 **Request:**
 ```json
-{ "name": "Updated Name" }
+{ "name": "Mathematics" }
 ```
 
 **Response (200):** `{ "success": true }`
@@ -111,107 +139,86 @@ Update class name. Requires authentication.
 ---
 
 ### DELETE /classes/:id
-Delete a class. Requires authentication.
+Delete a class. Requires authentication and class owner role.
 
 **Response (200):** `{ "success": true }`
-
----
 
 ## Class Teachers
 
 ### GET /classes/:classId/teachers
-List teachers in a class.
+List teachers with access to a class. Requires authentication and class access.
 
 **Response (200):**
 ```json
 [
-  { "teacher_id": "...", "username": "admin", "name": "Admin", "role": "owner" }
+  { "id": "...", "username": "...", "name": "...", "role": "owner" }
 ]
 ```
 
 ---
 
 ### POST /classes/:classId/teachers
-Add teacher to class. Requires authentication.
+Add a teacher to a class. Requires authentication and class owner role.
 
 **Request:**
 ```json
-{ "teacherId": "...", "role": "teacher" }
+{ "teacherId": "..." }
 ```
 
-**Response (201):** `{ "success": true }`
+**Response (200):** `{ "success": true }`
 
 ---
 
 ### DELETE /classes/:classId/teachers/:teacherId
-Remove teacher from class. Requires authentication.
+Remove a teacher from a class. Requires authentication and class owner role.
 
 **Response (200):** `{ "success": true }`
 
 ---
 
 ### PUT /classes/:classId/teachers/:teacherId/role
-Update teacher role.
+Update a teacher's role in a class. Requires class owner role.
 
 **Request:**
 ```json
-{ "role": "assistant" }
+{ "role": "teacher" }
 ```
+Valid roles: `owner`, `teacher`, `assistant`.
 
 **Response (200):** `{ "success": true }`
-
----
 
 ## Students
 
 ### GET /classes/:classId/students
-List students in a class.
+List students in a class. Also available at `/students/:classId/students` (legacy mount).
 
 **Response (200):**
 ```json
 [
-  {
-    "id": "student_123",
-    "name": "John Doe",
-    "rollNumber": "001",
-    "parentName": "Jane Doe",
-    "parentPhone": "123-456",
-    "isFlagged": false,
-    "isArchived": false
-  }
+  { "id": "s1", "name": "John", "rollNumber": "001", "isFlagged": false, "isArchived": false }
 ]
 ```
 
 ---
 
 ### POST /classes/:classId/students
-Add a student.
+Add a student to a class.
 
 **Request:**
 ```json
-{
-  "id": "student_123",
-  "name": "John Doe",
-  "rollNumber": "001",
-  "parentName": "Jane Doe",
-  "parentPhone": "123-456"
-}
+{ "id": "s_new", "name": "Alice", "rollNumber": "010", "isFlagged": false }
 ```
 
-**Response (201):** `{ "success": true }`
+**Response (201):** `{ "success": true, "id": "s_new" }`
 
 ---
 
 ### PUT /students/:id
-Update a student.
+Update a student's fields. At least one field required.
 
-**Request:**
+**Request (partial):**
 ```json
-{
-  "name": "Jane Doe",
-  "rollNumber": "002",
-  "isFlagged": true
-}
+{ "name": "Alice Smith", "isFlagged": true }
 ```
 
 **Response (200):** `{ "success": true }`
@@ -219,14 +226,14 @@ Update a student.
 ---
 
 ### DELETE /students/:id
-Archive a student (soft delete).
+Delete a student. Cascades to attendance records.
 
 **Response (200):** `{ "success": true }`
 
 ---
 
 ### POST /classes/:classId/students/sync
-Bulk sync students.
+Bulk create/update students. Used for Excel import.
 
 **Request:**
 ```json
@@ -243,49 +250,45 @@ Bulk sync students.
 { "success": true, "inserted": 3, "updated": 12 }
 ```
 
----
-
 ## Attendance Records
 
 ### GET /classes/:classId/records
 Get attendance records for a class.
 
-**Query:** `?date=2026-04-22`
+**Query params:**
+- `from` (optional, YYYY-MM-DD)
+- `to` (optional, YYYY-MM-DD)
 
 **Response (200):**
 ```json
-[
-  { "studentId": "student_123", "date": "2026-04-22", "status": "Present", "reason": null }
-]
+{ "records": [{ "studentId": "s1", "date": "2026-04-22", "status": "Present" }] }
 ```
 
 ---
 
 ### POST /records
-Save attendance records (batch).
+Save attendance records. Accepts single object or array.
 
-**Request:**
+**Request (single):**
 ```json
-[
-  { "studentId": "student_123", "classId": "class_123", "date": "2026-04-22", "status": "Present" },
-  { "studentId": "student_456", "classId": "class_123", "date": "2026-04-22", "status": "Absent", "reason": "Sick" }
-]
+{ "studentId": "s1", "classId": "class_123", "date": "2026-04-22", "status": "Present" }
+```
+
+**Request (array):**
+```json
+[{ "studentId": "s1", "classId": "class_123", "date": "2026-04-22", "status": "Present" }]
 ```
 
 **Response (200):** `{ "success": true }`
 
----
-
 ## Events
 
 ### GET /classes/:classId/events
-Get calendar events.
+List calendar events for a class.
 
 **Response (200):**
 ```json
-[
-  { "id": "event_123", "date": "2026-04-22", "title": "Math Test", "type": "Test", "description": "Chapter 5" }
-]
+[{ "id": "...", "date": "2026-04-22", "title": "Math Test", "type": "Test" }]
 ```
 
 ---
@@ -295,8 +298,9 @@ Create an event.
 
 **Request:**
 ```json
-{ "id": "event_123", "date": "2026-04-22", "title": "Math Test", "type": "Test" }
+{ "date": "2026-04-22", "title": "Math Test", "type": "Test", "description": "..." }
 ```
+Valid types: `Classwork`, `Test`, `Exam`, `Holiday`, `Other`.
 
 **Response (201):** `{ "success": true }`
 
@@ -304,11 +308,6 @@ Create an event.
 
 ### PUT /events/:id
 Update an event.
-
-**Request:**
-```json
-{ "title": "Updated Title", "type": "Exam" }
-```
 
 **Response (200):** `{ "success": true }`
 
@@ -319,12 +318,10 @@ Delete an event.
 
 **Response (200):** `{ "success": true }`
 
----
-
 ## Daily Notes
 
 ### GET /classes/:classId/daily-notes
-Get daily notes.
+Get daily notes keyed by date.
 
 **Response (200):**
 ```json
@@ -343,28 +340,26 @@ Save a daily note.
 
 **Response (200):** `{ "success": true }`
 
----
-
 ## Timetable
 
 ### GET /classes/:classId/timetable
-Get timetable slots.
+Get weekly timetable slots for a class.
 
 **Response (200):**
 ```json
 [
-  { "id": "slot_123", "dayOfWeek": 1, "startTime": "09:00", "endTime": "10:00", "subject": "Math", "lesson": "Algebra" }
+  { "id": "...", "dayOfWeek": 1, "startTime": "08:00", "endTime": "09:00", "subject": "Math", "lesson": "Algebra" }
 ]
 ```
 
 ---
 
 ### POST /classes/:classId/timetable
-Create a timetable slot.
+Add a timetable slot.
 
 **Request:**
 ```json
-{ "id": "slot_123", "dayOfWeek": 1, "startTime": "09:00", "endTime": "10:00", "subject": "Math", "lesson": "Algebra" }
+{ "dayOfWeek": 1, "startTime": "08:00", "endTime": "09:00", "subject": "Math", "lesson": "Algebra" }
 ```
 
 **Response (201):** `{ "success": true }`
@@ -374,11 +369,6 @@ Create a timetable slot.
 ### PUT /timetable/:id
 Update a timetable slot.
 
-**Request:**
-```json
-{ "startTime": "10:00", "endTime": "11:00" }
-```
-
 **Response (200):** `{ "success": true }`
 
 ---
@@ -387,8 +377,6 @@ Update a timetable slot.
 Delete a timetable slot.
 
 **Response (200):** `{ "success": true }`
-
----
 
 ## Seating
 
@@ -409,13 +397,14 @@ Update a single seat.
 ```json
 { "seatId": "seat_1", "studentId": "student_123" }
 ```
+Set `studentId: null` to clear a seat.
 
 **Response (200):** `{ "success": true }`
 
 ---
 
 ### PUT /classes/:classId/seating
-Save full seating layout.
+Replace entire seating layout.
 
 **Request:**
 ```json
@@ -427,37 +416,36 @@ Save full seating layout.
 ---
 
 ### DELETE /classes/:classId/seating
-Clear seating layout.
+Clear the seating layout.
 
 **Response (200):** `{ "success": true }`
-
----
 
 ## Invites
 
 ### GET /classes/:classId/invites
-List invite codes for a class.
+List active invites for a class. Requires class teacher or owner role.
 
 **Response (200):**
 ```json
 [
-  { "code": "ABC123", "role": "teacher", "created_at": "...", "expires_at": "...", "used_by": null }
+  { "code": "ABC123", "role": "teacher", "expiresAt": "...", "usedBy": null }
 ]
 ```
 
 ---
 
 ### POST /classes/:classId/invites
-Create an invite code.
+Create an invite code. Requires class teacher or owner role.
 
 **Request:**
 ```json
 { "role": "teacher", "expiresInHours": 168 }
 ```
+Default expiry 48h, max 720h (30 days). Default role: teacher.
 
 **Response (201):**
 ```json
-{ "code": "ABC123" }
+{ "code": "ABC123", "inviteUrl": "http://localhost:3000/invite/ABC123" }
 ```
 
 ---
@@ -470,7 +458,7 @@ Delete an invite code.
 ---
 
 ### POST /invites/redeem
-Redeem an invite code.
+Redeem an invite code to join a class. Rate-limited to 10/15min per teacher. Returns generic error message regardless of failure reason (F-012, prevents enumeration).
 
 **Request:**
 ```json
@@ -482,12 +470,12 @@ Redeem an invite code.
 { "success": true, "className": "Math Class", "role": "teacher" }
 ```
 
----
+**Errors:** `404` "Unable to redeem invite" (generic — same for invalid, expired, used, no-such-class)
 
 ## Sessions
 
 ### GET /sessions
-List active sessions.
+List active sessions for current teacher.
 
 **Response (200):**
 ```json
@@ -505,10 +493,9 @@ Revoke a session. Requires authentication.
 ```json
 { "sessionId": "..." }
 ```
+Use `sessionId: "all"` to revoke every session for the current teacher.
 
 **Response (200):** `{ "success": true }`
-
----
 
 ## Teachers
 
@@ -517,7 +504,7 @@ Register a new teacher.
 
 **Request:**
 ```json
-{ "username": "teacher1", "password": "password", "name": "John Smith" }
+{ "username": "teacher1", "password": "***", "name": "John Smith" }
 ```
 
 **Response (201):** `{ "success": true }`
@@ -534,12 +521,12 @@ List all teachers.
 ]
 ```
 
----
-
 ## Admin
 
+All admin endpoints require authentication AND `is_admin = 1`. This is enforced by `adminRouter.use(requireAuth, requireAdmin)` (F-011) at the router level — no per-handler duplication.
+
 ### GET /admin/settings
-Get all settings. Requires authentication and administrator role.
+Get all settings.
 
 **Response (200):**
 ```json
@@ -550,7 +537,7 @@ Get all settings. Requires authentication and administrator role.
 ---
 
 ### POST /admin/settings
-Update a setting. Requires authentication and administrator role.
+Update a setting.
 
 **Request:**
 ```json
@@ -562,9 +549,9 @@ Update a setting. Requires authentication and administrator role.
 ---
 
 ### POST /admin/database/backup
-Download database backup.
+Download database backup as a binary SQLite file.
 
-**Response:** Binary SQLite file download
+**Response:** Binary SQLite file download (`Content-Disposition: attachment; filename="database.sqlite"`)
 
 ---
 
@@ -585,7 +572,7 @@ Restore from backup.
 ---
 
 ### POST /admin/profiling/query
-Profile a SQL statement. Requires authentication and administrator role.
+Profile a SQL statement.
 
 **Restriction:** only a single `SELECT` statement is allowed (no semicolons).
 
@@ -601,6 +588,97 @@ Profile a SQL statement. Requires authentication and administrator role.
 - `400` non-SELECT or multi-statement SQL
 
 ---
+
+### GET /admin/profiling/statements
+List all prepared statements in the app with their query plans (SQLite `EXPLAIN QUERY PLAN`).
+
+**Response (200):**
+```json
+{ "statements": [{ "name": "...", "plan": [...] }] }
+```
+
+---
+
+### GET /admin/profiling/indexes
+List all indexes in the database with their columns.
+
+**Response (200):**
+```json
+{ "indexes": [...] }
+```
+
+---
+
+### GET /admin/profiling/stats
+Get table statistics (row counts, page counts, etc.).
+
+**Response (200):**
+```json
+{ "tables": [...] }
+```
+
+---
+
+### GET /admin/metrics
+Get all in-memory metrics (request counts, timings, slow queries).
+
+**Response (200):**
+```json
+{ "counters": {...}, "timings": {...}, "slowQueries": [...] }
+```
+
+---
+
+### GET /admin/metrics/summary
+Aggregated metrics summary (top slow endpoints, recent request rate).
+
+**Response (200):**
+```json
+{ "summary": { "totalRequests": 1234, "avgLatencyMs": 42, "p95LatencyMs": 180 } }
+```
+
+---
+
+### DELETE /admin/metrics
+Clear in-memory metrics store.
+
+**Response (200):** `{ "success": true }`
+
+---
+
+### GET /admin/resources
+Current resource snapshot (CPU, memory, event loop lag).
+
+**Response (200):**
+```json
+{ "current": {...}, "status": "ok" }
+```
+
+---
+
+### GET /admin/resources/history
+Resource usage history over a time window.
+
+**Query params:**
+- `window` (optional, minutes; default 5)
+
+**Response (200):**
+```json
+{ "history": [...], "stats": {...} }
+```
+
+---
+
+### GET /admin/resources/alerts
+Active alerts (high CPU, memory pressure, event loop lag).
+
+**Query params:**
+- `window` (optional, minutes; default 60)
+
+**Response (200):**
+```json
+{ "alerts": [...] }
+```
 
 ## Validation Schemas
 
@@ -628,8 +706,6 @@ Profile a SQL statement. Requires authentication and administrator role.
 | `studentUpdateSchema` | partial Student fields, at least 1 field required |
 | `studentSyncPayloadSchema` | students (non-empty array of Student objects) |
 
----
-
 ## Status Codes
 
 | Code | Meaning |
@@ -640,4 +716,18 @@ Profile a SQL statement. Requires authentication and administrator role.
 | 401 | Authentication required |
 | 403 | Permission denied |
 | 404 | Not found |
+| 413 | Payload too large (e.g., backup >25MB, JSON >100kb) |
+| 415 | Unsupported media type |
+| 429 | Rate limited |
 | 500 | Server error |
+| 503 | Service unavailable (e.g., DB unavailable) |
+
+## Rate Limits
+
+| Endpoint | Limit |
+|----------|-------|
+| `POST /auth/login` | 150 / 15min / IP |
+| All other write endpoints | 500 / 15min / IP |
+| `POST /invites/redeem` | 10 / 15min / teacher (or IP fallback) |
+
+Limits are configurable via `express-rate-limit` env vars. Tests bypass rate limits automatically.
