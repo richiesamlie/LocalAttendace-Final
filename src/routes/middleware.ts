@@ -37,6 +37,20 @@ export const postLimiter = skipRateLimitInTests
       message: { error: 'Too many requests. Please try again later.' },
     });
 
+// Invite-code redemption rate limiter (F-008).
+// Stricter than postLimiter: invite codes are short (e.g. 12 chars from
+// randomUUID) but still guessable. With 10 attempts per 15 min, an attacker
+// can try at most ~960/day, which is too slow for practical enumeration.
+export const inviteRedeemLimiter = skipRateLimitInTests
+  ? testBypassHandler
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
+    });
+
 export const JWT_SECRET: string = (() => {
   const fromEnv = process.env.JWT_SECRET;
   if (fromEnv && fromEnv.length >= 32) return fromEnv;

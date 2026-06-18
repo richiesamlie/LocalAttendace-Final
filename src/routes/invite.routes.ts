@@ -1,7 +1,7 @@
 import express from 'express';
 import { inviteService, classService } from '../../services';
 import type { Invite } from '../types/db';
-import { requireAuth, withWriteQueue } from './middleware';
+import { requireAuth, withWriteQueue, inviteRedeemLimiter } from './middleware';
 import { validate, inviteRedeemSchema } from '../../src/lib/validation';
 
 interface ClassNameCarrier {
@@ -10,7 +10,10 @@ interface ClassNameCarrier {
 
 export const inviteRouter = express.Router();
 
-inviteRouter.post('/redeem', requireAuth, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
+// F-008: stricter per-IP rate limit on /redeem (10 / 15 min) to prevent
+// invite-code enumeration attacks. Sequential via withWriteQueue below
+// ensures consistency; the rate limit gates burst attempts first.
+inviteRouter.post('/redeem', requireAuth, inviteRedeemLimiter, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { code } = req.body;
 
