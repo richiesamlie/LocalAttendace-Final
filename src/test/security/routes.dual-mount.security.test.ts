@@ -6,7 +6,13 @@ import { createTestApp } from '../helpers/app';
 
 process.env.DEFAULT_ADMIN_PASSWORD ??= 'test-default-admin-password';
 
-vi.mock('../../server', () => ({
+// vi.mock path: this test lives at src/test/security/routes.dual-mount.security.test.ts.
+// server.ts lives at <repo>/server.ts — three levels up: ../../../
+// The mock prevents the real server.ts from being evaluated (which would
+// call startServer() and try to bind port 3000, conflicting with parallel
+// tests). Without this mock, an UNHANDLED REJECTION appears in the test
+// log: 'Router.use() requires a middleware function but got a undefined'.
+vi.mock('../../../server', () => ({
   io: {
     to: () => ({ emit: () => undefined }),
     emit: () => undefined,

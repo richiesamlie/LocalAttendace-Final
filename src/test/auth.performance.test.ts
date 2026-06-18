@@ -15,7 +15,14 @@ describe('Auth performance hardening', () => {
     const teacherRoutePath = path.join(process.cwd(), 'src', 'routes', 'teacher.routes.ts');
     const content = readFileSync(teacherRoutePath, 'utf-8');
 
-    expect(content).toContain('await bcrypt.hash(');
+    // F-002 refactor (Batch 3) introduced src/lib/bcrypt.ts wrapper module
+    // with `hashPassword()` that internally calls bcrypt.hash() async.
+    // Accept either the direct call OR the wrapper call — the audit
+    // intent (no sync hashing) is what matters.
+    const usesAsyncHash =
+      content.includes('await bcrypt.hash(') ||
+      content.includes('await hashPassword(');
+    expect(usesAsyncHash).toBe(true);
     expect(content).not.toContain('bcrypt.hashSync(');
   });
 
@@ -23,7 +30,14 @@ describe('Auth performance hardening', () => {
     const adminRoutePath = path.join(process.cwd(), 'src', 'routes', 'admin.routes.ts');
     const content = readFileSync(adminRoutePath, 'utf-8');
 
-    expect(content).toContain('await bcrypt.hash(');
+    // F-002 refactor (Batch 3) introduced src/lib/bcrypt.ts wrapper module
+    // with `hashPassword()` that internally calls bcrypt.hash() async.
+    // Accept either the direct call OR the wrapper call — the audit
+    // intent (no sync hashing) is what matters.
+    const usesAsyncHash =
+      content.includes('await bcrypt.hash(') ||
+      content.includes('await hashPassword(');
+    expect(usesAsyncHash).toBe(true);
     expect(content).not.toContain('bcrypt.hashSync(');
   });
 });
