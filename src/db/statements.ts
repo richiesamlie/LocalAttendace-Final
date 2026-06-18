@@ -91,7 +91,7 @@ export function initStatements(): void {
     "UPDATE refresh_tokens SET used_at = CURRENT_TIMESTAMP WHERE family_id = ?"
   );
   preparedStatements.deleteExpiredRefreshTokens = _db.prepare(
-    "DELETE FROM refresh_tokens WHERE expires_at < datetime('now')"
+    "DELETE FROM refresh_tokens WHERE datetime(expires_at) < datetime('now')"
   );
   preparedStatements.countActiveRefreshTokensForTeacher = _db.prepare(
     "SELECT COUNT(*) as count FROM refresh_tokens WHERE teacher_id = ? AND used_at IS NULL AND expires_at > datetime('now')"
