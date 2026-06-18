@@ -1,15 +1,42 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
+import { randomBytes } from 'crypto';
 import * as svc from '../../services';
 import db from '../../db';
-import type { Session, ClassTeacher } from '../types/db';
+import type { Session, ClassTeacher, Teacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
 const testBypassHandler: RequestHandler = (_req, _res, next) => next();
 
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
+
+// F-020: __Host- cookie prefix in production for additional subdomain
+// bypass protection. The __Host- prefix requires:
+//   - Name starts with __Host-
+//   - Secure flag set
+//   - Path=/
+//   - No Domain attribute
+// In dev/test we keep the plain name so non-HTTPS localhost works.
+
+// F-004: short-lived access token cookie (default 1h). New login flow
+// issues this alongside a refresh token.
+export const ACCESS_COOKIE_NAME: string =
+  process.env.NODE_ENV === 'production' ? '__Host-access_token' : 'access_token';
+
+// F-004: long-lived refresh token cookie (default 7d). Opaque random
+// value, looked up by sha256 hash server-side. Used only by
+// POST /api/auth/refresh to mint a new access token.
+export const REFRESH_COOKIE_NAME: string =
+  process.env.NODE_ENV === 'production' ? '__Host-refresh_token' : 'refresh_token';
+
+// F-020/F-004: legacy 7-day JWT cookie name. Kept for backwards compat
+// with sessions created before the F-004 migration. Middleware accepts
+// tokens from either this OR ACCESS_COOKIE_NAME. Once the existing 7d
+// tokens naturally expire, only ACCESS_COOKIE_NAME will be in use.
+export const AUTH_COOKIE_NAME: string =
+  process.env.NODE_ENV === 'production' ? '__Host-auth_token' : 'auth_token';
 
 // Login rate limiter - configured for ~40 teachers logging in during morning rush
 // Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins
@@ -36,9 +63,46 @@ export const postLimiter = skipRateLimitInTests
       message: { error: 'Too many requests. Please try again later.' },
     });
 
-export const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
- ? (() => { throw new Error('JWT_SECRET must be set in production'); })()
- : 'dev-secret-change-in-production');
+// Invite-code redemption rate limiter (F-008).
+// Stricter than postLimiter: invite codes are short (e.g. 12 chars from
+// randomUUID) but still guessable. With 10 attempts per 15 min, an attacker
+// can try at most ~960/day, which is too slow for practical enumeration.
+export const inviteRedeemLimiter = skipRateLimitInTests
+  ? testBypassHandler
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
+    });
+
+export const JWT_SECRET: string = (() => {
+  const fromEnv = process.env.JWT_SECRET;
+  if (fromEnv && fromEnv.length >= 32) return fromEnv;
+
+  // Production MUST have a configured secret. Throw early.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable must be set (>= 32 chars) in production');
+  }
+
+  // Test environment: use a stable secret so test runs are reproducible.
+  // Generated once per process but constant within a run.
+  if (process.env.NODE_ENV === 'test') {
+    return 'test-jwt-secret-not-for-production-use-only-32c';
+  }
+
+  // Dev fallback: ephemeral random secret. No two restarts share a secret,
+  // so any token from a previous dev session is invalidated on restart
+  // (forces re-login). This prevents the F-005 risk of a hardcoded dev
+  // secret shipping to prod via NODE_ENV misconfiguration.
+  const ephemeral = randomBytes(32).toString('hex');
+  console.warn(
+    '[auth] JWT_SECRET not set. Generated ephemeral dev secret for this process only. ' +
+    'Set JWT_SECRET in .env to keep sessions across restarts.',
+  );
+  return ephemeral;
+})();
 
 export interface JwtPayload {
   teacherId: string;
@@ -56,13 +120,49 @@ declare module 'express-serve-static-core' {
 }
 
 export const getTeacherId = (req: express.Request): string | null => {
-  const token = req.cookies?.auth_token;
+  // F-004: prefer the new access_token cookie; fall back to the legacy
+  // auth_token cookie for sessions created before the F-004 migration.
+  const token = req.cookies?.[ACCESS_COOKIE_NAME] || req.cookies?.[AUTH_COOKIE_NAME];
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
     return decoded.teacherId;
   } catch {
     return null;
+  }
+};
+
+// F-011: requireAdmin middleware — defense-in-depth for admin endpoints.
+// MUST be chained AFTER requireAuth (which populates req.teacherId).
+// Looks up the teacher record and verifies is_admin=1; returns 403
+// otherwise. Replaces the per-handler `caller = await teacherService.
+// getById(...)` pattern that was duplicated in 14 admin handlers.
+//
+// Performance: admin operations are infrequent (metrics, profiling,
+// database backup) so the per-request teacher lookup is acceptable.
+// For very high-traffic admin paths, consider caching by teacherId.
+export const requireAdmin: RequestHandler = async (req, res, next) => {
+  if (!req.teacherId) {
+    const teacherId = getTeacherId(req);
+    if (!teacherId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    req.teacherId = teacherId;
+  }
+  try {
+    const caller = await svc.teacherService.getById(req.teacherId) as
+      | (Teacher & { is_admin?: number | boolean })
+      | null;
+    if (!caller || !caller.is_admin) {
+      return res.status(403).json({ error: 'Administrator access required' });
+    }
+    // Expose the admin teacher record on the request for handlers
+    // that want to log/audit who triggered the action.
+    (req as express.Request & { adminTeacher?: Teacher }).adminTeacher = caller as Teacher;
+    return next();
+  } catch (error) {
+    console.error('[admin] Failed to verify admin status:', error);
+    return res.status(503).json({ error: 'Authentication service unavailable' });
   }
 };
 
@@ -72,14 +172,14 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const token = req.cookies?.auth_token;
+  const token = req.cookies?.[ACCESS_COOKIE_NAME] || req.cookies?.[AUTH_COOKIE_NAME];
   if (token) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
       if (decoded.sessionId) {
         const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
         if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
-          res.clearCookie('auth_token');
+          res.clearCookie(AUTH_COOKIE_NAME);
           return res.status(401).json({ error: 'Session expired or revoked' });
         }
         try { await svc.sessionService.updateActivity(decoded.sessionId); } catch (e) {
@@ -90,7 +190,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       if (error instanceof Error && !error.message.includes('jwt')) {
         return res.status(503).json({ error: 'Authentication service unavailable' });
       }
-      res.clearCookie('auth_token');
+      res.clearCookie(AUTH_COOKIE_NAME);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
   }
@@ -215,3 +315,83 @@ export const withWriteQueue = (handler: WriteHandler): RequestHandler => {
     }
   };
 };
+
+/**
+ * Result of verifying a Socket.IO handshake (cookie-based JWT auth).
+ * Returned by `verifySocketAuth`.
+ */
+export interface SocketAuthContext {
+  teacherId: string;
+  sessionId?: string;
+}
+
+/**
+ * Parse `auth_token` value out of a raw Cookie header.
+ * No external dep — only handles the simple `name=value; name2=value2` format
+ * used by browsers for httpOnly cookies. Decodes percent-encoded values.
+ *
+ * Accepts an optional `cookieName` (defaults to AUTH_COOKIE_NAME) so callers
+ * can target the production __Host- prefix or the dev plain name.
+ */
+export function parseAuthTokenCookie(
+  cookieHeader: string | undefined,
+  cookieName: string = AUTH_COOKIE_NAME,
+): string | null {
+  if (!cookieHeader) return null;
+  const pairs = cookieHeader.split(';');
+  for (const pair of pairs) {
+    const eqIdx = pair.indexOf('=');
+    if (eqIdx === -1) continue;
+    const name = pair.slice(0, eqIdx).trim();
+    if (name !== cookieName) continue;
+    const raw = pair.slice(eqIdx + 1).trim();
+    if (!raw) return null;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
+  return null;
+}
+
+/**
+ * Verify a Socket.IO handshake using the same JWT cookie flow as HTTP.
+ *
+ * - Reads `auth_token` from the Cookie header on the upgrade request
+ * - Verifies the JWT signature + expiry (HS256 pinned, see F-021)
+ * - If the token carries a sessionId, verifies the session is not revoked
+ *   and has not expired server-side (matches `requireAuth` semantics)
+ *
+ * Returns the authenticated teacher context, or null if the handshake
+ * is invalid. Callers (e.g. `io.use(...)` middleware) should reject the
+ * connection when this returns null.
+ *
+ * F-001: Socket.IO previously accepted any client without authentication.
+ */
+export async function verifySocketAuth(headers: { cookie?: string } | undefined): Promise<SocketAuthContext | null> {
+  const token = parseAuthTokenCookie(headers?.cookie);
+  if (!token) return null;
+
+  let decoded: JwtPayload;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
+  } catch {
+    return null;
+  }
+  if (!decoded.teacherId) return null;
+
+  if (decoded.sessionId) {
+    const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
+    if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
+      return null;
+    }
+    try {
+      await svc.sessionService.updateActivity(decoded.sessionId);
+    } catch (e) {
+      console.warn('[socket-auth] Failed to update session activity:', (e as Error).message);
+    }
+  }
+
+  return { teacherId: decoded.teacherId, sessionId: decoded.sessionId };
+}

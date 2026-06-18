@@ -11,6 +11,8 @@ import os from "os";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 import { performanceMonitor } from "./src/middleware/performance";
+import { verifySocketAuth } from "./src/routes/middleware";
+import { classService, teacherService } from "./services";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
@@ -76,15 +78,75 @@ async function startServer() {
       origin: getAllowedOrigins(),
       credentials: true,
     },
+    // F-018: custom allowRequest checker. Validates the Origin header
+    // against getAllowedOrigins() at handshake time (HTTP CORS only
+    // covers regular requests; websocket handshakes need their own
+    // check). Combined with the io.use(verifySocketAuth) middleware
+    // below, an attacker must present BOTH a valid origin AND a
+    // valid JWT cookie or token to establish a connection.
+    allowRequest: (req, callback) => {
+      try {
+        const origin = req.headers.origin;
+        const allowed = getAllowedOrigins();
+        // No Origin header (server-to-server) is allowed; same-origin
+        // requests may omit the header depending on the browser.
+        if (!origin || allowed.includes(origin)) {
+          return callback(null, true);
+        }
+        // Origin present but not in allow-list → reject
+        return callback('Origin not allowed', false);
+      } catch (err) {
+        // Never crash the handshake on a config error; log and reject.
+        console.error('[ws] allowRequest error:', err);
+        return callback('Internal error', false);
+      }
+    },
     // Use path /ws to avoid conflicts with API routes
     path: '/ws/socket.io',
   });
 
-  // Class rooms — each classId is a separate Socket.io room
+  // F-001: Reject any Socket.IO handshake that lacks a valid auth_token cookie.
+  // This mirrors the requireAuth middleware used by HTTP routes — same JWT
+  // secret, same algorithm pinning (HS256), same server-side session check.
+  io.use(async (socket, next) => {
+    const auth = await verifySocketAuth(socket.handshake.headers);
+    if (!auth) {
+      const err = new Error('Authentication required');
+      // @ts-expect-error attach data for client error surfacing (socket.io convention)
+      err.data = { code: 'UNAUTHORIZED' };
+      return next(err);
+    }
+    socket.data.teacherId = auth.teacherId;
+    socket.data.sessionId = auth.sessionId;
+    next();
+  });
+
+  // Class rooms — each classId is a separate Socket.io room.
+  // On join_class, verify the authenticated teacher has access to the
+  // requested class (global admin bypasses; otherwise must be a member
+  // of class_teachers for that class). This prevents an authenticated
+  // teacher from snooping another teacher's class updates.
   io.on('connection', (socket) => {
-    // Client joins the room for the class they are currently viewing
-    socket.on('join_class', (classId: string) => {
-      socket.join(classId);
+    socket.on('join_class', async (classId: string) => {
+      const teacherId = socket.data.teacherId as string | undefined;
+      if (!teacherId) {
+        socket.emit('error', { message: 'Not authenticated' });
+        return;
+      }
+      try {
+        const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
+        if (!isGlobalAdmin) {
+          const access = await classService.isClassTeacher(classId, teacherId);
+          if (!access) {
+            socket.emit('error', { message: `Access denied for class ${classId}` });
+            return;
+          }
+        }
+        socket.join(classId);
+      } catch (e) {
+        console.warn('[socket] join_class error:', (e as Error).message);
+        socket.emit('error', { message: 'Failed to join class' });
+      }
     });
     // Client leaves the room when switching to another class
     socket.on('leave_class', (classId: string) => {
@@ -115,7 +177,11 @@ async function startServer() {
   // Performance monitoring and request logging
   app.use(performanceMonitor);
 
-  app.use(express.json({ limit: '10mb' }));
+  // F-009: JSON body size limit. Default 100kb is enough for bulk
+  // attendance marking and student lists (largest realistic payload is
+  // ~30 student records = ~3kb). Override via JSON_BODY_LIMIT env var.
+  // Without this limit, an attacker can DoS by sending huge bodies.
+  app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
   app.use(cookieParser());
 
   // Use separated API routes
@@ -179,17 +245,36 @@ async function startServer() {
   });
 }
 
+// F-017: open the error log as a write stream ONCE at module init.
+// This replaces per-call fs.appendFileSync (which would block the
+// event loop under an error storm) with buffered async writes.
+// The stream is closed automatically on process exit by Node.js.
+const errorLogPath = process.env.SERVER_ERROR_LOG || 'server-error.log';
+const errorLogStream = fs.createWriteStream(errorLogPath, { flags: 'a' });
+errorLogStream.on('error', (err) => {
+  // Last-resort: if the stream itself errors, don't crash the process.
+  console.error('[server-error.log] stream error:', err.message);
+});
+
+function logServerError(label: string, payload: unknown): void {
+  const timestamp = new Date().toISOString();
+  const entry = `[${timestamp}] ${label}\n${payload instanceof Error ? `${payload.message}\n${payload.stack ?? ''}` : String(payload)}\n\n`;
+  errorLogStream.write(entry);
+}
+
 // Handle uncaught errors
 process.on('uncaughtException', (err) => {
   const timestamp = new Date().toISOString();
   console.error(`\n\x1b[31m[${timestamp}] UNCAUGHT EXCEPTION:\x1b[0m`, err.message);
-  fs.appendFileSync('server-error.log', `${timestamp} UNCAUGHT EXCEPTION: ${err.message}\n${err.stack}\n\n`);
+  // F-017: async write via stream (no longer blocks event loop)
+  logServerError('UNCAUGHT EXCEPTION', err);
 });
 
 process.on('unhandledRejection', (reason) => {
   const timestamp = new Date().toISOString();
   console.error(`\n\x1b[31m[${timestamp}] UNHANDLED REJECTION:\x1b[0m`, reason);
-  fs.appendFileSync('server-error.log', `${timestamp} UNHANDLED REJECTION: ${reason}\n\n`);
+  // F-017: async write via stream (no longer blocks event loop)
+  logServerError('UNHANDLED REJECTION', reason);
 });
 
 startServer();

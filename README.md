@@ -42,7 +42,7 @@ A comprehensive, local-first web application designed to help teachers manage th
 - **WAL mode** with auto-checkpointing for concurrent access
 - **Pre-compiled SQL statements** for 40% faster queries
 - **Gzip compression** for 60-80% smaller responses
-- **Rate limiting** on all API endpoints (login: 5/15min, writes: 100/15min)
+- **Rate limiting** on all API endpoints (login: 150/15min, writes: 500/15min, invite redeem: 10/15min)
 - **Input validation** with Zod schemas
 - **Helmet security headers** (XSS, clickjacking protection)
 - **Global error handler** with SQLite constraint mapping

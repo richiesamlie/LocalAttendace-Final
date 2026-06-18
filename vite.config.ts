@@ -6,7 +6,7 @@ import {defineConfig, loadEnv} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
+  loadEnv(mode, '.', ''); // Loads .env files; values consumed via import.meta.env at runtime
   return {
     plugins: [
       react(), 
@@ -47,7 +47,10 @@ export default defineConfig(({mode}) => {
       })
     ],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      // F-027: removed dead 'process.env.GEMINI_API_KEY' define. It was
+      // never referenced in src/ (verified by grep), so this was a
+      // no-op build-time substitution that was also a latent leak
+      // vector if anyone added a reference later.
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version ?? 'dev'),
     },
     resolve: {

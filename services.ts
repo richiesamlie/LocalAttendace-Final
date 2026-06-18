@@ -21,6 +21,7 @@ export { timetableService } from './src/services/timetable.service';
 export { seatingService } from './src/services/seating.service';
 export { settingService } from './src/services/setting.service';
 export { inviteService } from './src/services/invite.service';
+export { refreshTokenService } from './src/services/refresh-token.service';
 
 // Re-export utilities
 export { isPostgres, type ClassSummary } from './src/services/utils';

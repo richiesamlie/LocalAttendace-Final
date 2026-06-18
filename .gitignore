@@ -15,3 +15,6 @@ test-results/
 backups/
 server-error.log
 spikes/
+
+# Audit artifacts (external repo workdir, not project files)
+audit/
