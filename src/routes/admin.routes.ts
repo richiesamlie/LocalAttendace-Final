@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { teacherService, sessionService, settingService } from '../../services';
 import { hashPassword } from '../../src/lib/bcrypt';
+import { safeLog } from '../../src/lib/log-redact';
 import { requireAuth, withWriteQueue, postLimiter } from './middleware';
 import { validate, settingSchema } from '../../src/lib/validation';
 import db from '../../db';
@@ -221,10 +222,11 @@ adminRouter.post('/profiling/query', requireAuth, async (req, res) => {
 
     return res.json({ ...result, score });
   } catch (error) {
-    console.error('Error profiling query:', error);
-    return res.status(500).json({ 
+    // F-007: do not echo raw SQL or PII values from the error message
+    console.error('Error profiling query:', safeLog(error));
+    return res.status(500).json({
       error: 'Failed to profile query',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Internal error — see server logs',
     });
   }
 });
