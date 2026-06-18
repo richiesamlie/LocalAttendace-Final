@@ -51,7 +51,7 @@ authRouter.post('/logout', async (req, res) => {
   const token = req.cookies?.auth_token;
   if (token) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { sessionId?: string };
+      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { sessionId?: string };
       if (decoded.sessionId) {
         await sessionService.revoke(decoded.sessionId);
       }

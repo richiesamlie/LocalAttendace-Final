@@ -59,7 +59,7 @@ export const getTeacherId = (req: express.Request): string | null => {
   const token = req.cookies?.auth_token;
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
     return decoded.teacherId;
   } catch {
     return null;
@@ -75,7 +75,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   const token = req.cookies?.auth_token;
   if (token) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
       if (decoded.sessionId) {
         const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
         if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
