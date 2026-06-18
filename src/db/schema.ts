@@ -1,5 +1,6 @@
 import { _db, DEFAULTS, getDefaultPassword, createBackup } from './connection';
 import bcrypt from 'bcrypt';
+import { BCRYPT_COST } from '../lib/bcrypt';
 
 export function initSchema(): void {
   createBackup();
@@ -144,7 +145,7 @@ export function initSchema(): void {
     let defaultTeacherId: string = DEFAULTS.TEACHER_ID;
     if (existingTeachers.count === 0) {
       const defaultPassword = getDefaultPassword();
-      const hash = bcrypt.hashSync(defaultPassword, 10);
+      const hash = bcrypt.hashSync(defaultPassword, BCRYPT_COST);
       _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
         DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME
       );
@@ -280,7 +281,7 @@ export function initSchema(): void {
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
   if (teacherCount.count === 0) {
     const defaultPassword = getDefaultPassword();
-    const hash = bcrypt.hashSync(defaultPassword, 10);
+    const hash = bcrypt.hashSync(defaultPassword, BCRYPT_COST);
     _db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, ?)').run(
       DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME, 1
     );

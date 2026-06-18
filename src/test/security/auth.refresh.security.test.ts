@@ -183,17 +183,14 @@ describe('refresh-token rotation (F-004)', () => {
   describe('countActiveForTeacher', () => {
     it('counts unused, unexpired tokens only', async () => {
       const a = refreshTokenService.issue(teacherId, sessionId);
-      // _b is unused-but-needed: keeps two distinct tokens in DB so the
-      // count assertion is meaningful (2 active vs 1 if we omitted it).
-      const _b = refreshTokenService.issue(teacherId, sessionId);
 
-      // Rotate a → it's now used
+      // Rotate a → it's now used (used_at is set)
       const c = refreshTokenService.issue(teacherId, sessionId, a.familyId);
       refreshTokenService.rotate(a.id, c.id);
 
       const count = await refreshTokenService.countActiveForTeacher(teacherId);
-      // _b and c are active; a is used
-      expect(count).toBe(2);
+      // Only c is active; a is used, no others
+      expect(count).toBe(1);
     });
 
     it('returns 0 for a teacher with no tokens', async () => {

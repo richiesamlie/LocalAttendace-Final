@@ -1,8 +1,8 @@
 import express from 'express';
-import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs';
 import { teacherService, sessionService, settingService } from '../../services';
+import { hashPassword } from '../../src/lib/bcrypt';
 import { requireAuth, withWriteQueue, postLimiter } from './middleware';
 import { validate, settingSchema } from '../../src/lib/validation';
 import db from '../../db';
@@ -47,7 +47,7 @@ adminRouter.post('/settings', requireAuth, postLimiter, validate(settingSchema),
       return res.status(400).json({ error: 'Password must be at least 4 characters' });
     }
 
-    const hash = await bcrypt.hash(value, 10);
+    const hash = await hashPassword(value);
     const adminTeacher = await teacherService.getByUsername('admin') as Teacher | null;
     if (adminTeacher) {
       await teacherService.updatePassword(adminTeacher.id, hash);

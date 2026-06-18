@@ -1,6 +1,6 @@
 import express from 'express';
-import bcrypt from 'bcrypt';
 import { teacherService, classService } from '../../services';
+import { hashPassword } from '../../src/lib/bcrypt';
 import { requireAuth, withWriteQueue, postLimiter } from './middleware';
 import { validate, teacherSchema } from '../../src/lib/validation';
 
@@ -39,7 +39,7 @@ teacherRouter.post('/register', requireAuth, postLimiter, validate(teacherSchema
   }
 
   const id = `teacher_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
-  const hash = await bcrypt.hash(password, 10);
+  const hash = await hashPassword(password);
   await teacherService.insert(id, username, hash, name);
   return res.json({ success: true, id, username, name });
 }));
