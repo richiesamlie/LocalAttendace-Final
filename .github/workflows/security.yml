@@ -40,6 +40,21 @@ jobs:
           npm audit --json > npm-audit.json || true
           echo "Audit report generated"
 
+      - name: Surface audit failures in job summary
+        if: failure()
+        run: |
+          echo "## ❌ Dependency audit gate FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Production dependency audit found vulnerabilities at HIGH or CRITICAL severity." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Required action:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the full audit report in the \`npm-audit-report\` artifact." >> $GITHUB_STEP_SUMMARY
+          echo "2. Run \`npm audit --omit=dev\` locally to see all HIGH/CRITICAL findings." >> $GITHUB_STEP_SUMMARY
+          echo "3. Apply non-breaking fixes: \`npm audit fix\`. For breaking fixes, pin explicitly or upgrade in a separate PR." >> $GITHUB_STEP_SUMMARY
+          echo "4. If a vulnerability has no upstream fix, add compensating controls + temporary acceptance note in SECURITY_RESIDUAL_RISK_REGISTER.md." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Do NOT** bypass this gate by adding \`continue-on-error: true\` to the audit step." >> $GITHUB_STEP_SUMMARY
+
       - name: Upload audit results
         if: always()
         uses: actions/upload-artifact@v7
@@ -71,6 +86,15 @@ jobs:
         run: |
           bun audit --json > bun-audit.json || true
           echo "Bun audit report generated"
+
+      - name: Surface Bun audit failures in job summary
+        if: failure()
+        run: |
+          echo "## ❌ Bun dependency audit gate FAILED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Bun audit found HIGH or CRITICAL severity vulnerabilities in the dependency tree." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Required action:** same as npm audit gate above. Check \`bun-audit-report\` artifact." >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Bun audit results
         if: always()
