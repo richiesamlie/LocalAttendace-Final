@@ -65,14 +65,14 @@ export function initStatements(): void {
   preparedStatements.useInviteCodeAtomic = _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ? AND used_by IS NULL');
   preparedStatements.deleteInviteCode = _db.prepare('DELETE FROM invite_codes WHERE code = ?');
   preparedStatements.getClassInviteCodes = _db.prepare('SELECT code, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE class_id = ? ORDER BY created_at DESC');
-  preparedStatements.deleteExpiredInviteCodes = _db.prepare("DELETE FROM invite_codes WHERE expires_at < datetime('now')");
+  preparedStatements.deleteExpiredInviteCodes = _db.prepare("DELETE FROM invite_codes WHERE datetime(expires_at) < datetime('now')");
   preparedStatements.insertSession = _db.prepare('INSERT INTO user_sessions (id, teacher_id, device_name, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)');
   preparedStatements.getSession = _db.prepare('SELECT id, teacher_id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE id = ?');
   preparedStatements.getSessionsByTeacher = _db.prepare('SELECT id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE teacher_id = ? ORDER BY last_active DESC');
   preparedStatements.updateSessionActivity = _db.prepare("UPDATE user_sessions SET last_active = datetime('now') WHERE id = ?");
   preparedStatements.revokeSession = _db.prepare('UPDATE user_sessions SET is_revoked = 1 WHERE id = ?');
   preparedStatements.revokeAllSessions = _db.prepare('UPDATE user_sessions SET is_revoked = 1 WHERE teacher_id = ?');
-  preparedStatements.deleteExpiredSessions = _db.prepare("DELETE FROM user_sessions WHERE expires_at < datetime('now')");
+  preparedStatements.deleteExpiredSessions = _db.prepare("DELETE FROM user_sessions WHERE datetime(expires_at) < datetime('now')");
   preparedStatements.updateTeacherLastLogin = _db.prepare("UPDATE teachers SET last_login = datetime('now') WHERE id = ?");
   preparedStatements.countOwnedClasses = _db.prepare("SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = ? AND role = 'owner'");
   preparedStatements.updateTeacherPassword = _db.prepare('UPDATE teachers SET password_hash = ? WHERE id = ?');
