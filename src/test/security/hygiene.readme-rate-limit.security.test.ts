@@ -24,14 +24,15 @@ describe('README rate-limit documentation sync (F-026)', () => {
 
   it('README documents current login rate limit (150/15min)', () => {
     const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
-    // The Features section should mention the current login limit
-    expect(readme).toMatch(/login:\s*150/);
+    // The README documents the current login limit (150/15min).
+    // Format varies between rewrites: 'login: 150/15min' OR 'login 150/15min'
+    expect(readme).toMatch(/login[:\s]+150/);
   });
 
   it('README documents current write rate limit (500/15min)', () => {
     const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8');
-    // The Features section should mention the current postLimiter value
-    expect(readme).toMatch(/(writes|POST|write).*?500/);
+    // The README documents the current postLimiter value (500/15min).
+    expect(readme).toMatch(/(writes|write|POST)[:\s]+500/);
   });
 
   it('README does NOT document the old login limit (5/15min)', () => {
