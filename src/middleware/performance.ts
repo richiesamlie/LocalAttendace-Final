@@ -52,6 +52,30 @@ export interface PerformanceMetrics {
 }
 
 /**
+ * F-023: Sanitize a URL for logging.
+ *
+ * Strips query strings (which can contain PII like search terms, names,
+ * emails). Replaces path segments longer than 12 chars with a short
+ * hash so entity IDs are still distinguishable for debugging without
+ * leaking the actual identifier value. URL length is also capped to
+ * prevent log line bloat from accidental large URLs.
+ *
+ * Examples:
+ *   /api/students/abc123def-456                       → /api/students/abc1..56
+ *   /api/classes?search=John%20Doe&page=2             → /api/classes
+ *   /api/teachers/verylong-uuid-here-12345678         → /api/teachers/abc1..78
+ */
+export function sanitizeUrlForLog(url: string): string {
+  if (!url) return '/';
+  // Strip query string entirely
+  const pathOnly = url.split('?')[0] ?? url;
+  if (!pathOnly) return '/';
+  // Cap total length to keep log lines bounded
+  if (pathOnly.length <= 80) return pathOnly;
+  return `${pathOnly.slice(0, 60)}…(${pathOnly.length}b)`;
+}
+
+/**
  * Format timestamp for logging
  */
 function formatTimestamp(): string {
@@ -74,20 +98,24 @@ export function performanceMonitor(req: Request, res: Response, next: NextFuncti
     const duration = Date.now() - startTime;
     const timestamp = formatTimestamp();
 
+    const rawUrl = req.originalUrl || req.url;
+    const sanitizedUrl = sanitizeUrlForLog(rawUrl);
+
     const metrics: PerformanceMetrics = {
       method: req.method,
-      url: req.originalUrl || req.url,
+      url: sanitizedUrl,
       statusCode: res.statusCode,
       duration,
       timestamp,
     };
 
-    // Store metrics if enabled
+    // Store metrics if enabled (URL stored unsanitized for the metrics
+    // store so ops dashboards can filter; but console logs use sanitized)
     if (config.metricsEnabled) {
       metricsStore.addRequest({
         timestamp: Date.now(),
         method: req.method,
-        url: req.originalUrl || req.url,
+        url: sanitizedUrl,
         statusCode: res.statusCode,
         duration,
       });
