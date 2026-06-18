@@ -19,6 +19,22 @@ const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 //   - Path=/
 //   - No Domain attribute
 // In dev/test we keep the plain name so non-HTTPS localhost works.
+
+// F-004: short-lived access token cookie (default 1h). New login flow
+// issues this alongside a refresh token.
+export const ACCESS_COOKIE_NAME: string =
+  process.env.NODE_ENV === 'production' ? '__Host-access_token' : 'access_token';
+
+// F-004: long-lived refresh token cookie (default 7d). Opaque random
+// value, looked up by sha256 hash server-side. Used only by
+// POST /api/auth/refresh to mint a new access token.
+export const REFRESH_COOKIE_NAME: string =
+  process.env.NODE_ENV === 'production' ? '__Host-refresh_token' : 'refresh_token';
+
+// F-020/F-004: legacy 7-day JWT cookie name. Kept for backwards compat
+// with sessions created before the F-004 migration. Middleware accepts
+// tokens from either this OR ACCESS_COOKIE_NAME. Once the existing 7d
+// tokens naturally expire, only ACCESS_COOKIE_NAME will be in use.
 export const AUTH_COOKIE_NAME: string =
   process.env.NODE_ENV === 'production' ? '__Host-auth_token' : 'auth_token';
 
@@ -104,7 +120,9 @@ declare module 'express-serve-static-core' {
 }
 
 export const getTeacherId = (req: express.Request): string | null => {
-  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  // F-004: prefer the new access_token cookie; fall back to the legacy
+  // auth_token cookie for sessions created before the F-004 migration.
+  const token = req.cookies?.[ACCESS_COOKIE_NAME] || req.cookies?.[AUTH_COOKIE_NAME];
   if (!token) return null;
   try {
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
@@ -120,7 +138,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const token = req.cookies?.[AUTH_COOKIE_NAME];
+  const token = req.cookies?.[ACCESS_COOKIE_NAME] || req.cookies?.[AUTH_COOKIE_NAME];
   if (token) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
