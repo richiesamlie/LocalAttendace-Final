@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { AUTH_COOKIE_NAME, parseAuthTokenCookie } from '../../../src/routes/middleware';
 
 process.env.DEFAULT_ADMIN_PASSWORD ??= 'test-default-admin-password';
@@ -31,14 +33,12 @@ describe('AUTH_COOKIE_NAME + __Host- prefix (F-020)', () => {
   it('source code uses AUTH_COOKIE_NAME constant in all cookie paths', () => {
     // Defense-in-depth: ensures no regression to hardcoded 'auth_token'
     // string literals in the source.
-    const fs = require('fs');
-    const path = require('path');
-    const middlewareSrc = fs.readFileSync(
-      path.join(process.cwd(), 'src/routes/middleware.ts'),
+    const middlewareSrc = readFileSync(
+      join(process.cwd(), 'src/routes/middleware.ts'),
       'utf8',
     );
-    const authRoutesSrc = fs.readFileSync(
-      path.join(process.cwd(), 'src/routes/auth.routes.ts'),
+    const authRoutesSrc = readFileSync(
+      join(process.cwd(), 'src/routes/auth.routes.ts'),
       'utf8',
     );
     // The string literal 'auth_token' should appear ONLY as part of the

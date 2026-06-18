@@ -33,9 +33,23 @@ describe('Refresh endpoint HTTP integration (F-004)', () => {
   });
 
   afterAll(() => {
-    try { db.prepare('DELETE FROM refresh_tokens WHERE teacher_id = ?').run(adminId); } catch {}
-    try { db.prepare('DELETE FROM user_sessions WHERE id = ?').run(sessionId); } catch {}
-    try { db.prepare('DELETE FROM teachers WHERE id = ?').run(adminId); } catch {}
+    // Best-effort fixture cleanup; each DELETE may fail if the row was
+    // already removed by a previous test, which is fine.
+    try {
+      db.prepare('DELETE FROM refresh_tokens WHERE teacher_id = ?').run(adminId);
+    } catch (_ignore) {
+      // row already gone
+    }
+    try {
+      db.prepare('DELETE FROM user_sessions WHERE id = ?').run(sessionId);
+    } catch (_ignore) {
+      // row already gone
+    }
+    try {
+      db.prepare('DELETE FROM teachers WHERE id = ?').run(adminId);
+    } catch (_ignore) {
+      // row already gone
+    }
   });
 
   function mintRefreshCookie(): string {
@@ -67,7 +81,7 @@ describe('Refresh endpoint HTTP integration (F-004)', () => {
     expect(res.body.success).toBe(true);
 
     // The response should set a new refresh_token cookie
-    const setCookie = res.headers['set-cookie'] as string[] | undefined;
+    const setCookie = res.headers['set-cookie'] as unknown as string[] | string | undefined;
     expect(setCookie).toBeDefined();
     const cookieStr = Array.isArray(setCookie) ? setCookie.join(';') : String(setCookie);
     expect(cookieStr).toMatch(/refresh_token=rt_/);

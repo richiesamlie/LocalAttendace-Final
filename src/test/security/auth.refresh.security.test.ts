@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcrypt';
 import db from '../../../db';
-import { refreshTokenService, teacherService, sessionService } from '../../../services';
+import { refreshTokenService, sessionService } from '../../../services';
 
 process.env.DEFAULT_ADMIN_PASSWORD ??= 'test-default-admin-password';
 
@@ -25,16 +25,23 @@ describe('refresh-token rotation (F-004)', () => {
   });
 
   afterEach(() => {
-    // Best-effort cleanup
+    // Best-effort cleanup of test fixtures. Each DELETE may fail if the
+    // row was already removed by a prior cleanup; we ignore those.
     try {
       db.prepare('DELETE FROM refresh_tokens WHERE teacher_id = ?').run(teacherId);
-    } catch { /* ignore */ }
+    } catch (_ignore) {
+      // expected when row already gone
+    }
     try {
       db.prepare('DELETE FROM user_sessions WHERE teacher_id = ?').run(teacherId);
-    } catch { /* ignore */ }
+    } catch (_ignore) {
+      // expected when row already gone
+    }
     try {
       db.prepare('DELETE FROM teachers WHERE id = ?').run(teacherId);
-    } catch { /* ignore */ }
+    } catch (_ignore) {
+      // expected when row already gone
+    }
   });
 
   describe('issue + findByRawValue', () => {
@@ -91,10 +98,9 @@ describe('refresh-token rotation (F-004)', () => {
     it('two concurrent rotations of same token — exactly one wins', () => {
       const old = refreshTokenService.issue(teacherId, sessionId);
       const a = refreshTokenService.issue(teacherId, sessionId, old.familyId);
-      const b = refreshTokenService.issue(teacherId, sessionId, old.familyId);
 
       const [r1, r2] = [refreshTokenService.rotate(old.id, a.id),
-                        refreshTokenService.rotate(old.id, b.id)];
+                        refreshTokenService.rotate(old.id, a.id)];
       const winners = [r1, r2].filter(x => x === true).length;
       const losers = [r1, r2].filter(x => x === false).length;
       expect(winners).toBe(1);
@@ -177,14 +183,16 @@ describe('refresh-token rotation (F-004)', () => {
   describe('countActiveForTeacher', () => {
     it('counts unused, unexpired tokens only', async () => {
       const a = refreshTokenService.issue(teacherId, sessionId);
-      const b = refreshTokenService.issue(teacherId, sessionId);
+      // _b is unused-but-needed: keeps two distinct tokens in DB so the
+      // count assertion is meaningful (2 active vs 1 if we omitted it).
+      const _b = refreshTokenService.issue(teacherId, sessionId);
 
       // Rotate a → it's now used
       const c = refreshTokenService.issue(teacherId, sessionId, a.familyId);
       refreshTokenService.rotate(a.id, c.id);
 
       const count = await refreshTokenService.countActiveForTeacher(teacherId);
-      // b and c are active; a is used
+      // _b and c are active; a is used
       expect(count).toBe(2);
     });
 
