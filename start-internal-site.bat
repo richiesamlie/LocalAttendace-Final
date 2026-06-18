@@ -18,6 +18,19 @@ IF %errorlevel% NEQ 0 (
     exit /b 1
 )
 
+:: Ensure Node.js is installed (used to run the Express backend;
+:: better-sqlite3 native bindings do not load in Bun on Windows)
+where node >nul 2>&1
+IF %errorlevel% NEQ 0 (
+    echo.
+    echo ERROR: Node.js is not installed or not in PATH.
+    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations (better-sqlite3).
+    echo Install Node.js first: https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
+)
+
 echo Installing dependencies with Bun...
 call bun install --frozen-lockfile
 
@@ -56,9 +69,9 @@ if /i "%~3"=="--debug" set MODE=debug
 
 if "%MODE%"=="debug" (
     echo.
-    echo Starting in Debug Mode...
+    echo Starting in Debug Mode via Node.js...
     echo.
-    call bun run dev:network
+    call npx tsx server.ts --network
 ) else (
     echo Building the application for production...
     call bun run build
@@ -75,7 +88,8 @@ if "%MODE%"=="debug" (
     echo ===================================================
     echo.
 
-    :: Set NODE_ENV to production and start the server
+    :: Set NODE_ENV to production and start the server via Node.js
+    :: (better-sqlite3 native bindings do not load in Bun on Windows)
     set NODE_ENV=production
-    call bun run start:network
+    call npx tsx server.ts --network
 )
