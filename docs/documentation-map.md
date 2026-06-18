@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated:** 2026-05-13  
+**Last Updated:** 2026-06-18
 **Purpose:** Single source index for active project documentation only.
 **Bahasa / Language:** English as canonical text, with concise Indonesian guidance for key operational notes.
 
@@ -25,10 +25,12 @@
 
 ## Current Repository Status
 
-- Documentation cleanup completed: non-core audit/handoff/progress docs removed.
-- Security hardening + contract alignment phases completed.
-- Excel engine migrated from `xlsx` to `exceljs`.
-- Runtime blocking bcrypt sync paths migrated to async in active request paths.
+- **Security audit completed 2026-06-18** — 15 of 15 findings closed (Phase 10, Batches 1-6)
+- Audit closeout docs in `docs/plans/2026-06-18-phase10-batch{1..6}-remediation-report.md`
+- Cumulative release notes in `docs/release-notes-develop-to-main-2026-06-18-audit-remediation-batch{1..6}.md`
+- Excel engine: `exceljs` (with import/export guardrails)
+- Runtime: bcrypt cost 12, async-only paths
+- CI: GitHub Actions dual-runtime (Bun + npm); `develop` is blocking/hardening lane, `main` is stable
 
 ---
 
