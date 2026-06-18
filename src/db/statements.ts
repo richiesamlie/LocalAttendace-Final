@@ -76,4 +76,24 @@ export function initStatements(): void {
   preparedStatements.updateTeacherLastLogin = _db.prepare("UPDATE teachers SET last_login = datetime('now') WHERE id = ?");
   preparedStatements.countOwnedClasses = _db.prepare("SELECT COUNT(*) as count FROM class_teachers WHERE teacher_id = ? AND role = 'owner'");
   preparedStatements.updateTeacherPassword = _db.prepare('UPDATE teachers SET password_hash = ? WHERE id = ?');
-}
+
+  // F-004: refresh-token rotation
+  preparedStatements.insertRefreshToken = _db.prepare(
+    'INSERT INTO refresh_tokens (id, family_id, token_hash, teacher_id, session_id, expires_at) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  preparedStatements.getRefreshTokenByHash = _db.prepare(
+    'SELECT id, family_id, token_hash, teacher_id, session_id, expires_at, used_at, rotated_to FROM refresh_tokens WHERE token_hash = ?'
+  );
+  preparedStatements.markRefreshTokenUsed = _db.prepare(
+    "UPDATE refresh_tokens SET used_at = CURRENT_TIMESTAMP, rotated_to = ? WHERE id = ? AND used_at IS NULL"
+  );
+  preparedStatements.revokeRefreshFamily = _db.prepare(
+    "UPDATE refresh_tokens SET used_at = CURRENT_TIMESTAMP WHERE family_id = ?"
+  );
+  preparedStatements.deleteExpiredRefreshTokens = _db.prepare(
+    "DELETE FROM refresh_tokens WHERE expires_at < datetime('now')"
+  );
+  preparedStatements.countActiveRefreshTokensForTeacher = _db.prepare(
+    "SELECT COUNT(*) as count FROM refresh_tokens WHERE teacher_id = ? AND used_at IS NULL AND expires_at > datetime('now')"
+  );
+  }

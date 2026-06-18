@@ -255,6 +255,28 @@ export function initSchema(): void {
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_invite_codes_class_active ON invite_codes (class_id, expires_at, used_by)`);
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher_active ON user_sessions (teacher_id, is_revoked, expires_at)`);
 
+  // F-004: refresh_tokens table for refresh-token rotation. Each row is
+  // a single-use token; rotation links it to a successor via rotated_to.
+  // Reuse of a used token revokes the entire family.
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id TEXT PRIMARY KEY,
+      family_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      teacher_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      rotated_to TEXT,
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE,
+      FOREIGN KEY (session_id) REFERENCES user_sessions (id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family ON refresh_tokens(family_id);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_teacher ON refresh_tokens(teacher_id);
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+  `);
+
   const teacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers').get() as { count: number };
   if (teacherCount.count === 0) {
     const defaultPassword = getDefaultPassword();
