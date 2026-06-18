@@ -62,6 +62,7 @@ export function initStatements(): void {
   preparedStatements.insertInviteCode = _db.prepare('INSERT INTO invite_codes (code, class_id, role, created_by, expires_at) VALUES (?, ?, ?, ?, ?)');
   preparedStatements.getInviteCode = _db.prepare('SELECT code, class_id, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE code = ?');
   preparedStatements.useInviteCode = _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ?');
+  preparedStatements.useInviteCodeAtomic = _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ? AND used_by IS NULL');
   preparedStatements.deleteInviteCode = _db.prepare('DELETE FROM invite_codes WHERE code = ?');
   preparedStatements.getClassInviteCodes = _db.prepare('SELECT code, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE class_id = ? ORDER BY created_at DESC');
   preparedStatements.deleteExpiredInviteCodes = _db.prepare("DELETE FROM invite_codes WHERE expires_at < datetime('now')");

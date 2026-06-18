@@ -2,7 +2,7 @@ import { db, isPostgres, pgQuery, pgQueryOne } from './utils';
 
 /**
  * Invite Service
- * 
+ *
  * Manages invite codes for teachers to join classes with specific roles,
  * including expiration and usage tracking.
  */
@@ -50,6 +50,29 @@ export const inviteService = {
       return pgQuery('UPDATE invite_codes SET used_by = $1, used_at = NOW() WHERE code = $2', [teacherId, code]);
     }
     return db.stmt.useInviteCode.run(teacherId, code);
+  },
+
+  /**
+   * Atomic single-use redemption. Resolves true if this call successfully
+   * marked the invite as used (we won the race); false if it was already
+   * used or doesn't exist.
+   *
+   * F-006: replaces the non-atomic read-then-write pattern that allowed
+   * two concurrent requests to both pass the `used_by` check.
+   */
+  async useAtomic(teacherId: string, code: string): Promise<boolean> {
+    if (isPostgres()) {
+      // RETURNING lets us detect zero-row updates without needing access
+      // to the raw QueryResult. If used_by was already set, the WHERE
+      // clause filters it out and zero rows are returned.
+      const rows = await pgQuery<{ code: string }>(
+        'UPDATE invite_codes SET used_by = $1, used_at = NOW() WHERE code = $2 AND used_by IS NULL RETURNING code',
+        [teacherId, code],
+      );
+      return rows.length === 1;
+    }
+    const info = db.stmt.useInviteCodeAtomic.run(teacherId, code) as { changes: number };
+    return info.changes === 1;
   },
 
   deleteExpired() {

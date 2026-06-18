@@ -37,7 +37,14 @@ inviteRouter.post('/redeem', requireAuth, validate(inviteRedeemSchema), withWrit
     return res.status(400).json({ error: 'You already have access to this class' });
   }
 
-  await inviteService.use(teacherId, code);
+  // F-006: Atomic redemption. The single UPDATE+WHERE guards against
+  // the race where two concurrent requests both pass the `used_by` check
+  // above and both call the old non-atomic `use()`. Now only one can win.
+  const won = await inviteService.useAtomic(teacherId, code);
+  if (!won) {
+    return res.status(400).json({ error: 'This invite code has already been used' });
+  }
+
   await classService.addTeacher(invite.class_id, teacherId, invite.role);
 
   const className = (classExists as ClassNameCarrier | null)?.name;
