@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { teacherService, sessionService } from '../../services';
 import { randomUUID } from 'crypto';
 import { validate, loginSchema } from '../../src/lib/validation';
-import { authLimiter, JWT_SECRET, requireAuth } from './middleware';
+import { authLimiter, JWT_SECRET, requireAuth, AUTH_COOKIE_NAME } from './middleware';
 import type { Teacher } from '../../src/types/db';
 
 export const authRouter = express.Router();
@@ -37,7 +37,7 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
 
   const token = jwt.sign({ teacherId: teacher.id, username: teacher.username, sessionId }, JWT_SECRET, { expiresIn: '7d' });
   const isProduction = process.env.NODE_ENV === 'production';
-  res.cookie('auth_token', token, {
+  res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProduction,
     sameSite: 'strict',
@@ -60,7 +60,7 @@ authRouter.post('/logout', async (req, res) => {
     }
   }
 
-  res.clearCookie('auth_token');
+  res.clearCookie(AUTH_COOKIE_NAME);
   return res.json({ success: true });
 });
 

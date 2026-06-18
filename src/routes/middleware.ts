@@ -12,6 +12,16 @@ const testBypassHandler: RequestHandler = (_req, _res, next) => next();
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
+// F-020: __Host- cookie prefix in production for additional subdomain
+// bypass protection. The __Host- prefix requires:
+//   - Name starts with __Host-
+//   - Secure flag set
+//   - Path=/
+//   - No Domain attribute
+// In dev/test we keep the plain name so non-HTTPS localhost works.
+export const AUTH_COOKIE_NAME: string =
+  process.env.NODE_ENV === 'production' ? '__Host-auth_token' : 'auth_token';
+
 // Login rate limiter - configured for ~40 teachers logging in during morning rush
 // Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins
 // while still protecting against brute force attacks
@@ -94,7 +104,7 @@ declare module 'express-serve-static-core' {
 }
 
 export const getTeacherId = (req: express.Request): string | null => {
-  const token = req.cookies?.auth_token;
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
   if (!token) return null;
   try {
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
@@ -110,14 +120,14 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const token = req.cookies?.auth_token;
+  const token = req.cookies?.[AUTH_COOKIE_NAME];
   if (token) {
     try {
       const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
       if (decoded.sessionId) {
         const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
         if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
-          res.clearCookie('auth_token');
+          res.clearCookie(AUTH_COOKIE_NAME);
           return res.status(401).json({ error: 'Session expired or revoked' });
         }
         try { await svc.sessionService.updateActivity(decoded.sessionId); } catch (e) {
@@ -128,7 +138,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       if (error instanceof Error && !error.message.includes('jwt')) {
         return res.status(503).json({ error: 'Authentication service unavailable' });
       }
-      res.clearCookie('auth_token');
+      res.clearCookie(AUTH_COOKIE_NAME);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
   }
@@ -267,15 +277,21 @@ export interface SocketAuthContext {
  * Parse `auth_token` value out of a raw Cookie header.
  * No external dep — only handles the simple `name=value; name2=value2` format
  * used by browsers for httpOnly cookies. Decodes percent-encoded values.
+ *
+ * Accepts an optional `cookieName` (defaults to AUTH_COOKIE_NAME) so callers
+ * can target the production __Host- prefix or the dev plain name.
  */
-export function parseAuthTokenCookie(cookieHeader: string | undefined): string | null {
+export function parseAuthTokenCookie(
+  cookieHeader: string | undefined,
+  cookieName: string = AUTH_COOKIE_NAME,
+): string | null {
   if (!cookieHeader) return null;
   const pairs = cookieHeader.split(';');
   for (const pair of pairs) {
     const eqIdx = pair.indexOf('=');
     if (eqIdx === -1) continue;
     const name = pair.slice(0, eqIdx).trim();
-    if (name !== 'auth_token') continue;
+    if (name !== cookieName) continue;
     const raw = pair.slice(eqIdx + 1).trim();
     if (!raw) return null;
     try {
