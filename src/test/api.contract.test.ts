@@ -7,7 +7,6 @@ describe('API contract alignment', () => {
   const apiReferencePath = path.join(process.cwd(), 'docs', 'api-reference.md');
   const architecturePath = path.join(process.cwd(), 'docs', 'architecture.md');
   const developerGuidePath = path.join(process.cwd(), 'docs', 'developer-guide.md');
-  const docsIndexPath = path.join(process.cwd(), 'docs', 'index.md');
   const readmePath = path.join(process.cwd(), 'README.md');
   const validationPath = path.join(process.cwd(), 'src', 'lib', 'validation.ts');
 
@@ -87,10 +86,13 @@ describe('API contract alignment', () => {
     expect(() => readFileSync(architecturePath, 'utf-8')).not.toThrow();
     expect(() => readFileSync(developerGuidePath, 'utf-8')).not.toThrow();
 
-    const docsIndexContent = readFileSync(docsIndexPath, 'utf-8');
-    expect(docsIndexContent).toContain('[API Reference](api-reference.md)');
-    expect(docsIndexContent).toContain('[Architecture](architecture.md)');
-    expect(docsIndexContent).toContain('[Developer Guide](developer-guide.md)');
+    // Canonical index is docs/documentation-map.md (docs/index.md was
+    // pruned as redundant; see docs commit 8ad94ca).
+    const docsMapPath = path.join(process.cwd(), 'docs', 'documentation-map.md');
+    const docsMapContent = readFileSync(docsMapPath, 'utf-8');
+    expect(docsMapContent).toContain('api-reference.md');
+    expect(docsMapContent).toContain('architecture.md');
+    expect(docsMapContent).toContain('developer-guide.md');
 
     const readmeContent = readFileSync(readmePath, 'utf-8');
     expect(readmeContent).toContain('docs/user-guide.md');
