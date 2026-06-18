@@ -35,8 +35,18 @@ jobs:
       - name: Create Zip Archive
         run: |
           # Create a zip file containing the entire repository
-          # Exclude the .git folder and node_modules (since node_modules is OS-specific)
-          zip -r LocalAttendance-${{ env.VERSION }}.zip . -x "*.git*" -x "node_modules/*"
+          # Exclude: git history, node_modules (reinstalled), .env*, logs, backups,
+          # coverage, test-results, spikes (dev-only), and .github/ (CI-specific).
+          zip -r LocalAttendance-${{ env.VERSION }}.zip . \
+            -x "*.git*" \
+            -x "node_modules/*" \
+            -x "*.env*" \
+            -x "*.log" \
+            -x "backups/*" \
+            -x "coverage/*" \
+            -x "test-results/*" \
+            -x "spikes/*" \
+            -x ".github/*"
 
       - name: Publish Release
         uses: ncipollo/release-action@v1
