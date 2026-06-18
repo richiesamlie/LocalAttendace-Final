@@ -11,6 +11,8 @@ import os from "os";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 import { performanceMonitor } from "./src/middleware/performance";
+import { verifySocketAuth } from "./src/routes/middleware";
+import { classService, teacherService } from "./services";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
@@ -80,11 +82,48 @@ async function startServer() {
     path: '/ws/socket.io',
   });
 
-  // Class rooms — each classId is a separate Socket.io room
+  // F-001: Reject any Socket.IO handshake that lacks a valid auth_token cookie.
+  // This mirrors the requireAuth middleware used by HTTP routes — same JWT
+  // secret, same algorithm pinning (HS256), same server-side session check.
+  io.use(async (socket, next) => {
+    const auth = await verifySocketAuth(socket.handshake.headers);
+    if (!auth) {
+      const err = new Error('Authentication required');
+      // @ts-expect-error attach data for client error surfacing (socket.io convention)
+      err.data = { code: 'UNAUTHORIZED' };
+      return next(err);
+    }
+    socket.data.teacherId = auth.teacherId;
+    socket.data.sessionId = auth.sessionId;
+    next();
+  });
+
+  // Class rooms — each classId is a separate Socket.io room.
+  // On join_class, verify the authenticated teacher has access to the
+  // requested class (global admin bypasses; otherwise must be a member
+  // of class_teachers for that class). This prevents an authenticated
+  // teacher from snooping another teacher's class updates.
   io.on('connection', (socket) => {
-    // Client joins the room for the class they are currently viewing
-    socket.on('join_class', (classId: string) => {
-      socket.join(classId);
+    socket.on('join_class', async (classId: string) => {
+      const teacherId = socket.data.teacherId as string | undefined;
+      if (!teacherId) {
+        socket.emit('error', { message: 'Not authenticated' });
+        return;
+      }
+      try {
+        const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
+        if (!isGlobalAdmin) {
+          const access = await classService.isClassTeacher(classId, teacherId);
+          if (!access) {
+            socket.emit('error', { message: `Access denied for class ${classId}` });
+            return;
+          }
+        }
+        socket.join(classId);
+      } catch (e) {
+        console.warn('[socket] join_class error:', (e as Error).message);
+        socket.emit('error', { message: 'Failed to join class' });
+      }
     });
     // Client leaves the room when switching to another class
     socket.on('leave_class', (classId: string) => {

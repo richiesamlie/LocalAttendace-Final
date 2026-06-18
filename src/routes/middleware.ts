@@ -215,3 +215,77 @@ export const withWriteQueue = (handler: WriteHandler): RequestHandler => {
     }
   };
 };
+
+/**
+ * Result of verifying a Socket.IO handshake (cookie-based JWT auth).
+ * Returned by `verifySocketAuth`.
+ */
+export interface SocketAuthContext {
+  teacherId: string;
+  sessionId?: string;
+}
+
+/**
+ * Parse `auth_token` value out of a raw Cookie header.
+ * No external dep — only handles the simple `name=value; name2=value2` format
+ * used by browsers for httpOnly cookies. Decodes percent-encoded values.
+ */
+export function parseAuthTokenCookie(cookieHeader: string | undefined): string | null {
+  if (!cookieHeader) return null;
+  const pairs = cookieHeader.split(';');
+  for (const pair of pairs) {
+    const eqIdx = pair.indexOf('=');
+    if (eqIdx === -1) continue;
+    const name = pair.slice(0, eqIdx).trim();
+    if (name !== 'auth_token') continue;
+    const raw = pair.slice(eqIdx + 1).trim();
+    if (!raw) return null;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
+  return null;
+}
+
+/**
+ * Verify a Socket.IO handshake using the same JWT cookie flow as HTTP.
+ *
+ * - Reads `auth_token` from the Cookie header on the upgrade request
+ * - Verifies the JWT signature + expiry (HS256 pinned, see F-021)
+ * - If the token carries a sessionId, verifies the session is not revoked
+ *   and has not expired server-side (matches `requireAuth` semantics)
+ *
+ * Returns the authenticated teacher context, or null if the handshake
+ * is invalid. Callers (e.g. `io.use(...)` middleware) should reject the
+ * connection when this returns null.
+ *
+ * F-001: Socket.IO previously accepted any client without authentication.
+ */
+export async function verifySocketAuth(headers: { cookie?: string } | undefined): Promise<SocketAuthContext | null> {
+  const token = parseAuthTokenCookie(headers?.cookie);
+  if (!token) return null;
+
+  let decoded: JwtPayload;
+  try {
+    decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
+  } catch {
+    return null;
+  }
+  if (!decoded.teacherId) return null;
+
+  if (decoded.sessionId) {
+    const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
+    if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
+      return null;
+    }
+    try {
+      await svc.sessionService.updateActivity(decoded.sessionId);
+    } catch (e) {
+      console.warn('[socket-auth] Failed to update session activity:', (e as Error).message);
+    }
+  }
+
+  return { teacherId: decoded.teacherId, sessionId: decoded.sessionId };
+}
