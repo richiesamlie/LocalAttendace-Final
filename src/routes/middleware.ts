@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
+import { randomBytes } from 'crypto';
 import * as svc from '../../services';
 import db from '../../db';
 import type { Session, ClassTeacher } from '../types/db';
@@ -36,9 +37,32 @@ export const postLimiter = skipRateLimitInTests
       message: { error: 'Too many requests. Please try again later.' },
     });
 
-export const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production'
- ? (() => { throw new Error('JWT_SECRET must be set in production'); })()
- : 'dev-secret-change-in-production');
+export const JWT_SECRET: string = (() => {
+  const fromEnv = process.env.JWT_SECRET;
+  if (fromEnv && fromEnv.length >= 32) return fromEnv;
+
+  // Production MUST have a configured secret. Throw early.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable must be set (>= 32 chars) in production');
+  }
+
+  // Test environment: use a stable secret so test runs are reproducible.
+  // Generated once per process but constant within a run.
+  if (process.env.NODE_ENV === 'test') {
+    return 'test-jwt-secret-not-for-production-use-only-32c';
+  }
+
+  // Dev fallback: ephemeral random secret. No two restarts share a secret,
+  // so any token from a previous dev session is invalidated on restart
+  // (forces re-login). This prevents the F-005 risk of a hardcoded dev
+  // secret shipping to prod via NODE_ENV misconfiguration.
+  const ephemeral = randomBytes(32).toString('hex');
+  console.warn(
+    '[auth] JWT_SECRET not set. Generated ephemeral dev secret for this process only. ' +
+    'Set JWT_SECRET in .env to keep sessions across restarts.',
+  );
+  return ephemeral;
+})();
 
 export interface JwtPayload {
   teacherId: string;
