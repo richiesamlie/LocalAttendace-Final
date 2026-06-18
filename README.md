@@ -1,462 +1,159 @@
 # Teacher Assistant App
 
-Panduan utama proyek ini menggunakan English sebagai teks utama, dengan catatan operasional penting dalam Bahasa Indonesia bila diperlukan.
+A local-first web application for teachers to manage classrooms: attendance, student rosters, seating charts, timetables, calendar events, reports, and Excel import/export.
 
-A comprehensive, local-first web application designed to help teachers manage their classrooms efficiently. Features include multi-teacher support (Google Classroom-style), attendance tracking, student roster management, visual seating charts, class scheduling, a random student picker, and monthly reports.
+**Bahasa Indonesia:** see [Quick Indonesian Notes](#quick-indonesian-notes).
+
+## 🔒 Security
+
+Audit completed **2026-06-18** — **15 of 15 findings closed** across 6 batches. All HIGH-severity CVEs resolved.
+
+| Layer | Status |
+|-------|--------|
+| Auth & sessions | ✅ Access token (1h) + rotating refresh token (7d, reuse-detected) |
+| Rate limiting | ✅ 150 login / 500 writes / 10 invite redeem, per 15min |
+| Input validation | ✅ Zod schemas on all endpoints |
+| Headers | ✅ Helmet CSP |
+| Password hashing | ✅ bcrypt cost 12, async-only |
+| Dependencies | ✅ 0 HIGH npm CVEs; bun smoke clean |
+| Container | ✅ Non-root, capability drops, resource limits |
+| CI gates | ✅ ESLint `--max-warnings=0`, 226 critical tests, bun smoke |
+
+Full audit closeout: [`docs/plans/2026-06-18-phase10-batch6-remediation-report.md`](docs/plans/2026-06-18-phase10-batch6-remediation-report.md)
+
+## Quick Start
+
+### Prerequisites
+- **Bun** ≥ 1.1 (frontend + Vite build)
+- **Node.js** ≥ 18 (backend — `better-sqlite3` native bindings don't load in Bun on Windows)
+
+### Setup
+```bash
+git clone https://github.com/richiesamlie/LocalAttendace-Final.git
+cd LocalAttendace-Final
+bun install
+bash setup-env.sh        # Linux/macOS — generates .env with secure random secrets
+# or .\setup-env.ps1     # Windows PowerShell
+```
+
+### Run
+
+| Mode | Command |
+|------|---------|
+| Production (local) | `bun run build && NODE_ENV=production npx tsx server.ts` |
+| Production (network) | `bun run build && NODE_ENV=production npx tsx server.ts --network` |
+| Development (hot reload) | `npx tsx server.ts` |
+| One-click | Double-click `start-app.bat` (Windows) or `bash start-app.sh` (Linux/macOS) |
+
+Open `http://127.0.0.1:3000` (or the displayed network IP).
+
+### First Login
+
+- **Username:** `admin`
+- **Password:** Value of `DEFAULT_ADMIN_PASSWORD` from your `.env`
+
+The app refuses to start if `DEFAULT_ADMIN_PASSWORD` is unset. Change the password after first login via **Admin Dashboard → Settings**.
+
+## Docker
+
+```bash
+# Generate .env (one time)
+bash setup-env.sh
+
+# Build + run
+docker-compose up -d
+```
+
+Available at `http://localhost:3000`. Container runs as non-root (UID 1001), drops all Linux capabilities, capped at 512MB RAM / 1 CPU / 100 processes. Database persists via named volume `teacher-assistant-data`.
 
 ## Quick Indonesian Notes
 
 - Login awal: gunakan akun `admin` dengan password dari `DEFAULT_ADMIN_PASSWORD` di file `.env`.
 - Untuk pemakaian sekolah harian: fokus ke Dashboard, Student Roster, Take Attendance, dan Monthly Reports.
 - Import Excel memakai `exceljs` dengan guardrails aktif (batas ukuran file/sheet).
-- Untuk masalah umum, cek `docs/troubleshooting.md` dulu sebelum eskalasi.
+- Untuk masalah umum, cek [`docs/troubleshooting.md`](docs/troubleshooting.md) dulu sebelum eskalasi.
 
-## Key Features
-
-### 🏫 Multi-Teacher Support (Google Classroom-style)
-- **Homeroom teachers** create and own classes
-- **Co-teachers** can be invited to shared classes
-- Each teacher has their own isolated account
-- Only class owners can edit/delete classes or manage teachers
-
-### 📊 Core Features
-- **Dashboard**: Overview of today's classes and quick stats
-- **Take Attendance**: Record daily attendance with support for past dates and bulk Excel import
-- **Student Roster**: Manage students, import from Excel, flag students, export full class data
-- **Monthly Reports**: Generate and export attendance summaries
-- **Daily Timetable**: Weekly schedule with time slots, subjects, lessons
-- **Calendar Events**: Manage classwork, tests, exams
-- **Visual Seating**: Drag-and-drop seating chart with auto-fill
-- **Random Picker**: Animated student selection tool
-- **Smart Groups**: Auto-generate student groups with flagged student separation
-- **Gatekeeper**: Quick search and late-tagging for students arriving after class starts
-- **Admin Dashboard**: Bulk data management, teacher management, and data export
-
-### 📥 Excel Import/Export
-- **Bulk Student Import**: Import entire class rosters from Excel templates
-- **Bulk Attendance Import**: Import attendance records from Excel (by roll number or name)
-- **Full Class Export**: Export all class data (students, attendance, events, timetable, notes) to a multi-sheet Excel file
-- **Monthly Reports**: Export attendance summaries with customizable columns
-
-### 🔒 Security & Performance
-- **WAL mode** with auto-checkpointing for concurrent access
-- **Pre-compiled SQL statements** for 40% faster queries
-- **Gzip compression** for 60-80% smaller responses
-- **Rate limiting** on all API endpoints (login: 150/15min, writes: 500/15min, invite redeem: 10/15min)
-- **Input validation** with Zod schemas
-- **Helmet security headers** (XSS, clickjacking protection)
-- **Global error handler** with SQLite constraint mapping
-- **Dynamic cookie security** (secure flag enabled in production)
-
-## 📖 User Guide
-
-For a complete beginner's guide with step-by-step instructions, see the full **[User Guide](docs/user-guide.md)**.
-
-It covers:
-- Installation (Docker & Bun methods)
-- First login and setup
-- Adding students and taking attendance
-- Inviting teachers to classes
-- Backup, restore, and troubleshooting
-
-Additional docs:
-- [Documentation Index](docs/index.md)
-- [Operations Runbook](docs/operations.md)
-
-## Prerequisites
-
-- **Bun** (version 1.1 or higher) — Used for frontend dependency installation and Vite builds.
-- **Node.js** (version 18 or higher) — Required to execute the Express/SQLite backend server (specifically due to Bun's native binding limitations with `better-sqlite3` on Windows).
-
-## Getting Started
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/richiesamlie/LocalAttendace-Final.git
-cd LocalAttendace-Final
-```
-
-### 2. Install Dependencies
-
-```bash
-bun install
-```
-
-### 3. Configure Environment
-
-The app requires environment variables to run. The easiest way is to use the provided setup script:
-
-#### Automatic Setup (Recommended)
-
-**Windows (PowerShell):**
-```powershell
-.\setup-env.ps1
-```
-
-**Linux / macOS:**
-```bash
-bash setup-env.sh
-```
-
-The script will:
-- ✅ Copy `.env.example` to `.env`
-- ✅ Generate secure random `JWT_SECRET` (64 characters)
-- ✅ Generate secure random `DEFAULT_ADMIN_PASSWORD` (16 characters)
-- ✅ Backup existing `.env` if present
-- ✅ Display your admin credentials
-
-**Your admin password will be shown in the terminal** - save it securely!
-
-#### Manual Setup
-
-Or create a `.env` file manually by copying `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Then edit `.env` and replace placeholders:
-
-```env
-# REQUIRED — app throws on startup if these are missing
-JWT_SECRET=your_64_char_hex_secret        # Generate: openssl rand -hex 32
-DEFAULT_ADMIN_PASSWORD=your_admin_password
-
-# OPTIONAL — uncomment and configure as needed
-# NODE_ENV=production
-# DATABASE_URL=postgresql://user:***@localhost:5432/teacher_assistant
-# ALLOWED_ORIGINS=http://localhost:3000,http://192.168.1.50:3000
-
-# OPTIONAL — Performance Monitoring
-# Available admin endpoints:
-# - GET /api/admin/metrics
-# - GET /api/admin/resources
-# PERF_LOG_ALL_REQUESTS=false
-```
-
-### 4. Start the Server
-
-> [!NOTE]
-> The Express server relies on `better-sqlite3` which has native C++ bindings. Since Bun on Windows does not support loading this addon natively (`ERR_DLOPEN_FAILED`), **Node.js** (via `npx tsx`) is strictly required to execute the backend server. The scripts check for both Bun (frontend) and Node.js (backend) and orchestrate this automatically.
-
-To make launching as simple as possible, you can double-click **`start-app.bat`** (Windows) or run **`bash start-app.sh`** (Linux/macOS) in the root directory. This will automatically check prerequisites, install dependencies, build the frontend, and boot the server in production mode.
-
-Or, to launch manually:
-
-#### 🔒 Local Mode (Production)
-Only accessible from this computer:
-```bash
-# Build the frontend assets using Bun
-bun run build
-
-# Start the Express server using Node.js
-export NODE_ENV=production
-npx tsx server.ts
-```
-Open `http://127.0.0.1:3000`
-
-*(To run in debug/development mode with hot reloading, use: `npx tsx server.ts`)*
-
-#### 🌍 Network Mode (Shared on Wi-Fi)
-Accessible from other devices on the same network (Production):
-```bash
-# Build the frontend assets using Bun
-bun run build
-
-# Start the Express server on network using Node.js
-export NODE_ENV=production
-npx tsx server.ts --network
-```
-Open the displayed IP address (e.g., `http://192.168.1.50:3000`) on other devices.
-
-*(To run in debug/development mode on network, use: `npx tsx server.ts --network`)*
-
-### 5. First Login
-
-**Default credentials:**
-- **Username:** `admin`
-- **Password:** The value you set for `DEFAULT_ADMIN_PASSWORD` in your `.env` file
-
-> [!IMPORTANT]
-> The app **will not start** if `DEFAULT_ADMIN_PASSWORD` is not set. Run `setup-env.ps1` (Windows) or `setup-env.sh` (Linux/macOS) to generate it automatically. Change the password after first login via **Admin Dashboard → Settings**.
-
-## Multi-Teacher Setup
-
-### Adding New Teachers
-
-1. Log in as admin
-2. Go to **Admin Dashboard** (shield icon in sidebar)
-3. Click the **Teachers** tab
-4. Use **Bulk Add** to add multiple teachers at once:
-   ```
-   johnsmith,John Smith
-   janedoe,Jane Doe
-   ```
-5. All new teachers get the default password you set
-
-### Inviting Teachers to Classes
-
-1. Click the **⚙️ settings icon** in the class switcher
-2. Click **"Invite Teacher to Class"**
-3. Select a teacher and click **Add**
-4. Only class owners can manage teachers
-
-### Teacher Roles
+## Multi-Teacher Roles
 
 | Role | Scope | Permissions |
 |------|-------|-------------|
-| **Administrator** | Global | Can access any class, register new teachers, unlimited class creation |
-| **Homeroom** | Class | Full access: edit/delete class, manage teachers, all data operations |
-| **Subject Teacher** | Class | Read/write: attendance, students, events, timetable, seating, invites |
+| **Administrator** | Global | Access any class, register teachers |
+| **Owner (Homeroom)** | Class | Full control of their class |
+| **Subject Teacher** | Class | Read/write attendance, students, events, invites |
 | **Assistant** | Class | Limited helper access |
 
-The default `admin` account is a global **Administrator** (can manage all classes). Class owners are called **Homeroom**.
-
-## Windows Scripts
-
-- **`setup-env.ps1`**: Run once to generate secure `.env` secrets (required before first run)
-- **`start-app.bat`**: Double-click to start the server and open the app
-- **`setup-windows-startup.bat`**: Run once to auto-start on Windows login
-
-## Building for Production
-
-```bash
-bun run build
-```
-
-Generates optimized static files in `dist/` for deployment.
-
-## Docker Deployment
-
-### Quick Start
-
-**Step 1** — Generate your `.env` file (do this once):
-```bash
-# Linux/macOS
-bash setup-env.sh
-
-# Windows PowerShell
-.\setup-env.ps1
-```
-
-**Step 2** — Build and start:
-```bash
-docker-compose up -d
-```
-
-The app will be available at `http://localhost:3000`.
-
-> [!NOTE]
-> `docker-compose.yml` reads secrets from your `.env` file via `env_file`. Never hard-code `JWT_SECRET` or `DEFAULT_ADMIN_PASSWORD` directly in the compose file.
-
-### Manual Docker Build
-
-```bash
-docker build -t teacher-assistant .
-docker run -d -p 3000:3000 \
-  -v $(pwd)/data:/app/data \
-  --env-file .env \
-  --name teacher-assistant \
-  teacher-assistant
-```
-
-### Docker Features
-- **Multi-stage build** for minimal image size
-- **Persistent volume** for database storage
-- **Health checks** for monitoring
-- **Auto-restart** on failure
-- **Secrets via `.env`** — no secrets in compose or image layers
-
-### Docker Commands
-```bash
-bun run docker:up      # Start containers
-bun run docker:down    # Stop containers
-bun run docker:logs    # View logs
-bun run docker:build   # Rebuild image
-```
-
-## Database Options
-
-### SQLite (Default)
-Uses local file `database.sqlite` by default.
-
-Optional override with environment variable:
-- `DB_FILE=/absolute/path/to/database.sqlite`
-
-Docker images set `DB_FILE=/app/data/database.sqlite` to persist SQLite data on the mounted volume.
-
-### PostgreSQL (Optional)
-For production or multi-user setups:
-
-1. **Quick setup (recommended):**
-```bash
-bun run db:setup:postgres
-```
-
-This script will:
-- Create database `teacher_assistant`
-- Run the database schema
-- Ask to migrate existing SQLite data
-- Create `.env` file with connection string
-
-2. **Or manual setup:**
-
-**Create PostgreSQL database:**
-```bash
-createdb teacher_assistant
-```
-
-**Run schema:**
-```bash
-psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
-```
-
-**Migrate existing data (if upgrading):**
-```bash
-bun run db:migrate:to-postgres
-```
-
-3. **Start the app (Production Mode):**
-```bash
-bun run build
-export NODE_ENV=production
-bun run start
-```
-*(Or use `bun run dev` to start in development mode)*
-
-The app auto-detects PostgreSQL when `DATABASE_URL` is set in `.env`.
-
-## Development Tools
-
-### Sample Data Seeding
-Populate the database with sample teachers, students, and classes for testing:
-```bash
-bun run db:seed
-```
-Login credentials after seeding:
-- **Username:** `demo`
-- **Password:** Value of `DEMO_TEACHER_PASSWORD` in `.env` (defaults to `demo_placeholder` if not set)
-
-### Database Backup & Restore
-
-Create a manual backup before major changes:
-```bash
-bun run db:backup
-```
-Backups are stored in the `backups/` folder with timestamps.
-
-> **Note:** Automatic backups are created before database migrations.
-
-**Restore from backup:**
-```bash
-bun run db:restore              # Restore from most recent backup
-bun run db:restore -- <file>    # Restore from specific backup
-bun run db:restore:list         # List all available backups
-```
-
-> Restoring creates a pre-restore backup automatically, so you can always undo.
-
-## Cross-Platform Startup
-
-### Windows
-```bash
-start-app.bat              # Start server in production mode and open browser
-start-app.bat --debug      # Start server in debug mode with hot reloading
-setup-windows-startup.bat  # Auto-start on Windows login
-```
-
-### Linux / macOS
-```bash
-./start-app.sh           # Start server in production mode and open browser
-./start-app.sh --debug   # Start server in debug mode with hot reloading
-./start-internal-site.sh # Share on local network (production module)
-```
-
-## Data Storage
-
-Data is stored in a local SQLite database (`database.sqlite`) in the project root. This ensures:
-- Data persists across browser sessions
-- No cloud dependency
-- Easy backup and restore
-
-Automatic backups (up to 10) are created in the `backups/` folder on every server start. Older backups are pruned automatically.
-
-### In-App Backup & Restore
-
-1. Go to **Settings** → **Manual Database Backup**
-2. Download a `.sqlite` backup file
-3. Restore by uploading the backup file
-
-### Cloud Sync (Optional)
-
-Move the entire project folder into your Google Drive/Dropbox folder for automatic cloud sync.
+Full multi-teacher guide: [User Guide](docs/user-guide.md)
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| **Frontend** | React 19, TypeScript, Vite |
-| **Styling** | Tailwind CSS |
-| **State** | Zustand, React Query |
-| **Backend** | Express.js |
-| **Database** | SQLite (default) or PostgreSQL (optional) |
-| **Auth** | JWT, bcrypt |
-| **Validation** | Zod |
-| **Security** | Helmet, express-rate-limit |
-| **Excel** | exceljs |
-| **Icons** | Lucide React |
-| **Dates** | date-fns |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
+| State | Zustand 5, React Query 5 |
+| Backend | Express 4.21, better-sqlite3 12 |
+| Auth | JWT (access 1h + refresh 7d), bcrypt cost 12, HttpOnly `__Host-` cookies |
+| Realtime | Socket.IO 4 (JWT handshake + origin allowlist) |
+| Validation | Zod 4 |
+| Security | Helmet CSP, express-rate-limit, prepared statements, PII log redaction |
+| Database | SQLite (default) or PostgreSQL (optional) |
+| Excel | exceljs |
+| Container | Docker multi-stage alpine, non-root, capability drops |
+| CI | GitHub Actions dual-runtime (Bun + npm) |
 
 ## CI/CD
 
-This project uses GitHub Actions for continuous integration:
-- **TypeScript checking** - Catches type errors before merge
-- **Build verification** - Ensures the app builds successfully
-- **Unit tests** - Runs vitest test suite automatically
+GitHub Actions runs three workflows on every push to `develop` and `main`:
 
-CI runs automatically on pushes and pull requests to `main` and `develop` branches.
+| Workflow | develop | main |
+|----------|:-------:|:----:|
+| **CI**: TypeScript Check | ✓ | ✓ |
+| **CI**: ESLint (`--max-warnings=0`) | ✓ | ✓ |
+| **CI**: Build Verification | ✓ | ✓ |
+| **CI**: Docs Link Check | ✓ | ✓ |
+| **CI**: Bun Parity Smoke (blocking) | ✓ | — |
+| **CI**: Critical Tests (226, fast gate) | ✓ | — |
+| **CI**: Full Test Suite (505, main/PR gate) | — | ✓ |
+| **CI**: Test Coverage (main baseline) | — | ✓ |
+| **Security**: npm audit (`--omit=dev --audit-level=high`) | ✓ | ✓ |
+| **Security**: CodeQL Analysis | ✓ | ✓ |
+| **Security**: Bun Security Smoke (blocking at high) | ✓ | — |
+| **Automated Release** | — | ✓ |
 
-### Bun Migration Status (Final)
+**`develop` = blocking/hardening lane. `main` = stable/production lane.** Promotion to `main` requires explicit user approval and uses `git merge --no-ff`.
 
-As of 2026-05-18, the npm -> Bun migration program is completed and promoted to `main` with evidence-based phase gates.
+### Local CI parity
 
-- `develop`: Bun parity and Bun security smoke are **blocking** lanes.
-- `main`: CI, Security, and Automated Release are stable after promotion and audit closure.
-- Bun audit policy: blocking at high severity (`bun audit --audit-level=high`) on Bun smoke lane.
+```bash
+npm run lint                              # TypeScript check
+npm run lint:eslint -- --max-warnings=0   # ESLint blocking gate
+npm run test:critical                     # 226 tests (fast)
+npm test                                  # 505 tests (full suite)
+bun install --frozen-lockfile && bun run lint
+bun audit --audit-level=high              # Bun security gate
+```
 
-References:
-- Promotion notes: `docs/release-notes-develop-to-main-2026-05-18-bun-migration.md`
-- Main promotion close-out: `docs/plans/2026-05-18-phase9-main-promotion-closeout-report.md`
-- Audit close-loop fix promoted to main: merge commit `6d0dcbd`
+## Documentation
 
-## Performance Optimizations
+| Audience | Document |
+|----------|----------|
+| End users (teachers) | [User Guide](docs/user-guide.md) |
+| Troubleshooting | [Troubleshooting](docs/troubleshooting.md) |
+| Developers | [Developer Guide](docs/developer-guide.md), [Contributing](docs/contributing.md) |
+| Architecture | [Architecture](docs/architecture.md) |
+| API contracts | [API Reference](docs/api-reference.md) |
+| Operations / CI | [Operations Runbook](docs/operations.md) |
+| Dependencies | [Dependency Governance](docs/dependency-governance.md) |
+| All docs | [Documentation Map](docs/documentation-map.md) |
 
-| Optimization | Impact |
-|-------------|--------|
-| Pre-compiled SQL statements | ~40% faster queries |
-| WAL auto-checkpoint | Prevents WAL file bloat |
-| 64MB SQLite cache | Faster reads |
-| 256MB memory-mapped I/O | Faster disk access |
-| Gzip compression | 60-80% smaller responses |
-| React Query caching (5min stale, 30min cache) | 70% fewer API calls |
-| Debounced search (300ms) | Reduced re-renders |
-| Pagination for records/events | Handles 10k+ records |
+## Performance Highlights
 
-## Screenshots
-
-| Dashboard | Student Roster |
-| :---: | :---: |
-| <img src="screenshots/dashboard.png" alt="Dashboard" width="100%"/> | <img src="screenshots/roster.png" alt="Student Roster" width="100%"/> |
-
-| Monthly Reports | Visual Seating Chart |
-| :---: | :---: |
-| <img src="screenshots/reports.png" alt="Monthly Reports" width="100%"/> | <img src="screenshots/seating.png" alt="Visual Seating" width="100%"/> |
-
-| Smart Group Generator | Random Student Picker |
-| :---: | :---: |
-| <img src="screenshots/groups.png" alt="Smart Groups" width="100%"/> | <img src="screenshots/random_picker.png" alt="Random Picker" width="100%"/> |
+- Pre-compiled SQL statements (~40% faster queries)
+- WAL-mode SQLite with auto-checkpointing
+- Gzip compression (60-80% smaller responses)
+- React Query caching (5min stale, 30min cache)
+- Pagination for records/events (handles 10k+ records)
+- All fs operations async (no event-loop blocking)
 
 ## License
 
-This project is for educational and personal use.
+For educational and personal use.
