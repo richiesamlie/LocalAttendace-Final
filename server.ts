@@ -78,6 +78,29 @@ async function startServer() {
       origin: getAllowedOrigins(),
       credentials: true,
     },
+    // F-018: custom allowRequest checker. Validates the Origin header
+    // against getAllowedOrigins() at handshake time (HTTP CORS only
+    // covers regular requests; websocket handshakes need their own
+    // check). Combined with the io.use(verifySocketAuth) middleware
+    // below, an attacker must present BOTH a valid origin AND a
+    // valid JWT cookie or token to establish a connection.
+    allowRequest: (req, callback) => {
+      try {
+        const origin = req.headers.origin;
+        const allowed = getAllowedOrigins();
+        // No Origin header (server-to-server) is allowed; same-origin
+        // requests may omit the header depending on the browser.
+        if (!origin || allowed.includes(origin)) {
+          return callback(null, true);
+        }
+        // Origin present but not in allow-list → reject
+        return callback('Origin not allowed', false);
+      } catch (err) {
+        // Never crash the handshake on a config error; log and reject.
+        console.error('[ws] allowRequest error:', err);
+        return callback('Internal error', false);
+      }
+    },
     // Use path /ws to avoid conflicts with API routes
     path: '/ws/socket.io',
   });

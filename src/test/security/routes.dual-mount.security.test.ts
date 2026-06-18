@@ -52,10 +52,28 @@ describe('Student routes dual mount (F-022)', () => {
   });
 
   afterAll(() => {
-    try { db.prepare('DELETE FROM user_sessions WHERE teacher_id = ?').run(teacherId); } catch {}
-    try { db.prepare('DELETE FROM class_teachers WHERE teacher_id = ?').run(teacherId); } catch {}
-    try { db.prepare('DELETE FROM classes WHERE teacher_id = ?').run(teacherId); } catch {}
-    try { db.prepare('DELETE FROM teachers WHERE id = ?').run(teacherId); } catch {}
+    // Best-effort cleanup; each DELETE may fail if the row was already
+    // removed by a previous test, which is fine.
+    try {
+      db.prepare('DELETE FROM user_sessions WHERE teacher_id = ?').run(teacherId);
+    } catch (_ignore) {
+      // row already gone
+    }
+    try {
+      db.prepare('DELETE FROM class_teachers WHERE teacher_id = ?').run(teacherId);
+    } catch (_ignore) {
+      // row already gone
+    }
+    try {
+      db.prepare('DELETE FROM classes WHERE teacher_id = ?').run(teacherId);
+    } catch (_ignore) {
+      // row already gone
+    }
+    try {
+      db.prepare('DELETE FROM teachers WHERE id = ?').run(teacherId);
+    } catch (_ignore) {
+      // row already gone
+    }
   });
 
   it('GET /classes/:classId/students works (canonical mount)', async () => {
