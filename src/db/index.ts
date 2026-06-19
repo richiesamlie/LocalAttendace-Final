@@ -4,7 +4,6 @@ import fs from 'fs';
 import { _db, initConnection, DB_FILE } from './connection';
 import { initSchema } from './schema';
 import { preparedStatements, initStatements } from './statements';
-import { cacheGet, cacheSet, cacheInvalidate, cached } from './cache';
 import { enqueueWrite } from './writeQueue';
 
 // Initialize schema first, then prepare SQL statements
@@ -58,9 +57,6 @@ const dbProxy = new Proxy({}, {
     if (prop === 'enqueueWrite') {
       return enqueueWrite;
     }
-    if (prop === 'cache') {
-      return { get: cacheGet, set: cacheSet, invalidate: cacheInvalidate, cached };
-    }
     const dbObj = _db as unknown as Record<PropertyKey, unknown>;
     const val = dbObj[prop];
     if (typeof val === 'function') {
@@ -72,7 +68,6 @@ const dbProxy = new Proxy({}, {
   restore: (buf: Buffer) => void;
   stmt: typeof preparedStatements;
   enqueueWrite: typeof enqueueWrite;
-  cache: { get: typeof cacheGet; set: typeof cacheSet; invalidate: typeof cacheInvalidate; cached: typeof cached }
 };
 
 export default dbProxy;
