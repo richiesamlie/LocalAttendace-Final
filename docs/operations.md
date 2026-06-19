@@ -66,12 +66,9 @@ npm audit --json > npm-audit.json || true
 
 ## 2) Script Entry Points (Bun-first)
 
-All operational script families are Bun-first:
-- `start-app.bat`, `start-app.sh`
-- `start-internal-site.bat`, `start-internal-site.sh`
-- `setup-env.ps1`, `setup-env.sh`
-- `clean-db.ps1`, `clean-db.sh`
-- `scripts/setup-postgres.bat`, `scripts/setup-postgres.sh`
+Operational script families:
+- `start-app.bat`, `start-app.sh` (Windows admin double-click + dev/CI)
+- `setup-env.ps1`, `setup-env.sh` (release.yml step 3 for Windows admin post-extract setup)
 
 Policy:
 - Avoid reintroducing `npm` / `npx` in `.bat` / `.sh` / `.ps1` scripts (Bun is the standard).
@@ -80,7 +77,7 @@ Policy:
   - `bun install --frozen-lockfile`
   - `bun x <tool>`
 
-Exceptions (post-audit):
+Exceptions:
 - CI runs `npm install` to keep `package-lock.json` current for the
   Full Test Suite CI lane and `npm audit` gate
 - Backend server uses `npx tsx server.ts` because `better-sqlite3`
