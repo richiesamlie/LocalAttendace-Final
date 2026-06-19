@@ -9,6 +9,21 @@
 
 Ponytail ladder (full mode): YAGNI → stdlib → native → installed-dep → one-liner. Each finding tagged `delete | shrink | yagni | stdlib | native` per the audit format.
 
+## Verification: gate commands
+
+The CI workflow uses these exact commands. Local runs must match them:
+
+```bash
+export DEFAULT_ADMIN_PASSWORD=ci_test_admin_password
+echo "JWT_SECRET=$(openssl rand -hex 16)" > .env
+npm ci                       # or: bun install --frozen-lockfile
+npm run lint                 # tsc --noEmit
+npm run lint:eslint -- --max-warnings=0
+npm run test:critical        # 226 critical tests
+```
+
+`DEFAULT_ADMIN_PASSWORD` env var is required even for tests (the test app boots the schema in setup).
+
 ## Findings (ranked biggest cut first)
 
 ### 1. Admin debug tools — entire subsystem is dead weight for production
@@ -39,9 +54,10 @@ Evidence:
 `delete` — three files with zero importers, one dual-config:
 
 - `verify-perf-config.ts` — 50 lines, not in any `package.json` script, prints env vars to stdout
-- `db.ts` (root) — 9-line re-export shim, zero importers
 - `src/services/index.ts` — 31 lines of aliased re-exports (`classBackendService` etc.), zero importers (server.ts imports `./services` from root)
 - `.eslintrc.json` — legacy ESLint config; ESLint 9 flat config (`eslint.config.js`) supersedes it; legacy configs are ignored when flat config exists
+
+**Note on `db.ts` (root):** Original audit flagged this as dead with 0 importers — verified false. `db.ts` IS imported by 8 files (`src/routes/admin.routes.ts`, `src/routes/middleware.ts`, `src/services/utils.ts`, `src/test/invite.routes.test.ts`, `src/test/security/auth.refresh.*`, `invite.atomic.security.test.ts`, `routes.dual-mount.security.test.ts`). It is a path-shortcut re-export from `src/db/`. Keeping it for now.
 
 ### 4. Dual setup-script sprawl
 

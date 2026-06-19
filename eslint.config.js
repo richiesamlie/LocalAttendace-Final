@@ -70,7 +70,6 @@ export default [
   {
     files: [
       'server.ts',
-      'verify-perf-config.ts',
       'scripts/**/*.ts',
       'src/db/connection.ts',
       'src/db/schema.ts',

@@ -34,7 +34,7 @@ Ponytail ladder, applied strictly:
 |---|-------|---------|--------------|-------|------|------------|
 | 0 | Branch setup | `feature/v2-ponytail-major-cut` created and pushed | 0 | 0 | none | — |
 | 1 | Plan + audit + CHANGELOG baseline | This file + audit artifact + CHANGELOG.md scaffolded | +200 | 0 | none | yes |
-| 2 | Dead file removal | `verify-perf-config.ts`, `db.ts` root, `src/services/index.ts`, `.eslintrc.json` deleted | -90 | 0 | low | yes |
+| 2 | Dead file removal | `verify-perf-config.ts`, `src/services/index.ts`, `.eslintrc.json` deleted (db.ts stays — it has 8 importers) | -120 | 0 | low | yes |
 | 3 | Dead dep removal | `recharts`, `motion`, `react-window`, `react-virtualized-auto-sizer` removed | ~0 | -4 | med | yes |
 | 4 | Setup script consolidation | `.ps1` wrappers, `exec-by-platform.mjs`, `setup-postgres.*`, `setup-windows-startup.bat`, `start-internal-site.*` deleted | -800 | 0 | med | yes |
 | 5 | Admin debug tools removed | PerformanceMonitor/QueryProfiler/ResourceMonitor UI + middleware + routes gone; admin routes kept for settings/password only | -1,400 | 0 | high | yes |
