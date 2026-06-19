@@ -20,9 +20,6 @@ const GroupGenerator = React.lazy(() => import('./components/GroupGenerator'));
 const ExamTimer = React.lazy(() => import('./components/ExamTimer'));
 const Settings = React.lazy(() => import('./components/Settings'));
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
-const PerformanceMonitor = React.lazy(() => import('./components/PerformanceMonitor'));
-const QueryProfiler = React.lazy(() => import('./components/QueryProfiler'));
-const ResourceMonitor = React.lazy(() => import('./components/ResourceMonitor'));
 const Gatekeeper = React.lazy(() => import('./components/Gatekeeper'));
 
 function LoginScreen() {
@@ -153,9 +150,6 @@ export default function App() {
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
       case 'admin': return <AdminDashboard navigate={setCurrentPage} />;
-      case 'performance': return <PerformanceMonitor />;
-      case 'profiler': return <QueryProfiler />;
-      case 'resources': return <ResourceMonitor />;
       case 'gatekeeper': return <Gatekeeper />;
       default: return <Dashboard navigate={setCurrentPage} />;
     }

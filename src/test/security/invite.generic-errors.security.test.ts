@@ -44,12 +44,3 @@ describe('Generic error messages (F-012)', () => {
     });
   });
 });
-
-describe('Log redaction is in place (cross-check F-007 + F-012)', () => {
-  it('safeLog is used in profile-query error handler (F-007 + F-012)', () => {
-    const src = readFileSync(join(process.cwd(), 'src/routes/admin.routes.ts'), 'utf8');
-    expect(src).toContain('safeLog(error)');
-    // The response should NOT echo raw error.message
-    expect(src).not.toMatch(/error\.message\s*\?\s*error\.message/);
-  });
-});

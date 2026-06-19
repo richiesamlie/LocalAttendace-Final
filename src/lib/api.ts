@@ -2,8 +2,6 @@ import { ClassData, Student, AttendanceRecord, CalendarEvent, TimetableSlot } fr
 
 const API_BASE = '/api';
 
-type JsonObject = Record<string, unknown>;
-
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -87,28 +85,4 @@ export const api = {
 
   // --- ROLE MANAGEMENT ---
   updateTeacherRole: (classId: string, teacherId: string, role: string) => fetchApi<{success: boolean}>(`/classes/${classId}/teachers/${teacherId}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
-
-  // --- PERFORMANCE METRICS (Admin only) ---
-  getPerformanceMetrics: (windowMinutes?: number) => {
-    const params = windowMinutes ? `?window=${windowMinutes}` : '';
-    return fetchApi<JsonObject>(`/admin/metrics${params}`);
-  },
-  clearPerformanceMetrics: () => fetchApi<{success: boolean, message: string}>('/admin/metrics', { method: 'DELETE' }),
-
-  // --- QUERY PROFILING (Admin only) ---
-  profileCustomQuery: (sql: string) => fetchApi<JsonObject>('/admin/profiling/query', { method: 'POST', body: JSON.stringify({ sql }) }),
-  getQueryProfilingStatements: () => fetchApi<JsonObject>('/admin/profiling/statements'),
-  getQueryProfilingIndexes: () => fetchApi<JsonObject>('/admin/profiling/indexes'),
-  getQueryProfilingStats: () => fetchApi<JsonObject>('/admin/profiling/stats'),
-
-  // --- RESOURCE MONITORING (Admin only) ---
-  getResourceCurrent: () => fetchApi<JsonObject>('/admin/resources'),
-  getResourceHistory: (windowMinutes?: number) => {
-    const params = windowMinutes ? `?window=${windowMinutes}` : '';
-    return fetchApi<JsonObject>(`/admin/resources/history${params}`);
-  },
-  getResourceAlerts: (windowMinutes?: number) => {
-    const params = windowMinutes ? `?window=${windowMinutes}` : '';
-    return fetchApi<JsonObject>(`/admin/resources/alerts${params}`);
-  },
 };
