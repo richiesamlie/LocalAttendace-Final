@@ -41,7 +41,7 @@ async function freshStart(options: FreshStartOptions = {}) {
   console.log('\n✅ Application data cleared.');
   console.log('\n📝 To start fresh:');
   console.log('   npm run dev');
-  console.log('\n   Login with: admin / teacher123');
+  console.log('   Login with: admin / <DEFAULT_ADMIN_PASSWORD from .env>');
 }
 
 const args = process.argv.slice(2);

@@ -12,31 +12,43 @@ const testBypassHandler: RequestHandler = (_req, _res, next) => next();
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
-// F-020: __Host- cookie prefix in production for additional subdomain
-// bypass protection. The __Host- prefix requires:
+// Cookie security policy.
+// - Default: secure cookies in production, plain cookies in dev/test.
+// - Override with COOKIE_SECURE=true|false for deployments that run
+//   production builds on plain HTTP (e.g., trusted LAN/internal use).
+export const COOKIE_SECURE: boolean = (() => {
+  const raw = process.env.COOKIE_SECURE?.trim().toLowerCase();
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return process.env.NODE_ENV === 'production';
+})();
+
+// F-020: __Host- cookie prefix when secure cookies are enabled for
+// additional subdomain bypass protection. The __Host- prefix requires:
 //   - Name starts with __Host-
 //   - Secure flag set
 //   - Path=/
 //   - No Domain attribute
-// In dev/test we keep the plain name so non-HTTPS localhost works.
+// When secure cookies are disabled, we must use plain cookie names.
+const USE_HOST_PREFIX = COOKIE_SECURE;
 
 // F-004: short-lived access token cookie (default 1h). New login flow
 // issues this alongside a refresh token.
 export const ACCESS_COOKIE_NAME: string =
-  process.env.NODE_ENV === 'production' ? '__Host-access_token' : 'access_token';
+  USE_HOST_PREFIX ? '__Host-access_token' : 'access_token';
 
 // F-004: long-lived refresh token cookie (default 7d). Opaque random
 // value, looked up by sha256 hash server-side. Used only by
 // POST /api/auth/refresh to mint a new access token.
 export const REFRESH_COOKIE_NAME: string =
-  process.env.NODE_ENV === 'production' ? '__Host-refresh_token' : 'refresh_token';
+  USE_HOST_PREFIX ? '__Host-refresh_token' : 'refresh_token';
 
 // F-020/F-004: legacy 7-day JWT cookie name. Kept for backwards compat
 // with sessions created before the F-004 migration. Middleware accepts
 // tokens from either this OR ACCESS_COOKIE_NAME. Once the existing 7d
 // tokens naturally expire, only ACCESS_COOKIE_NAME will be in use.
 export const AUTH_COOKIE_NAME: string =
-  process.env.NODE_ENV === 'production' ? '__Host-auth_token' : 'auth_token';
+  USE_HOST_PREFIX ? '__Host-auth_token' : 'auth_token';
 
 // Login rate limiter - configured for ~40 teachers logging in during morning rush
 // Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins

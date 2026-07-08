@@ -11,6 +11,7 @@ import {
   AUTH_COOKIE_NAME,
   ACCESS_COOKIE_NAME,
   REFRESH_COOKIE_NAME,
+  COOKIE_SECURE,
 } from './middleware';
 import type { Teacher } from '../../src/types/db';
 
@@ -56,19 +57,19 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
   // F-004: long-lived refresh token (7d, opaque random, hashed in DB)
   const refresh = refreshTokenService.issue(teacher.id, sessionId);
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isSecureCookie = COOKIE_SECURE;
 
   // New cookies (F-004): access_token + refresh_token
   res.cookie(ACCESS_COOKIE_NAME, accessToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isSecureCookie,
     sameSite: 'strict',
     path: '/',
     maxAge: ACCESS_TOKEN_TTL_SECONDS * 1000,
   });
   res.cookie(REFRESH_COOKIE_NAME, refresh.rawValue, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isSecureCookie,
     sameSite: 'strict',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -83,7 +84,7 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
   );
   res.cookie(AUTH_COOKIE_NAME, legacyToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isSecureCookie,
     sameSite: 'strict',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -201,17 +202,17 @@ authRouter.post('/refresh', async (req, res) => {
     { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_TTL_SECONDS },
   );
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isSecureCookie = COOKIE_SECURE;
   res.cookie(ACCESS_COOKIE_NAME, accessToken, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isSecureCookie,
     sameSite: 'strict',
     path: '/',
     maxAge: ACCESS_TOKEN_TTL_SECONDS * 1000,
   });
   res.cookie(REFRESH_COOKIE_NAME, newRefresh.rawValue, {
     httpOnly: true,
-    secure: isProduction,
+    secure: isSecureCookie,
     sameSite: 'strict',
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,

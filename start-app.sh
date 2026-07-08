@@ -86,5 +86,8 @@ else
     bun run build
     echo "Starting Teacher Assistant Server in Production Mode via Node.js..."
     export NODE_ENV=production
+    # Local production mode runs on plain HTTP (http://127.0.0.1:3000).
+    # Use non-secure cookies so auth persists across requests.
+    export COOKIE_SECURE=false
     npx tsx server.ts
 fi

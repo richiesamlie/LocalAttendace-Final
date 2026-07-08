@@ -103,7 +103,7 @@ else
     echo ""
     echo "📝 Next steps:"
     echo "   1. Run: bun run dev"
-    echo "   2. Login with: admin / teacher123"
+    echo "   2. Login with: admin / <DEFAULT_ADMIN_PASSWORD from .env>"
 fi
 
 echo ""

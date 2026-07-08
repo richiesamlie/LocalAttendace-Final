@@ -26,6 +26,7 @@
     "db:restore:list": "bun scripts/restore.ts --list",
     "db:seed": "bun scripts/seed.ts",
     "db:fresh": "bun scripts/fresh-start.ts",
+    "db:sync-admin-password": "npx tsx scripts/sync-admin-password.ts",
     "db:clean": "bun scripts/exec-by-platform.mjs clean-db",
     "db:clean:force": "bun scripts/exec-by-platform.mjs clean-db --force",
     "db:clean:backup": "bun scripts/exec-by-platform.mjs clean-db --backup",

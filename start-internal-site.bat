@@ -91,5 +91,8 @@ if "%MODE%"=="debug" (
     :: Set NODE_ENV to production and start the server via Node.js
     :: (better-sqlite3 native bindings do not load in Bun on Windows)
     set NODE_ENV=production
+    :: Internal-site mode commonly runs on plain HTTP. Allow non-secure
+    :: cookies so auth persists across requests on trusted LAN deployments.
+    set COOKIE_SECURE=false
     call npx tsx server.ts --network
 )

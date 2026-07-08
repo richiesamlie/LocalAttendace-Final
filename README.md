@@ -47,12 +47,30 @@ bash setup-env.sh        # Linux/macOS — generates .env with secure random sec
 
 Open `http://127.0.0.1:3000` (or the displayed network IP).
 
+#### LAN / Internal-Site Note (HTTP)
+
+If you run in production mode over plain HTTP (no HTTPS), secure auth cookies may not persist in some browsers. In that case, set this in `.env` for trusted internal networks:
+
+```env
+COOKIE_SECURE=false
+```
+
+Then restart the server and log in again.
+
+`start-app.bat`, `start-app.sh`, `start-internal-site.bat`, and `start-internal-site.sh` now set `COOKIE_SECURE=false` automatically for local/internal HTTP runs.
+
 ### First Login
 
 - **Username:** `admin`
 - **Password:** Value of `DEFAULT_ADMIN_PASSWORD` from your `.env`
 
 The app refuses to start if `DEFAULT_ADMIN_PASSWORD` is unset. Change the password after first login via **Admin Dashboard → Settings**.
+
+If login fails after you changed `.env` or restored an older database, sync the admin password hash in the DB with your current `.env` value:
+
+```bash
+npm run db:sync-admin-password
+```
 
 ## Docker
 

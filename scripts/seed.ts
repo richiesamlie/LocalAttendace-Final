@@ -197,7 +197,8 @@ async function seed() {
   console.log('  Password: demo123');
   console.log('\nOr use the default admin account:');
   console.log('  Username: admin');
-  console.log('  Password: teacher123');
+  console.log('  Password: <current admin password in database>');
+  console.log('  Tip: run `bun run db:sync-admin-password` to reset admin password to DEFAULT_ADMIN_PASSWORD from .env');
 }
 
 seed().catch((err) => {

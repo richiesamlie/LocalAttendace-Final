@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { AUTH_COOKIE_NAME, parseAuthTokenCookie } from '../../../src/routes/middleware';
+import { AUTH_COOKIE_NAME, COOKIE_SECURE, parseAuthTokenCookie } from '../../../src/routes/middleware';
 
 process.env.DEFAULT_ADMIN_PASSWORD ??= 'test-default-admin-password';
 
@@ -9,6 +9,7 @@ describe('AUTH_COOKIE_NAME + __Host- prefix (F-020)', () => {
   it('AUTH_COOKIE_NAME is the plain name in non-production env', () => {
     // Vitest sets NODE_ENV=test by default.
     expect(AUTH_COOKIE_NAME).toBe('auth_token');
+    expect(COOKIE_SECURE).toBe(false);
   });
 
   it('parseAuthTokenCookie finds the cookie under the default name', () => {

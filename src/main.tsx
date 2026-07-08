@@ -16,17 +16,40 @@ const updateSW = registerSW({
     sessionStorage.setItem(SW_UPDATE_APPLIED_KEY, '1');
     updateSW(true);
   },
+  onOfflineReady() {
+    // App is ready to work offline; no reload needed.
+  },
 });
 
 const checkForUpdates = () => {
   updateSW();
 };
 
-setInterval(checkForUpdates, 60_000);
-window.addEventListener('focus', checkForUpdates);
+// Only poll for updates when the app is visible. Frequent checks while the
+// user is interacting with the roster (which involves rapid focus/blur events
+// on form elements) used to trigger service-worker updates that reload the page.
+let updateIntervalId: ReturnType<typeof setInterval> | null = null;
+const startUpdatePolling = () => {
+  if (updateIntervalId) return;
+  checkForUpdates();
+  updateIntervalId = setInterval(checkForUpdates, 60_000);
+};
+const stopUpdatePolling = () => {
+  if (updateIntervalId) {
+    clearInterval(updateIntervalId);
+    updateIntervalId = null;
+  }
+};
+
+if (document.visibilityState === 'visible') {
+  startUpdatePolling();
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
-    checkForUpdates();
+    startUpdatePolling();
+  } else {
+    stopUpdatePolling();
   }
 });
 

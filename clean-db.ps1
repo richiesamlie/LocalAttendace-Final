@@ -154,7 +154,7 @@ if ($deletedCount -eq 0 -and $lockedFiles.Count -eq 0) {
     Write-Host ""
     Write-Host "📝 Next steps:" -ForegroundColor Cyan
     Write-Host "   1. Run: .\start-app.bat --mode debug  (or: npx tsx server.ts)" -ForegroundColor White
-    Write-Host "   2. Login with: admin / teacher123" -ForegroundColor White
+    Write-Host "   2. Login with: admin / <DEFAULT_ADMIN_PASSWORD from .env>" -ForegroundColor White
 }
 
 Write-Host ""
