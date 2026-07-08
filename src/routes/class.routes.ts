@@ -94,7 +94,85 @@ classRouter.get('/:classId/dashboard-payload', requireClassAccess('classId'), as
       noteService.getByClass(classId),
       seatingService.getByClass(classId),
     ]);
-    return res.json({ students, records, events, timetable, dailyNotes, seatingLayout });
+
+    const mappedStudents = (students as Array<{
+      id: string;
+      name: string;
+      roll_number?: string | null;
+      parent_name?: string | null;
+      parent_phone?: string | null;
+      is_flagged?: number | boolean;
+      is_archived?: number | boolean;
+    }>).map((s) => ({
+      id: s.id,
+      name: s.name,
+      rollNumber: s.roll_number ?? '',
+      parentName: s.parent_name ?? '',
+      parentPhone: s.parent_phone ?? '',
+      isFlagged: !!s.is_flagged,
+      isArchived: !!s.is_archived,
+    }));
+
+    const mappedRecords = (records as Array<{
+      student_id: string;
+      date: string;
+      status: string;
+      reason?: string | null;
+    }>).map((r) => ({
+      studentId: r.student_id,
+      date: r.date,
+      status: r.status,
+      reason: r.reason ?? undefined,
+    }));
+
+    const mappedEvents = (events as Array<{
+      id: string;
+      date: string;
+      title: string;
+      type: string;
+      description?: string | null;
+    }>).map((e) => ({
+      id: e.id,
+      date: e.date,
+      title: e.title,
+      type: e.type,
+      description: e.description ?? undefined,
+    }));
+
+    const mappedTimetable = (timetable as Array<{
+      id: string;
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      subject: string;
+      lesson: string;
+    }>).map((t) => ({
+      id: t.id,
+      dayOfWeek: t.day_of_week,
+      startTime: t.start_time,
+      endTime: t.end_time,
+      subject: t.subject,
+      lesson: t.lesson,
+    }));
+
+    const mappedDailyNotes: Record<string, string> = {};
+    for (const n of dailyNotes as Array<{ date: string; note: string }>) {
+      mappedDailyNotes[n.date] = n.note;
+    }
+
+    const mappedSeatingLayout: Record<string, string> = {};
+    for (const seat of seatingLayout as Array<{ seat_id: string; student_id: string | null }>) {
+      mappedSeatingLayout[seat.seat_id] = seat.student_id ?? '';
+    }
+
+    return res.json({
+      students: mappedStudents,
+      records: mappedRecords,
+      events: mappedEvents,
+      timetable: mappedTimetable,
+      dailyNotes: mappedDailyNotes,
+      seatingLayout: mappedSeatingLayout,
+    });
   } catch (_error) {
     return res.status(500).json({ error: 'Failed to fetch dashboard payload' });
   }
