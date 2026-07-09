@@ -1,7 +1,7 @@
 import express from 'express';
 import { eventService } from '../../services';
 import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
-import { validate, eventSchema } from '../../src/lib/validation';
+import { validate, eventPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 import type { CalendarEvent } from '../../src/types/db';
 
@@ -25,7 +25,7 @@ eventRouter.get('/classes/:classId/events', requireClassAccess('classId'), async
   }
 });
 
-eventRouter.post('/classes/:classId/events', requireClassAccess('classId'), postLimiter, validate(eventSchema), withWriteQueue(async (req, res) => {
+eventRouter.post('/classes/:classId/events', requireClassAccess('classId'), postLimiter, validate(eventPayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
 
   const events = (Array.isArray(req.body) ? req.body : [req.body]) as EventPayload[];

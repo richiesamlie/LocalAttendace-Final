@@ -71,8 +71,8 @@ export default function Timetable() {
         dayOfWeek: selectedDay,
         startTime: slot.startTime,
         endTime: slot.endTime,
-        subject: '',
-        lesson: '',
+        subject: slot.subject,
+        lesson: slot.lesson || '',
       });
     });
   };

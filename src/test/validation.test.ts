@@ -6,6 +6,7 @@ import {
   attendanceRecordSchema,
   attendanceRecordsPayloadSchema,
   eventSchema,
+  eventPayloadSchema,
   timetableSlotSchema,
   teacherSchema,
   settingSchema,
@@ -304,6 +305,35 @@ describe('eventSchema', () => {
       });
       expect(result.success).toBe(true);
     }
+  });
+});
+
+describe('eventPayloadSchema', () => {
+  it('accepts a single event object payload', () => {
+    const result = eventPayloadSchema.safeParse({
+      id: 'event_123',
+      date: '2026-04-22',
+      title: 'Math Test',
+      type: 'Test',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a non-empty array of events', () => {
+    const result = eventPayloadSchema.safeParse([
+      {
+        id: 'event_123',
+        date: '2026-04-22',
+        title: 'Math Test',
+        type: 'Test',
+      },
+    ]);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an empty array payload', () => {
+    const result = eventPayloadSchema.safeParse([]);
+    expect(result.success).toBe(false);
   });
 });
 

@@ -48,6 +48,11 @@ export const eventSchema = z.object({
   description: safeString({ max: 1000 }).optional().nullable(),
 });
 
+export const eventPayloadSchema = z.union([
+  eventSchema,
+  z.array(eventSchema).min(1),
+]);
+
 export const timetableSlotSchema = z.object({
   id: safeString({ max: 100 }),
   dayOfWeek: z.number().int().min(0).max(6),
