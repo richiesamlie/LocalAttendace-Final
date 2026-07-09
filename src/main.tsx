@@ -7,14 +7,18 @@ import { registerSW } from 'virtual:pwa-register';
 import toast from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-const SW_UPDATE_APPLIED_KEY = 'sw-update-applied';
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? 'dev';
+let hasPendingSwUpdate = false;
 
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    sessionStorage.setItem(SW_UPDATE_APPLIED_KEY, '1');
-    updateSW(true);
+    if (hasPendingSwUpdate) return;
+    hasPendingSwUpdate = true;
+    toast(`🔄 Update available (${APP_VERSION}). Refresh when you're ready.`, {
+      icon: '⬆️',
+      duration: 6000,
+    });
   },
   onOfflineReady() {
     // App is ready to work offline; no reload needed.
@@ -22,6 +26,7 @@ const updateSW = registerSW({
 });
 
 const checkForUpdates = () => {
+  if (hasPendingSwUpdate) return;
   updateSW();
 };
 
@@ -32,7 +37,7 @@ let updateIntervalId: ReturnType<typeof setInterval> | null = null;
 const startUpdatePolling = () => {
   if (updateIntervalId) return;
   checkForUpdates();
-  updateIntervalId = setInterval(checkForUpdates, 60_000);
+  updateIntervalId = setInterval(checkForUpdates, 300_000);
 };
 const stopUpdatePolling = () => {
   if (updateIntervalId) {
@@ -52,14 +57,6 @@ document.addEventListener('visibilitychange', () => {
     stopUpdatePolling();
   }
 });
-
-if (sessionStorage.getItem(SW_UPDATE_APPLIED_KEY) === '1') {
-  sessionStorage.removeItem(SW_UPDATE_APPLIED_KEY);
-  toast.success(`🚀 Aplikasi diperbarui ke versi ${APP_VERSION}`, {
-    icon: '✅',
-    duration: 4500,
-  });
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {

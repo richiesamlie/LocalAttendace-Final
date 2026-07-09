@@ -24,6 +24,25 @@ const PerformanceMonitor = React.lazy(() => import('./components/PerformanceMoni
 const QueryProfiler = React.lazy(() => import('./components/QueryProfiler'));
 const ResourceMonitor = React.lazy(() => import('./components/ResourceMonitor'));
 const Gatekeeper = React.lazy(() => import('./components/Gatekeeper'));
+const CURRENT_PAGE_STORAGE_KEY = 'ta-current-page';
+const VALID_PAGES = new Set([
+  'dashboard',
+  'attendance',
+  'roster',
+  'timetable',
+  'schedule',
+  'seating',
+  'picker',
+  'groups',
+  'timer',
+  'reports',
+  'settings',
+  'admin',
+  'performance',
+  'profiler',
+  'resources',
+  'gatekeeper',
+]);
 
 function LoginScreen() {
   const [username, setUsername] = useState('');
@@ -99,7 +118,10 @@ function LoginScreen() {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState(() => {
+    const saved = sessionStorage.getItem(CURRENT_PAGE_STORAGE_KEY);
+    return saved && VALID_PAGES.has(saved) ? saved : 'dashboard';
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const theme = useStore((state) => state.theme);
   const toggleTheme = useStore((state) => state.toggleTheme);
@@ -125,6 +147,10 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  useEffect(() => {
+    sessionStorage.setItem(CURRENT_PAGE_STORAGE_KEY, currentPage);
+  }, [currentPage]);
 
   if (authQuery.isLoading || (authQuery.data?.authenticated && !isInitialized)) {
     return (
