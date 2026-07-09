@@ -54,7 +54,7 @@ export const timetableSlotSchema = z.object({
   startTime: safeString({ min: 1, max: 5 }).refine(v => /^\d{2}:\d{2}$/.test(v), { message: 'Invalid time format (expected HH:MM)' }),
   endTime: safeString({ min: 1, max: 5 }).refine(v => /^\d{2}:\d{2}$/.test(v), { message: 'Invalid time format (expected HH:MM)' }),
   subject: safeString({ min: 1, max: 200 }),
-  lesson: safeString({ min: 1, max: 200 }),
+  lesson: safeString({ max: 200 }),
 });
 
 export const teacherSchema = z.object({
