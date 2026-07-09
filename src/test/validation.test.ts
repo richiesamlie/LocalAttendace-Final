@@ -381,6 +381,36 @@ describe('timetableSlotSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('accepts empty lesson string', () => {
+    const result = timetableSlotSchema.safeParse({
+      id: 'slot_123',
+      dayOfWeek: 1,
+      startTime: '09:00',
+      endTime: '10:00',
+      subject: 'Mathematics',
+      lesson: '',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.lesson).toBe('');
+    }
+  });
+
+  it('accepts whitespace-only lesson (trimmed to empty)', () => {
+    const result = timetableSlotSchema.safeParse({
+      id: 'slot_123',
+      dayOfWeek: 1,
+      startTime: '09:00',
+      endTime: '10:00',
+      subject: 'Mathematics',
+      lesson: '   ',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.lesson).toBe('');
+    }
+  });
 });
 
 describe('teacherSchema', () => {

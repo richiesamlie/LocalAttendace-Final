@@ -198,6 +198,9 @@ export default function globalSetup() {
   db.prepare('INSERT INTO timetable_slots (id, class_id, day_of_week, start_time, end_time, subject, lesson) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
     'tt2', 'class_1', weekday, '10:00', '11:00', 'English', 'Reading'
   );
+  db.prepare('INSERT INTO timetable_slots (id, class_id, day_of_week, start_time, end_time, subject, lesson) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    'tt3', 'class_1', weekday, '11:00', '12:00', 'Science', ''
+  );
 
   // Seed today's attendance (status=absent) so attendance page has data
   const today = new Date().toISOString().slice(0, 10);

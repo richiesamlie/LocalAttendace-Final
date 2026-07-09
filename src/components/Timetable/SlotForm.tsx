@@ -19,7 +19,7 @@ const getInitialFormData = (mode: 'add' | 'edit', editingSlot?: TimetableSlot | 
       startTime: editingSlot.startTime,
       endTime: editingSlot.endTime,
       subject: editingSlot.subject,
-      lesson: editingSlot.lesson,
+      lesson: editingSlot.lesson || '',
     };
   }
 
