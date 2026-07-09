@@ -46,12 +46,12 @@ const persistStopwatchState = (state: PersistedStopwatchState) => {
 
 export function useStopwatch() {
   const [initialState] = useState(() => readPersistedStopwatchState());
-  const initialTime =
-    initialState.isRunning && initialState.startedAtMs !== null
-      ? initialState.accumulatedMs + (Date.now() - initialState.startedAtMs)
-      : initialState.accumulatedMs;
-
-  const [stopwatchTime, setStopwatchTime] = useState(initialTime);
+  const [stopwatchTime, setStopwatchTime] = useState(() => {
+    if (initialState.isRunning && initialState.startedAtMs !== null) {
+      return initialState.accumulatedMs + (Date.now() - initialState.startedAtMs);
+    }
+    return initialState.accumulatedMs;
+  });
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(initialState.isRunning);
 
   const stopwatchIntervalRef = useRef<number | null>(null);
