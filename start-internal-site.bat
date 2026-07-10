@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 echo ===================================================
 echo Starting Teacher Assistant as an Internal Site
 echo ===================================================
@@ -9,7 +10,7 @@ cd /d "%~dp0"
 
 :: Ensure Bun is installed and dependencies are available
 where bun >nul 2>&1
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Bun is not installed or not in PATH.
     echo Install Bun first: https://bun.sh/
@@ -21,7 +22,7 @@ IF %errorlevel% NEQ 0 (
 :: Ensure Node.js is installed (used to run the Express backend;
 :: better-sqlite3 native bindings do not load in Bun on Windows)
 where node >nul 2>&1
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Node.js is not installed or not in PATH.
     echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations (better-sqlite3).
@@ -33,7 +34,7 @@ IF %errorlevel% NEQ 0 (
 
 echo Installing dependencies with Bun...
 call bun install --frozen-lockfile
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Dependency installation failed!
     echo.
@@ -61,7 +62,7 @@ IF NOT EXIST ".env" (
 
 :: Check that DEFAULT_ADMIN_PASSWORD is present in .env
 findstr /i "DEFAULT_ADMIN_PASSWORD" ".env" >nul 2>&1
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!
     echo The server will not start without it.
@@ -74,10 +75,8 @@ IF %errorlevel% NEQ 0 (
 :: Check for debug flag
 set MODE=production
 if /i "%~1"=="--debug" set MODE=debug
-if /i "%~2"=="--debug" set MODE=debug
-if /i "%~3"=="--debug" set MODE=debug
 
-if "%MODE%"=="debug" (
+if "!MODE!"=="debug" (
     echo.
     echo Starting in Debug Mode via Node.js...
     echo.
@@ -85,7 +84,7 @@ if "%MODE%"=="debug" (
 ) else (
     echo Building the application for production...
     call bun run build
-    IF %errorlevel% NEQ 0 (
+    IF !errorlevel! NEQ 0 (
         echo.
         echo ERROR: Build failed!
         echo.
@@ -116,3 +115,4 @@ if "%MODE%"=="debug" (
     set COOKIE_SECURE=false
     call npx tsx server.ts --network
 )
+endlocal

@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 echo ===================================================
 echo   Local Attendance - Teacher Assistant App
 echo ===================================================
@@ -18,7 +18,7 @@ cd /d "%~dp0"
 
 :: Ensure Bun is installed (used for package management and building the frontend)
 where bun >nul 2>&1
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Bun is not installed or not in PATH.
     echo Install Bun first (required for frontend tooling): https://bun.sh/
@@ -29,7 +29,7 @@ IF %errorlevel% NEQ 0 (
 
 :: Ensure Node.js is installed (required for executing the Express backend on Windows)
 where node >nul 2>&1
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Node.js is not installed or not in PATH.
     echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations (better-sqlite3).
@@ -41,7 +41,7 @@ IF %errorlevel% NEQ 0 (
 
 echo Installing dependencies with Bun...
 call bun install --frozen-lockfile
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Dependency installation failed!
     echo.
@@ -69,7 +69,7 @@ IF NOT EXIST ".env" (
 
 :: Check that DEFAULT_ADMIN_PASSWORD is present in .env
 findstr /i "DEFAULT_ADMIN_PASSWORD" ".env" >nul 2>&1
-IF %errorlevel% NEQ 0 (
+IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!
     echo The server will not start without it.
@@ -83,13 +83,13 @@ IF %errorlevel% NEQ 0 (
 start "" cmd /c "timeout /t 5 /nobreak > NUL && start http://127.0.0.1:3000"
 
 :: Start the app server
-if "%MODE%"=="debug" (
+if "!MODE!"=="debug" (
     echo Starting Teacher Assistant Server in Debug Mode via Node.js...
     call npx tsx server.ts
 ) else (
     echo Building the application for production...
     call bun run build
-    IF %errorlevel% NEQ 0 (
+    IF !errorlevel! NEQ 0 (
         echo.
         echo ERROR: Build failed!
         echo.
