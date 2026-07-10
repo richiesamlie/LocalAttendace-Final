@@ -25,7 +25,7 @@ where node >nul 2>&1
 IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Node.js is not installed or not in PATH.
-    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations (better-sqlite3).
+    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations for better-sqlite3.
     echo Install Node.js first: https://nodejs.org/
     echo.
     pause
@@ -108,7 +108,7 @@ if "!MODE!"=="debug" (
     echo.
 
     :: Set NODE_ENV to production and start the server via Node.js
-    :: (better-sqlite3 native bindings do not load in Bun on Windows)
+    :: better-sqlite3 native bindings do not load in Bun on Windows.
     set NODE_ENV=production
     :: Internal-site mode commonly runs on plain HTTP. Allow non-secure
     :: cookies so auth persists across requests on trusted LAN deployments.

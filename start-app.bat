@@ -21,7 +21,7 @@ where bun >nul 2>&1
 IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Bun is not installed or not in PATH.
-    echo Install Bun first (required for frontend tooling): https://bun.sh/
+    echo Install Bun first, required for frontend tooling: https://bun.sh/
     echo.
     pause
     exit /b 1
@@ -32,7 +32,7 @@ where node >nul 2>&1
 IF !errorlevel! NEQ 0 (
     echo.
     echo ERROR: Node.js is not installed or not in PATH.
-    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations (better-sqlite3).
+    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations for better-sqlite3.
     echo Install Node.js first: https://nodejs.org/
     echo.
     pause
@@ -101,7 +101,7 @@ if "!MODE!"=="debug" (
     )
     echo Starting Teacher Assistant Server in Production Mode via Node.js...
     set NODE_ENV=production
-    :: Local production mode runs on plain HTTP (http://127.0.0.1:3000).
+    :: Local production mode runs on plain HTTP at http://127.0.0.1:3000.
     :: Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
     call npx tsx server.ts
