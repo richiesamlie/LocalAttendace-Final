@@ -33,6 +33,16 @@ IF %errorlevel% NEQ 0 (
 
 echo Installing dependencies with Bun...
 call bun install --frozen-lockfile
+IF %errorlevel% NEQ 0 (
+    echo.
+    echo ERROR: Dependency installation failed!
+    echo.
+    echo Try running: bun install
+    echo If that fails, try: rm -rf node_modules && bun install
+    echo.
+    pause
+    exit /b 1
+)
 
 :: Check if .env file exists - required before the server can start
 IF NOT EXIST ".env" (
@@ -75,6 +85,16 @@ if "%MODE%"=="debug" (
 ) else (
     echo Building the application for production...
     call bun run build
+    IF %errorlevel% NEQ 0 (
+        echo.
+        echo ERROR: Build failed!
+        echo.
+        echo Try running: bun run build
+        echo Check the error messages above for details.
+        echo.
+        pause
+        exit /b 1
+    )
 
     echo.
     echo ===================================================
