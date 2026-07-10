@@ -15,13 +15,14 @@ set STARTUP_VBS="%STARTUP_DIR%\TeacherAssistantStartup.vbs"
 if exist "%STARTUP_DIR%\LocalAttendanceStartup.vbs" del "%STARTUP_DIR%\LocalAttendanceStartup.vbs"
 if exist "%STARTUP_DIR%\TeacherAssistantStartup.vbs" del "%STARTUP_DIR%\TeacherAssistantStartup.vbs"
 
-:: Create a VBScript in the Startup folder to run the app silently
+:: Create a VBScript in the Startup folder to run the app on login
 echo Set WshShell = CreateObject("WScript.Shell") > %STARTUP_VBS%
-echo WshShell.Run chr(34) ^& "%SCRIPT_DIR%start-app.bat" ^& chr(34) ^& " hidden", 0, False >> %STARTUP_VBS%
+echo WshShell.Run chr(34) ^& "%SCRIPT_DIR%start-app.bat" ^& chr(34), 1, False >> %STARTUP_VBS%
 
 echo.
-echo Success! A silent startup script has been added to your Windows Startup folder.
-echo The app will now start automatically and silently every time you log into Windows.
+echo Success! A startup script has been added to your Windows Startup folder.
+echo The app will now start automatically every time you log into Windows.
+echo NOTE: A console window will appear — do not close it while using the app.
 echo.
 echo Default login: username=admin
 echo Password: see DEFAULT_ADMIN_PASSWORD in your .env file

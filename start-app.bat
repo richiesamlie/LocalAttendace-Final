@@ -1,25 +1,18 @@
 @echo off
 setlocal
+echo ===================================================
+echo   Local Attendance - Teacher Assistant App
+echo ===================================================
+echo.
+echo   DO NOT CLOSE THIS WINDOW while using the app.
+echo   Closing this window will stop the server.
+echo.
+echo ===================================================
 
 :: Check for debug flag
 set MODE=production
 if /i "%~1"=="--debug" set MODE=debug
-if /i "%~2"=="--debug" set MODE=debug
-if /i "%~3"=="--debug" set MODE=debug
 
-if "%~1"=="hidden" goto :run
-if "%~2"=="hidden" goto :run
-if "%~3"=="hidden" goto :run
-
-:: Create a VBScript to run this batch file silently
-set "vbs=%temp%\hide_cmd_%RANDOM%.vbs"
-echo Set WshShell = CreateObject("WScript.Shell") > "%vbs%"
-echo WshShell.Run chr(34) ^& "%~f0" ^& chr(34) ^& " %* hidden", 0, False >> "%vbs%"
-cscript //nologo "%vbs%"
-del "%vbs%"
-exit /b
-
-:run
 :: Change directory to the location of this batch file
 cd /d "%~dp0"
 
