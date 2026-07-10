@@ -30,6 +30,15 @@ fi
 
 echo "Installing dependencies with Bun..."
 bun install --frozen-lockfile
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Dependency installation failed!"
+    echo ""
+    echo "Try running: bun install"
+    echo "If that fails, try: rm -rf node_modules && bun install"
+    echo ""
+    exit 1
+fi
 
 # Check if .env file exists - required before the server can start
 if [ ! -f ".env" ]; then
@@ -69,6 +78,15 @@ if [ "$MODE" == "debug" ]; then
 else
     echo "Building the application for production..."
     bun run build
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "ERROR: Build failed!"
+        echo ""
+        echo "Try running: bun run build"
+        echo "Check the error messages above for details."
+        echo ""
+        exit 1
+    fi
 
     echo ""
     echo "==================================================="
