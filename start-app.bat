@@ -79,8 +79,8 @@ IF !errorlevel! NEQ 0 (
     exit /b 1
 )
 
-:: Open the web browser after a 5-second delay to give the server time to start
-start "" cmd /c "timeout /t 5 /nobreak > NUL && start http://127.0.0.1:3000"
+:: Wait until server responds, then open browser
+start "" powershell -NoProfile -WindowStyle Hidden -Command "$deadline=(Get-Date).AddSeconds(120); while((Get-Date)-lt $deadline){ try { $r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:3000' -TimeoutSec 2; if($r.StatusCode -ge 200){ Start-Process 'http://127.0.0.1:3000'; break } } catch {}; Start-Sleep -Seconds 1 }"
 
 :: Start the app server
 if "!MODE!"=="debug" (

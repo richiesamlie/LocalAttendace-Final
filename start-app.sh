@@ -64,7 +64,6 @@ fi
 # Function to open browser (cross-platform)
 open_browser() {
     local URL="http://127.0.0.1:3000"
-    sleep 5  # Wait for server to start
 
     if command -v xdg-open &> /dev/null; then
         xdg-open "$URL"  # Linux
@@ -75,8 +74,34 @@ open_browser() {
     fi
 }
 
-# Open browser in background
-open_browser &
+# Wait until server responds, then open browser in background
+wait_and_open_browser() {
+    local URL="http://127.0.0.1:3000"
+    local retries=120
+
+    while [ "$retries" -gt 0 ]; do
+        if command -v curl >/dev/null 2>&1; then
+            if curl -fsS "$URL" >/dev/null 2>&1; then
+                open_browser
+                return
+            fi
+        elif command -v wget >/dev/null 2>&1; then
+            if wget -q --spider "$URL" >/dev/null 2>&1; then
+                open_browser
+                return
+            fi
+        else
+            sleep 5
+            open_browser
+            return
+        fi
+
+        retries=$((retries - 1))
+        sleep 1
+    done
+}
+
+wait_and_open_browser &
 
 # Check for debug param
 MODE="production"
