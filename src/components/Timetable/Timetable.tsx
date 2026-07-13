@@ -38,7 +38,7 @@ export default function Timetable() {
 
   const handleSave = (data: { startTime: string; endTime: string; subject: string; lesson: string }) => {
     if (editingId) {
-      updateTimetableSlot(editingId, data);
+      updateTimetableSlot(editingId, { ...data, dayOfWeek: selectedDay });
       setEditingId(null);
     } else {
       addTimetableSlot({ id: crypto.randomUUID(), dayOfWeek: selectedDay, ...data });
