@@ -13,6 +13,7 @@
 | [README.md](../README.md) | Main documentation: setup, features, deployment, tech stack | All users |
 | [user-guide.md](user-guide.md) | Step-by-step usage guide | End users (teachers) |
 | [troubleshooting.md](troubleshooting.md) | Common issues and fixes | All users |
+| [migration-guide.md](migration-guide.md) | SQLite → PostgreSQL migration guide | All users |
 | [developer-guide.md](developer-guide.md) | Developer workflows, coding patterns, testing | Developers |
 | [architecture.md](architecture.md) | System architecture, backend/frontend data flow, security model | Developers |
 | [api-reference.md](api-reference.md) | API endpoint contracts and validation schemas | Developers |
