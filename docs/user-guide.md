@@ -402,17 +402,17 @@ If you prefer to set it up manually:
    createdb teacher_assistant
    ```
 
-2. Run schema:
-   ```bash
-   psql -U postgres -d teacher_assistant -f src/repositories/schema.sql
-   ```
-
-3. Create `.env` file:
+2. Create `.env` file:
    ```env
    DATABASE_URL=postgresql://postgres:***@localhost:5432/teacher_assistant
    ```
 
-4. Start app: `bun run build` and `bun run start` (or `bun run dev` for debug mode)
+3. Start app — schema is applied automatically on startup:
+   ```bash
+   bun run build
+   bun run start
+   ```
+   (or `bun run dev` for debug mode)
 
 ### Switch Back to SQLite
 

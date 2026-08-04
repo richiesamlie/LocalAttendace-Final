@@ -171,7 +171,7 @@ E2E tests share a single database. Running in parallel causes flaky failures. Ru
 **Check:**
 1. PostgreSQL is running
 2. Database exists: `createdb teacher_assistant`
-3. Schema applied: `psql -U postgres -d teacher_assistant -f src/repositories/schema.sql`
+3. Schema is applied automatically on server startup via `src/db/schema.ts` (no manual SQL import needed)
 4. Connection string correct in `DATABASE_URL`
 
 ---
