@@ -276,7 +276,7 @@ async function migrateData(data: Record<string, unknown[]>): Promise<Record<stri
     for (const table of TABLES) {
       const rows = data[table] || [];
       counts[table] = await insertBatch(client, table, rows as Record<string, unknown>[]);
-      console.log(`  ✓ ${table}: ${counts[table]}/${rows.length} rows`);
+      console.warn(`  ✓ ${table}: ${counts[table]}/${rows.length} rows`);
     }
 
     // Re-enable triggers
@@ -303,7 +303,7 @@ async function validateMigration(sqlitePath: string): Promise<boolean> {
   const pool = getPool();
   let allMatch = true;
 
-  console.log('\nValidation:');
+  console.warn('\nValidation:');
 
   for (const table of TABLES) {
     try {
@@ -312,11 +312,11 @@ async function validateMigration(sqlitePath: string): Promise<boolean> {
       const pgCount = parseInt(pgResult.rows[0].count);
 
       const match = sqliteCount === pgCount;
-      console.log(`  ${match ? '✅' : '❌'} ${table}: SQLite=${sqliteCount}, PostgreSQL=${pgCount}`);
+      console.warn(`  ${match ? '✅' : '❌'} ${table}: SQLite=${sqliteCount}, PostgreSQL=${pgCount}`);
 
       if (!match) allMatch = false;
     } catch {
-      console.log(`  ⚠️  ${table}: skipped (not in SQLite)`);
+      console.warn(`  ⚠️  ${table}: skipped (not in SQLite)`);
     }
   }
 
@@ -331,14 +331,14 @@ async function validateMigration(sqlitePath: string): Promise<boolean> {
 export async function autoMigrateIfNeeded(): Promise<boolean> {
   // 1. Check if SQLite file exists
   if (!fs.existsSync(DB_FILE)) {
-    console.log('[migrate] No existing SQLite database found, starting fresh on PostgreSQL');
+    console.warn('[migrate] No existing SQLite database found, starting fresh on PostgreSQL');
     return false;
   }
 
   // 2. Check if PostgreSQL is empty
   const empty = await isPostgresEmpty();
   if (!empty) {
-    console.log('[migrate] PostgreSQL already has tables, skipping auto-migration');
+    console.warn('[migrate] PostgreSQL already has tables, skipping auto-migration');
     return false;
   }
 
@@ -356,36 +356,36 @@ export async function autoMigrateIfNeeded(): Promise<boolean> {
   db.close();
 
   if (totalRows === 0) {
-    console.log('[migrate] SQLite database is empty, starting fresh on PostgreSQL');
+    console.warn('[migrate] SQLite database is empty, starting fresh on PostgreSQL');
     return false;
   }
 
   // 4. Auto-migrate!
-  console.log('');
-  console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║  Auto-Migrating SQLite → PostgreSQL                    ║');
-  console.log('║  Found existing data, migrating automatically...       ║');
-  console.log('╚══════════════════════════════════════════════════════════╝');
-  console.log('');
+  console.warn('');
+  console.warn('╔══════════════════════════════════════════════════════════╗');
+  console.warn('║  Auto-Migrating SQLite → PostgreSQL                    ║');
+  console.warn('║  Found existing data, migrating automatically...       ║');
+  console.warn('╚══════════════════════════════════════════════════════════╝');
+  console.warn('');
 
-  console.log('Creating PostgreSQL schema...');
+  console.warn('Creating PostgreSQL schema...');
   await createPostgresSchema();
 
-  console.log('Reading SQLite data...');
+  console.warn('Reading SQLite data...');
   const data = readSQLiteData(DB_FILE);
 
-  console.log('Migrating data...');
+  console.warn('Migrating data...');
   await migrateData(data);
 
-  console.log('\nValidating...');
+  console.warn('\nValidating...');
   const valid = await validateMigration(DB_FILE);
 
   if (valid) {
-    console.log('\n✅ Auto-migration complete! PostgreSQL is ready.');
-    console.log('   (SQLite database preserved at ' + DB_FILE + ')');
+    console.warn('\n✅ Auto-migration complete! PostgreSQL is ready.');
+    console.warn('   (SQLite database preserved at ' + DB_FILE + ')');
   } else {
-    console.log('\n⚠️  Migration completed with count mismatches.');
-    console.log('   Run `bun run db:migrate:to-postgres --validate-only` to investigate.');
+    console.warn('\n⚠️  Migration completed with count mismatches.');
+    console.warn('   Run `bun run db:migrate:to-postgres --validate-only` to investigate.');
   }
 
   return true;
@@ -426,46 +426,46 @@ export async function migrateStandalone(options: {
 
   // Dry run
   if (options.dryRun) {
-    console.log('DRY RUN — showing what would be migrated:\n');
+    console.warn('DRY RUN — showing what would be migrated:\n');
     const data = readSQLiteData(sqlitePath);
     for (const table of TABLES) {
       const rows = data[table] || [];
-      console.log(`  ${table}: ${rows.length} rows`);
+      console.warn(`  ${table}: ${rows.length} rows`);
     }
-    console.log('\nDry run complete. No changes made.');
+    console.warn('\nDry run complete. No changes made.');
     return;
   }
 
   // Run migration
-  console.log('');
-  console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║  SQLite → PostgreSQL Migration                         ║');
-  console.log('╚══════════════════════════════════════════════════════════╝');
-  console.log('');
+  console.warn('');
+  console.warn('╔══════════════════════════════════════════════════════════╗');
+  console.warn('║  SQLite → PostgreSQL Migration                         ║');
+  console.warn('╚══════════════════════════════════════════════════════════╝');
+  console.warn('');
 
-  console.log(`SQLite: ${sqlitePath}`);
-  console.log(`PostgreSQL: ${process.env.DATABASE_URL || '(default)'}`);
-  console.log('');
+  console.warn(`SQLite: ${sqlitePath}`);
+  console.warn(`PostgreSQL: ${process.env.DATABASE_URL || '(default)'}`);
+  console.warn('');
 
-  console.log('Creating PostgreSQL schema...');
+  console.warn('Creating PostgreSQL schema...');
   await createPostgresSchema();
 
-  console.log('Reading SQLite data...');
+  console.warn('Reading SQLite data...');
   const data = readSQLiteData(sqlitePath);
 
-  console.log('Migrating data...');
+  console.warn('Migrating data...');
   await migrateData(data);
 
-  console.log('\nValidating...');
+  console.warn('\nValidating...');
   const valid = await validateMigration(sqlitePath);
 
-  console.log('');
+  console.warn('');
   if (valid) {
-    console.log('✅ Migration complete!');
-    console.log('   (SQLite database preserved at ' + sqlitePath + ')');
+    console.warn('✅ Migration complete!');
+    console.warn('   (SQLite database preserved at ' + sqlitePath + ')');
   } else {
-    console.log('⚠️  Migration completed with count mismatches.');
-    console.log('   Run with --validate-only to investigate.');
+    console.warn('⚠️  Migration completed with count mismatches.');
+    console.warn('   Run with --validate-only to investigate.');
     process.exit(1);
   }
 }
