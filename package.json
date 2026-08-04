@@ -31,7 +31,7 @@
     "db:clean:force": "bun scripts/exec-by-platform.mjs clean-db --force",
     "db:clean:backup": "bun scripts/exec-by-platform.mjs clean-db --backup",
     "db:setup:postgres": "bun scripts/setup-postgres.ts",
-    "db:migrate:to-postgres": "bun src/repositories/migrate.ts",
+    "db:migrate:to-postgres": "npx tsx scripts/migrate-to-postgres.ts",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
