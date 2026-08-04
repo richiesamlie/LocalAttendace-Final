@@ -1,6 +1,6 @@
 # API Reference — Teacher Assistant
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-08-04
 **Branch:** `develop`
 
 Base URL: `/api`

@@ -1,6 +1,6 @@
-# Troubleshooting â€” Teacher Assistant
+# Troubleshooting — Teacher Assistant
 
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-08-04
 **Branch:** `develop`
 
 ---
@@ -16,7 +16,7 @@
 
 ## Common Issues
 
-### App won't start â€” "DEFAULT_ADMIN_PASSWORD environment variable is required"
+### App won't start — "DEFAULT_ADMIN_PASSWORD environment variable is required"
 
 **Cause:** Missing required environment variable.
 

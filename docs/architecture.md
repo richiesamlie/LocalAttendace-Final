@@ -1,6 +1,6 @@
 ﻿# Architecture — Teacher Assistant
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-08-04
 **Branch:** `develop`
 
 ## Tech Stack
@@ -9,7 +9,7 @@
 |-------|------------|
 | Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
 | State | Zustand 5 (primary), React Query 5 (caching) |
-| Backend | Express 4.21, better-sqlite3 12.4 |
+| Backend | Express 4.21+, better-sqlite3 12 |
 | Realtime | Socket.IO 4 (`allowRequest` origin check + JWT handshake auth) |
 | Auth | JWT (access token 1h + refresh token 7d rotation), httpOnly cookies |
 | Validation | Zod 4 |
@@ -97,9 +97,9 @@ exists in the user's cookie. Reuse-detection prevents stolen-token replay
 attack.
 ```
 
-### services.ts
+### services.ts (→ src/services/)
 
-Service layer with 11 service objects (teacherService, classService, etc.). All DB access flows through here via `db.stmt.*` prepared statements. Examples:
+Service layer with 12 service modules (teacherService, classService, studentService, recordService, noteService, eventService, timetableService, seatingService, settingService, inviteService, sessionService, refreshTokenService). All DB access flows through here via `db.stmt.*` prepared statements. Examples:
 
 - `refreshTokenService.issue()` — generates raw value, stores sha256 hash
 - `refreshTokenService.rotate()` — chain rotation with family revocation on reuse
@@ -114,6 +114,7 @@ src/db/
 ├── statements.ts    — prepared statements (incl. refresh_tokens CRUD)
 ├── cache.ts         — TTL cache (5s default, 60s for static)
 ├── writeQueue.ts    — Serialized write queue
+├── profiling.ts     — Query profiling + EXPLAIN QUERY PLAN
 └── index.ts         — Re-exports dbProxy with restore support
 ```
 

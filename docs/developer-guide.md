@@ -1,6 +1,6 @@
 # Developer Guide — Teacher Assistant
 
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-08-04
 **Branch:** `develop`
 
 ---
@@ -224,25 +224,31 @@ Quick reference:
 
 ## Testing
 
-### Unit Tests (Vitest)
+### Unit / Security Tests
 ```bash
-bun run vitest run     # Run tests
-bun run vitest --ui    # With UI
-bunx vitest run src/test/validation.test.ts  # Specific file
-bunx vitest run src/test/authz.integration.test.ts  # AuthZ guard regression tests
+npm run test:critical    # 226 critical tests (fast gate, runs on every CI build)
+npm test                 # 510 full test suite (main/PR gate)
+npm run test:watch       # Watch mode for development
+npm run test:ui          # Vitest UI
+```
+
+Run specific test files:
+```bash
+npx vitest run src/test/validation.test.ts
+npx vitest run src/test/authz.integration.test.ts
 ```
 
 ### E2E Tests (Playwright)
 ```bash
-bunx playwright test           # Run all
-bunx playwright test auth      # Specific test
+npx playwright test           # Run all
+npx playwright test auth      # Specific test
 ```
 
 **Note:** E2E tests share a single database. Run serially or with clean DB between runs.
 
 ### Coverage
 ```bash
-bunx vitest run --coverage
+npm run test:coverage
 ```
 
 ---

@@ -2,7 +2,7 @@
 
 This runbook is the fast path for daily operations after the 2026-06-18 audit closeout.
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-08-04
 
 ## 1) Daily Commands (Operator Quick Start)
 
@@ -41,7 +41,7 @@ npm run start:network
 npm run lint                              # TypeScript check (blocking)
 npm run lint:eslint -- --max-warnings=0   # ESLint blocking gate
 npm run test:critical                     # 226 fast tests
-npm test                                  # 505 full suite
+npm test                                  # 510 full suite
 bun install --frozen-lockfile             # Bun parity check
 bun run lint                              # Bun lint parity
 bun audit --audit-level=high              # Bun security audit
@@ -113,7 +113,7 @@ gh run view <RUN_ID> --log-failed
 | CI | ESLint (`--max-warnings=0`) | ✓ pass (blocking) |
 | CI | Docs Link Check | ✓ pass |
 | CI | Build Verification | ✓ pass |
-| CI | **Full Test Suite** (main/PR gate, 505 tests) | ✓ pass (blocking) |
+| CI | **Full Test Suite** (main/PR gate, 510 tests) | ✓ pass (blocking) |
 | CI | Test Coverage (main baseline) | ✓ pass |
 | Security Scan | npm audit (`--omit=dev --audit-level=high`) | ✓ pass (blocking) |
 | Security Scan | CodeQL Security Analysis | ✓ pass |
@@ -149,7 +149,7 @@ Security Scan on develop failing?
 
 CI on main failing?
 └─ Same as develop CI, plus:
-   └─ Full Test Suite (505 tests) → check vitest output
+   └─ Full Test Suite (510 tests) → check vitest output
 ```
 
 ---
