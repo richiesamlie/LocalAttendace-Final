@@ -26,8 +26,12 @@ echo   Host: !DB_HOST!:!DB_PORT!
 echo.
 
 REM Check schema file exists
-if not exist "src\repositories\schema.sql" (
-    echo Error: src\repositories\schema.sql not found.
+REM Note: The app uses src/db/schema.ts which auto-creates tables on startup.
+REM The PostgreSQL schema is applied automatically when the server starts
+REM with DATABASE_URL set. No manual SQL file import is needed.
+if not exist "src\db\schema.ts" (
+    echo Error: src\db\schema.ts not found.
+    echo The schema is applied automatically on server startup.
     exit /b 1
 )
 
@@ -42,29 +46,19 @@ if !errorlevel! neq 0 (
 echo Database created successfully.
 echo.
 
-REM Run schema
-echo Running database schema...
-psql -U "!DB_USER!" -h "!DB_HOST!" -p "!DB_PORT!" -d "!DB_NAME!" -f "src\repositories\schema.sql"
-if !errorlevel! neq 0 (
-    echo Error: Failed to apply schema.
-    exit /b 1
-)
-echo Schema applied successfully.
+REM Schema is applied automatically by the server on startup via src/db/schema.ts
+echo Schema will be applied automatically when the server starts.
 echo.
 
 REM Optional migration from SQLite
+REM Note: SQLite-to-PostgreSQL migration is not yet implemented.
+REM To migrate data, export from SQLite and import manually, or
+REM start fresh with PostgreSQL (schema is auto-applied on startup).
 if exist "database.sqlite" (
-    set /p migrate="Found SQLite database. Migrate data to PostgreSQL? (y/n): "
-    if /i "!migrate!"=="y" (
-        echo Migrating data from SQLite to PostgreSQL...
-        bun x tsx src\repositories\migrate.ts
-        if !errorlevel! neq 0 (
-            echo Warning: Migration command failed. Please check output above.
-        ) else (
-            echo Migration complete.
-        )
-        echo.
-    )
+    echo Found existing SQLite database.
+    echo Note: Automatic migration is not available.
+    echo To start fresh, delete database.sqlite and restart the server.
+    echo.
 )
 
 REM Create .env file if it doesn't exist
@@ -73,7 +67,7 @@ if not exist ".env" (
     (
         echo # Database ^(PostgreSQL^)
         echo # Set your PostgreSQL password in DATABASE_URL
-        echo DATABASE_URL=******!DB_HOST!:!DB_PORT!/!DB_NAME!
+        echo DATABASE_URL=postgresql://!DB_USER!:CHANGE_ME@!DB_HOST!:!DB_PORT!/!DB_NAME!
         echo.
         echo # Security ^(required^)
         echo JWT_SECRET=change_this_to_a_secure_random_string
