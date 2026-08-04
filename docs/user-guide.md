@@ -341,87 +341,86 @@ Use these default credentials:
 
 ## 10. Using PostgreSQL (Optional)
 
-The app uses SQLite by default (no setup needed). You can switch to PostgreSQL for production or multi-user setups.
+The app uses SQLite by default (no setup needed). You can switch to PostgreSQL anytime for production or multi-user setups.
 
 ### Why Use PostgreSQL?
 - Better for multiple users accessing simultaneously
 - More robust for large datasets
 - Standard for production environments
 
-### Quick Setup (Windows)
+### Seamless Migration (Recommended)
+
+If you have existing data in SQLite, the app can migrate it automatically:
 
 1. **Install PostgreSQL:**
-   - Download from: https://www.postgresql.org/download/windows/
-   - During install, remember your password for user `postgres`
+   - Windows: Download from https://www.postgresql.org/download/windows/
+   - macOS: `brew install postgresql && brew services start postgresql`
+   - Linux: `sudo apt-get install postgresql`
 
-2. **Run the setup script:**
-   ```cmd
-   bun run db:setup:postgres
-   ```
-
-   This will:
-   - Create database `teacher_assistant`
-   - Run the database schema
-   - Ask if you want to migrate existing data
-   - Create `.env` file with connection string
-
-3. **Start the app (Production Mode):**
-   ```cmd
-   bun run build
-   set NODE_ENV=production
-   bun run start
-   ```
-   *(To start in debug mode, just run `bun run dev` instead)*
-
-   The app will automatically detect PostgreSQL and connect.
-
-### Quick Setup (macOS/Linux)
-
-```bash
-# Install PostgreSQL
-brew install postgresql
-brew services start postgresql
-
-# Run setup script
-bun run db:setup:postgres
-
-# Start app (Production Mode)
-bun run build
-export NODE_ENV=production
-bun run start
-```
-
-*(To start in debug mode, just use `bun run dev` instead)*
-
-### Manual PostgreSQL Setup
-
-If you prefer to set it up manually:
-
-1. Create database:
+2. **Create the database:**
    ```bash
    createdb teacher_assistant
    ```
 
-2. Create `.env` file:
+3. **Add DATABASE_URL to `.env`:**
    ```env
-   DATABASE_URL=postgresql://postgres:***@localhost:5432/teacher_assistant
+   DATABASE_URL=postgresql://postgres:your_password@localhost:5432/teacher_assistant
    ```
 
-3. Start app — schema is applied automatically on startup:
+4. **Start the app normally:**
    ```bash
-   bun run build
-   bun run start
+   bun run dev
    ```
-   (or `bun run dev` for debug mode)
+
+   **That's it!** The app detects empty PostgreSQL + existing SQLite → auto-migrates everything.
+
+   You'll see:
+   ```
+   ╔══════════════════════════════════════════════════════════╗
+   ║  Auto-Migrating SQLite → PostgreSQL                    ║
+   ║  Found existing data, migrating automatically...       ║
+   ╚══════════════════════════════════════════════════════════╝
+   
+   Creating PostgreSQL schema...
+   Reading SQLite data...
+   Migrating data...
+     ✓ teachers: 1/1 rows
+     ✓ classes: 3/3 rows
+     ...
+   
+   ✅ Auto-migration complete! PostgreSQL is ready.
+   ```
+
+### Explicit Migration (Optional)
+
+If you prefer to migrate manually before starting:
+
+```bash
+bun run db:migrate:to-postgres
+```
+
+Options:
+```bash
+bun run db:migrate:to-postgres -- --dry-run        # Preview without changes
+bun run db:migrate:to-postgres -- --validate-only   # Check existing migration
+bun run db:migrate:to-postgres -- --force           # Migrate even if PG has tables
+```
+
+### Fresh Install (No Existing Data)
+
+If you're starting fresh (no SQLite data):
+
+1. Install PostgreSQL and create database
+2. Set `DATABASE_URL` in `.env`. Start the app — schema is created automatically
 
 ### Switch Back to SQLite
 
-Simply remove or empty the `DATABASE_URL` in `.env`:
+Simply remove or comment out `DATABASE_URL` in `.env`:
 ```env
 # DATABASE_URL=postgresql://...
 ```
 
-Or set: `DB_TYPE=sqlite`
+Your SQLite data is preserved — the app uses it again on restart.
 
 ---
 

@@ -48,6 +48,16 @@ async function configureDatabase() {
       
       process.env.DB_TYPE = 'postgres';
       console.log('[db] PostgreSQL connected successfully - using PostgreSQL');
+      
+      // Auto-migrate from SQLite if PostgreSQL is empty
+      try {
+        const { autoMigrateIfNeeded } = await import('./src/db/auto-migrate');
+        await autoMigrateIfNeeded();
+      } catch (migrateErr) {
+        console.warn('[db] Auto-migration check failed:', (migrateErr as Error).message);
+        // Continue anyway — schema will be created by initSchema()
+      }
+      
       return;
     } catch (err) {
       console.warn('[db] PostgreSQL connection failed, falling back to SQLite:', (err as Error).message);
