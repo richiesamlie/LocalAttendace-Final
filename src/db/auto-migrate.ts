@@ -69,7 +69,6 @@ function readSQLiteData(sqlitePath: string): Record<string, unknown[]> {
  */
 async function createPostgresSchema(): Promise<void> {
   const pool = getPool();
-
   await pool.query(`
     CREATE TABLE IF NOT EXISTS teachers (
       id TEXT PRIMARY KEY,
