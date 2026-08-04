@@ -2,7 +2,7 @@
 
 Tujuan dokumen ini adalah menjaga dependency tetap sehat, aman, dan minim regresi.
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-08-04
 
 ## Policy
 
@@ -47,13 +47,29 @@ Commit both lockfiles in the same change. CI uses both — drift between them ca
     "ws": "^8.21.0",
     "form-data": "^4.0.6",
     "tmp": "^0.2.7",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "ip-address": ">=10.4.0",
+    "brace-expansion": ">=5.0.8",
+    "minimatch": ">=10.2.6",
+    "postcss": ">=8.5.23",
+    "socket.io-parser": ">=4.2.7",
+    "engine.io": ">=6.6.7",
+    "fast-uri": ">=3.1.5",
+    "undici": ">=7.29.0"
   },
   "resolutions": {
     "ws": "^8.21.0",
     "form-data": "^4.0.6",
     "tmp": "^0.2.7",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "ip-address": ">=10.4.0",
+    "brace-expansion": ">=5.0.8",
+    "minimatch": ">=10.2.6",
+    "postcss": ">=8.5.23",
+    "socket.io-parser": ">=4.2.7",
+    "engine.io": ">=6.6.7",
+    "fast-uri": ">=3.1.5",
+    "undici": ">=7.29.0"
   }
 }
 ```
@@ -61,9 +77,17 @@ Commit both lockfiles in the same change. CI uses both — drift between them ca
 | Override | Why | Bumped | Audit |
 |----------|-----|--------|-------|
 | `ws: ^8.21.0` | Fix CVE-2024-37890 (DoS via tiny fragments) | 2026-05 (Batch 1, F-013) | npm + bun clean |
-| `form-data: ^4.0.6` | Fix CVE-2025-7783 (CRLF injection in multipart names) | 2026-06 (just now) | npm clean; bun flagged before |
-| `tmp: ^0.2.7` | Fix CVE-2025-47906 (path traversal in prefix/postfix) | 2026-06 (just now) | npm clean; bun flagged before |
-| `vite: ^6.4.3` | Fix CVE-2025-30208 (fs.deny bypass on Windows alternate paths) | 2026-06 (just now) | npm clean; bun flagged before |
+| `form-data: ^4.0.6` | Fix CVE-2025-7783 (CRLF injection in multipart names) | 2026-06 | npm clean; bun flagged before |
+| `tmp: ^0.2.7` | Fix CVE-2025-47906 (path traversal in prefix/postfix) | 2026-06 | npm clean; bun flagged before |
+| `vite: ^6.4.3` | Fix CVE-2025-30208 (fs.deny bypass on Windows alternate paths) | 2026-06 | npm clean; bun flagged before |
+| `ip-address: >=10.4.0` | Fix GHSA-mwp4-54f8-5fhr (SSRF via leading-zero octets) | 2026-08 | bun audit HIGH |
+| `brace-expansion: >=5.0.8` | Fix GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895, GHSA-3jxr-9vmj-r5cp (DoS, 3 CVEs) | 2026-08 | bun audit HIGH |
+| `minimatch: >=10.2.6` | Transitive: pulls brace-expansion ^5.0.8 | 2026-08 | bun audit HIGH |
+| `postcss: >=8.5.23` | Fix GHSA-r28c-9q8g-f849 (sourceMappingURL path traversal) | 2026-08 | bun audit HIGH |
+| `socket.io-parser: >=4.2.7` | Fix GHSA-2m8v-j782-fhvr (zero-attachment memory exhaustion) | 2026-08 | npm + bun audit HIGH |
+| `engine.io: >=6.6.7` | Fix GHSA-r635-g3xr-vw7x (polling transport connection exhaustion) | 2026-08 | bun audit HIGH |
+| `fast-uri: >=3.1.5` | Fix GHSA-4c8g-83qw-93j6, GHSA-7p8r-x3mc-p8w7, GHSA-v2hh-gcrm-f6hx (host confusion, 3 CVEs) | 2026-08 | bun audit HIGH |
+| `undici: >=7.29.0` | Fix multiple HIGH CVEs (TLS bypass, response queue poisoning, etc.) | 2026-08 | bun audit HIGH |
 
 **When adding a new override:**
 1. Document the CVE / advisory in the commit message body

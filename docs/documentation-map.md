@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-08-04
 **Purpose:** Single source index for active project documentation only.
 **Bahasa / Language:** English as canonical text, with concise Indonesian guidance for key operational notes.
 

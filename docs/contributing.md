@@ -1,8 +1,6 @@
 # Contributing — Teacher Assistant
 
-# Contributing — Teacher Assistant
-
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-08-04
 **Branch:** `develop`
 
 ---
@@ -259,7 +257,7 @@ gh pr create
 
 ```bash
 npm run test:critical    # 226 tests, runs on every commit
-npm test                 # 505 tests, full suite (CI on main)
+npm test                 # 510 tests, full suite (CI on main)
 ```
 
 ### Integration Tests
@@ -315,12 +313,25 @@ npm install           # updates package-lock.json
     "ws": "^8.21.0",
     "form-data": "^4.0.6",
     "tmp": "^0.2.7",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "ip-address": ">=10.4.0",
+    "brace-expansion": ">=5.0.8",
+    "minimatch": ">=10.2.6",
+    "postcss": ">=8.5.23",
+    "socket.io-parser": ">=4.2.7",
+    "engine.io": ">=6.6.7",
+    "fast-uri": ">=3.1.5",
+    "undici": ">=7.29.0"
   }
 }
 ```
 
-When adding a new override, document the reason in the commit message.
+See `docs/dependency-governance.md` for the full override table with CVE references.
+
+When adding a new override:
+1. Document the CVE / advisory in the commit message body
+2. Note which CI lane was failing (npm audit, bun audit, or both)
+3. Update the override table in `docs/dependency-governance.md`
 
 ### Removing a Dependency
 
@@ -396,7 +407,7 @@ npm run lint:eslint -- --max-warnings=0   # ESLint blocking gate
 
 # Test
 npm run test:critical    # Fast gate (226 tests, CI on develop)
-npm test                 # Full suite (505 tests, CI on main)
+npm test                 # Full suite (510 tests, CI on main)
 
 # Security
 npm audit --omit=dev --audit-level=high   # npm audit (CI)

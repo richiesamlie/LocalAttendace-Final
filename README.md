@@ -82,7 +82,7 @@ bash setup-env.sh
 docker-compose up -d
 ```
 
-Available at `http://localhost:3000`. Container runs as non-root (UID 1001), drops all Linux capabilities, capped at 512MB RAM / 1 CPU / 100 processes. Database persists via named volume `teacher-assistant-data`.
+Available at `http://localhost:3000`. Container runs as non-root (UID 1001), drops all Linux capabilities, capped at 512MB RAM / 1 CPU / 100 processes. Database persists via named volume `teacher-assistant-data` (defined in `docker-compose.yml`).
 
 ## Quick Indonesian Notes
 
@@ -130,7 +130,8 @@ GitHub Actions runs three workflows on every push to `develop` and `main`:
 | **CI**: Docs Link Check | ✓ | ✓ |
 | **CI**: Bun Parity Smoke (blocking) | ✓ | — |
 | **CI**: Critical Tests (226, fast gate) | ✓ | — |
-| **CI**: Full Test Suite (505, main/PR gate) | — | ✓ |
+| **CI**: Bun Parity Smoke (blocking) | ✓ | — |
+| **CI**: Full Test Suite (510, main/PR gate) | — | ✓ |
 | **CI**: Test Coverage (main baseline) | — | ✓ |
 | **Security**: npm audit (`--omit=dev --audit-level=high`) | ✓ | ✓ |
 | **Security**: CodeQL Analysis | ✓ | ✓ |
@@ -145,7 +146,7 @@ GitHub Actions runs three workflows on every push to `develop` and `main`:
 npm run lint                              # TypeScript check
 npm run lint:eslint -- --max-warnings=0   # ESLint blocking gate
 npm run test:critical                     # 226 tests (fast)
-npm test                                  # 505 tests (full suite)
+npm test                                  # 510 tests (full suite)
 bun install --frozen-lockfile && bun run lint
 bun audit --audit-level=high              # Bun security gate
 ```

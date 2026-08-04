@@ -1,4 +1,4 @@
-# Teacher Assistant â€” User Guide
+# Teacher Assistant — User Guide
 
 Catatan bahasa: Dokumen ini berbahasa Inggris sederhana agar konsisten, dengan istilah operasional yang familiar untuk pengguna Indonesia.
 
@@ -498,9 +498,12 @@ Or set: `DB_TYPE=sqlite`
 
 ### Docker: Data Lost After Restart
 **Solution:**
-1. Make sure the `data` folder exists in your app directory
+1. The app uses a named Docker volume `teacher-assistant-data` (not a bind mount)
 2. Check `docker-compose.yml` has this volume mapping:
    ```yaml
    volumes:
-     - ./data:/app/data
+     - teacher-assistant-data:/app/data
+   
+   volumes:
+     teacher-assistant-data:
 
