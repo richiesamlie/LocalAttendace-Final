@@ -74,32 +74,16 @@ async function main() {
       database: dbName,
     });
 
-    // Run schema
-    console.log('Running database schema...');
-    const schemaPath = path.join(__dirname, '..', 'src', 'repositories', 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
-    await appPool.query(schema);
-    console.log('Schema applied successfully.\n');
+    // Schema is applied automatically by the server on startup via src/db/schema.ts
+    console.log('Schema will be applied automatically when the server starts.');
+    console.log('(The app uses src/db/schema.ts which auto-creates tables on startup.)\n');
     
     // Check for SQLite migration
     const sqlitePath = path.join(__dirname, '..', 'database.sqlite');
     if (fs.existsSync(sqlitePath)) {
-      console.log('Found SQLite database.');
-      const response = await new Promise<string>((resolve) => {
-        process.stdout.write('Migrate data to PostgreSQL? (y/n): ');
-        process.stdin.once('data', (data) => {
-          resolve(data.toString().trim().toLowerCase());
-        });
-      });
-      
-      if (response === 'y' || response === 'yes') {
-        console.log('Migrating data from SQLite to PostgreSQL...');
-        await appPool.end();
-        // Run migrate script directly
-        const { execSync } = await import('child_process');
-        execSync('npx tsx src/repositories/migrate.ts', { stdio: 'inherit' });
-        console.log('Migration complete.\n');
-      }
+      console.log('Found existing SQLite database.');
+      console.log('Note: Automatic migration is not available.');
+      console.log('To start fresh, delete database.sqlite and restart the server.\n');
     }
 
     // Create .env file
