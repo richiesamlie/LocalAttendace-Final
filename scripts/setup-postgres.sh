@@ -29,8 +29,12 @@ echo "  Host: $DB_HOST:$DB_PORT"
 echo ""
 
 # Check schema file exists
-if [ ! -f "src/repositories/schema.sql" ]; then
-  echo "Error: src/repositories/schema.sql not found."
+# Note: The app uses src/db/schema.ts which auto-creates tables on startup.
+# The PostgreSQL schema is applied automatically when the server starts
+# with DATABASE_URL set. No manual SQL file import is needed.
+if [ ! -f "src/db/schema.ts" ]; then
+  echo "Error: src/db/schema.ts not found."
+  echo "The schema is applied automatically on server startup."
   exit 1
 fi
 
@@ -44,21 +48,16 @@ psql -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -c "CREATE DATABASE $DB_NAME;" ||
 echo "Database created successfully."
 echo ""
 
-# Run schema
-echo "Running database schema..."
-psql -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -f "src/repositories/schema.sql"
-echo "Schema applied successfully."
+# Schema is applied automatically by the server on startup via src/db/schema.ts
+echo "Schema will be applied automatically when the server starts."
 echo ""
 
 # Check if SQLite database exists for migration
 if [ -f "database.sqlite" ]; then
-  read -r -p "Found SQLite database. Migrate data to PostgreSQL? (y/n): " response
-  if [[ "$response" =~ ^[Yy]$ ]]; then
-    echo "Migrating data from SQLite to PostgreSQL..."
-    bun x tsx src/repositories/migrate.ts || echo "Warning: Migration command failed. Please check output above."
-    echo "Migration complete."
-    echo ""
-  fi
+  echo "Found existing SQLite database."
+  echo "Note: Automatic migration is not available."
+  echo "To start fresh, delete database.sqlite and restart the server."
+  echo ""
 fi
 
 # Create .env file if it doesn't exist
