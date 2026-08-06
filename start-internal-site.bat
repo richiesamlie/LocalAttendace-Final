@@ -8,6 +8,10 @@ echo.
 :: Change directory to the location of this batch file
 cd /d "%~dp0"
 
+:: Log file for debugging autostart issues
+set "LOG_FILE=%~dp0server-stdout.log"
+echo [%date% %time%] Starting Teacher Assistant (Internal Site) >> "%LOG_FILE%"
+
 :: Ensure Bun is installed and dependencies are available
 where bun >nul 2>&1
 IF !errorlevel! NEQ 0 (
@@ -32,17 +36,22 @@ IF !errorlevel! NEQ 0 (
     exit /b 1
 )
 
-echo Installing dependencies with Bun...
-call bun install --frozen-lockfile
-IF !errorlevel! NEQ 0 (
-    echo.
-    echo ERROR: Dependency installation failed!
-    echo.
-    echo Try running: bun install
-    echo If that fails, try: rm -rf node_modules && bun install
-    echo.
-    pause
-    exit /b 1
+IF EXIST "node_modules" (
+    echo [%date% %time%] Dependencies already installed, skipping bun install >> "%LOG_FILE%"
+) else (
+    echo [%date% %time%] Installing dependencies with Bun... >> "%LOG_FILE%"
+    call bun install --frozen-lockfile >> "%LOG_FILE%" 2>&1
+    IF !errorlevel! NEQ 0 (
+        echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
+        echo.
+        echo ERROR: Dependency installation failed!
+        echo.
+        echo Try running: bun install
+        echo If that fails, try: rm -rf node_modules && bun install
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 :: Check if .env file exists - required before the server can start
@@ -72,6 +81,11 @@ IF !errorlevel! NEQ 0 (
     exit /b 1
 )
 
+:: Kill any existing process on port 3000 to avoid conflicts
+echo [%date% %time%] Checking for existing server on port 3000... >> "%LOG_FILE%"
+powershell -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; echo 'Killed existing process' } else { echo 'Port 3000 is free' } } catch { echo 'Port check skipped' }" >> "%LOG_FILE%" 2>&1
+timeout /t 2 /nobreak >nul
+
 :: Check for debug flag
 set MODE=production
 if /i "%~1"=="--debug" set MODE=debug
@@ -82,17 +96,22 @@ if "!MODE!"=="debug" (
     echo.
     call npx tsx server.ts --network
 ) else (
-    echo Building the application for production...
-    call bun run build
-    IF !errorlevel! NEQ 0 (
-        echo.
-        echo ERROR: Build failed!
-        echo.
-        echo Try running: bun run build
-        echo Check the error messages above for details.
-        echo.
-        pause
-        exit /b 1
+    IF EXIST "dist\index.html" (
+        echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
+    ) else (
+        echo [%date% %time%] Building the application for production... >> "%LOG_FILE%"
+        call bun run build >> "%LOG_FILE%" 2>&1
+        IF !errorlevel! NEQ 0 (
+            echo [%date% %time%] ERROR: Build failed! >> "%LOG_FILE%"
+            echo.
+            echo ERROR: Build failed!
+            echo.
+            echo Try running: bun run build
+            echo Check the error messages above for details.
+            echo.
+            pause
+            exit /b 1
+        )
     )
 
     echo.
@@ -113,6 +132,7 @@ if "!MODE!"=="debug" (
     :: Internal-site mode commonly runs on plain HTTP. Allow non-secure
     :: cookies so auth persists across requests on trusted LAN deployments.
     set COOKIE_SECURE=false
-    call npx tsx server.ts --network
+    echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
+    call npx tsx server.ts --network >> "%LOG_FILE%" 2>&1
 )
 endlocal

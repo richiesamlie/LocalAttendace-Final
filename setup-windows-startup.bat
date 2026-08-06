@@ -16,8 +16,9 @@ if exist "%STARTUP_DIR%\LocalAttendanceStartup.vbs" del "%STARTUP_DIR%\LocalAtte
 if exist "%STARTUP_DIR%\TeacherAssistantStartup.vbs" del "%STARTUP_DIR%\TeacherAssistantStartup.vbs"
 
 :: Create a VBScript in the Startup folder to run the app hidden on login
+:: Output is logged to server-stdout.log for debugging
 echo Set WshShell = CreateObject("WScript.Shell") > %STARTUP_VBS%
-echo WshShell.Run chr(34) ^& "%SCRIPT_DIR%start-app.bat" ^& chr(34), 0, False >> %STARTUP_VBS%
+echo WshShell.Run "cmd /c ""%SCRIPT_DIR%start-app.bat"" >> ""%SCRIPT_DIR%server-stdout.log"" 2>&1", 0, False >> %STARTUP_VBS%
 
 echo.
 echo Success! A startup script has been added to your Windows Startup folder.
@@ -27,5 +28,8 @@ echo.
 echo Default login: username=admin
 echo Password: see DEFAULT_ADMIN_PASSWORD in your .env file
 echo (Run .\setup-env.ps1 first if you have not set up .env yet)
+echo.
+echo If the app does not start, check the log file:
+echo   %SCRIPT_DIR%server-stdout.log
 echo.
 pause
