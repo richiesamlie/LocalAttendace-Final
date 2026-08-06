@@ -46,6 +46,8 @@ const dbProxy = new Proxy({}, {
         try { _db.close(); } catch(_e) {
           // Ignore close errors while restoring DB file.
         }
+        try { fs.unlinkSync(DB_FILE + '-wal'); } catch { /* ignore if missing */ }
+        try { fs.unlinkSync(DB_FILE + '-shm'); } catch { /* ignore if missing */ }
         fs.writeFileSync(DB_FILE, buffer);
         reinitConnection();
         initSchema();

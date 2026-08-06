@@ -7,22 +7,34 @@ interface WriteTask {
 const writeQueue: WriteTask[] = [];
 let isProcessingWriteQueue = false;
 
+let restoreLockActive = false;
+
+export function acquireRestoreLock(): void {
+  restoreLockActive = true;
+}
+export function releaseRestoreLock(): void {
+  restoreLockActive = false;
+}
+
 export async function processWriteQueue(): Promise<void> {
   if (isProcessingWriteQueue || writeQueue.length === 0) return;
   isProcessingWriteQueue = true;
 
-  while (writeQueue.length > 0) {
-    const task = writeQueue.shift();
-    if (!task) continue;
-    try {
-      await task.fn();
-      task.resolve();
-    } catch (error) {
-      task.reject(error as Error);
+  try {
+    while (writeQueue.length > 0) {
+      if (restoreLockActive) break;
+      const task = writeQueue.shift();
+      if (!task) continue;
+      try {
+        await task.fn();
+        task.resolve();
+      } catch (error) {
+        task.reject(error as Error);
+      }
     }
+  } finally {
+    isProcessingWriteQueue = false;
   }
-
-  isProcessingWriteQueue = false;
 }
 
 export function enqueueWrite(fn: () => void): Promise<void> {

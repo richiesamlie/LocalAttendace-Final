@@ -6,6 +6,7 @@ interface CacheEntry<T> {
 const cache = new Map<string, CacheEntry<unknown>>();
 const DEFAULT_TTL = 5000;
 const LONG_TTL = 60000;
+const MAX_CACHE_SIZE = 10000;
 
 export function cacheGet<T>(key: string): T | null {
   const entry = cache.get(key);
@@ -17,6 +18,15 @@ export function cacheGet<T>(key: string): T | null {
 }
 
 export function cacheSet<T>(key: string, value: T, ttl: number = DEFAULT_TTL): void {
+  if (cache.size >= MAX_CACHE_SIZE && !cache.has(key)) {
+    // Evict oldest entries when cache is full
+    const keysToDelete = Math.min(100, cache.size);
+    const iter = cache.keys();
+    for (let i = 0; i < keysToDelete; i++) {
+      const k = iter.next().value;
+      if (k !== undefined) cache.delete(k);
+    }
+  }
   cache.set(key, { value, expiresAt: Date.now() + ttl });
 }
 

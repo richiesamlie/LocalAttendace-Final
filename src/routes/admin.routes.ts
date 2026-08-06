@@ -7,9 +7,10 @@ import { safeLog } from '../../src/lib/log-redact';
 import { requireAuth, requireAdmin, withWriteQueue, postLimiter } from './middleware';
 import { validate, settingSchema } from '../../src/lib/validation';
 import db from '../../db';
+import { acquireRestoreLock, releaseRestoreLock } from '../db/writeQueue';
 import type { Teacher, SettingRow } from '../../src/types/db';
 import { metricsStore } from '../middleware/metricsStore';
-import { profileQuery, profileAllStatements, getAllIndexes, getTableStats, getOptimizationScore } from '../db/profiling';
+import { profileQuery, getAllIndexes, getTableStats, getOptimizationScore } from '../db/profiling';
 import { resourceMonitor } from '../middleware/resourceMonitor';
 
 export const adminRouter = express.Router();
@@ -73,6 +74,7 @@ adminRouter.post('/database/backup', async (_req, res) => {  try {
 adminRouter.post('/database/restore', async (req, res): Promise<void> => {
   try {
     await db.enqueueWrite(() => {});
+    acquireRestoreLock();
 
     const dbPath = path.join(process.cwd(), 'database.sqlite');
     const backupDir = path.join(process.cwd(), 'backups');
@@ -90,6 +92,7 @@ adminRouter.post('/database/restore', async (req, res): Promise<void> => {
     const maxRestoreBytes = 25 * 1024 * 1024;
     const contentType = String(req.headers['content-type'] || '').toLowerCase();
     if (!contentType.includes('application/octet-stream')) {
+      releaseRestoreLock();
       res.status(415).json({ error: 'Unsupported content type. Use application/octet-stream' });
       return;
     }
@@ -106,6 +109,7 @@ adminRouter.post('/database/restore', async (req, res): Promise<void> => {
       chunks.push(chunk);
     });
     req.on('error', () => {
+      releaseRestoreLock();
       if (!res.headersSent) {
         res.status(400).json({ error: 'Failed to read restore payload' });
       }
@@ -114,13 +118,16 @@ adminRouter.post('/database/restore', async (req, res): Promise<void> => {
       if (res.headersSent) return;
       const fileBuffer = Buffer.concat(chunks);
       if (fileBuffer.length < 100 || fileBuffer.toString('utf8', 0, 15) !== 'SQLite format 3') {
+        releaseRestoreLock();
         res.status(400).json({ error: 'Invalid SQLite database file' });
         return;
       }
       db.restore(fileBuffer);
       res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
+      releaseRestoreLock();
     });
   } catch (_error) {
+    releaseRestoreLock();
     res.status(500).json({ error: 'Failed to restore database' });
   }
 });
@@ -191,19 +198,11 @@ adminRouter.post('/profiling/query', async (req, res) => {  try {
   }
 });
 
-adminRouter.get('/profiling/statements', async (_req, res) => {  try {
-    const results = profileAllStatements();
-    const profilesWithScores = Array.from(results.entries()).map(([name, result]) => ({
-      name,
-      ...result,
-      score: getOptimizationScore(result),
-    }));
-
-    return res.json({ statements: profilesWithScores });
-  } catch (error) {
-    console.error('Error profiling statements:', error);
-    return res.status(500).json({ error: 'Failed to profile statements' });
-  }
+adminRouter.get('/profiling/statements', async (_req, res) => {
+  return res.json({
+    message: 'Use POST /api/admin/profiling/query with { "sql": "SELECT ..." } to profile specific queries.',
+    example: { sql: 'SELECT * FROM students WHERE class_id = ? AND archived = 0' },
+  });
 });
 
 adminRouter.get('/profiling/indexes', async (_req, res) => {  try {
