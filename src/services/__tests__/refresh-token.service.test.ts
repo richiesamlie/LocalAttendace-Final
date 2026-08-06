@@ -52,11 +52,12 @@ describe('Refresh Token Service', () => {
 
       const row = db.prepare('SELECT * FROM refresh_tokens WHERE token_hash = ?').get(tokenHash) as RefreshTokenRow | undefined;
       expect(row).toBeDefined();
-      expect(row!.id).toBe(id);
-      expect(row!.family_id).toBe(familyId);
-      expect(row!.teacher_id).toBe(teacherId);
-      expect(row!.used_at).toBeNull();
-      expect(row!.rotated_to).toBeNull();
+      if (!row) return;
+      expect(row.id).toBe(id);
+      expect(row.family_id).toBe(familyId);
+      expect(row.teacher_id).toBe(teacherId);
+      expect(row.used_at).toBeNull();
+      expect(row.rotated_to).toBeNull();
     });
 
     it('should enforce UNIQUE constraint on token_hash', () => {
@@ -89,8 +90,9 @@ describe('Refresh Token Service', () => {
 
       const old = db.prepare('SELECT * FROM refresh_tokens WHERE id = ?').get('rt-old') as RefreshTokenRow | undefined;
       expect(old).toBeDefined();
-      expect(old!.used_at).not.toBeNull();
-      expect(old!.rotated_to).toBe('rt-new');
+      if (!old) return;
+      expect(old.used_at).not.toBeNull();
+      expect(old.rotated_to).toBe('rt-new');
     });
 
     it('should not rotate an already-used token (race condition)', () => {
@@ -131,7 +133,8 @@ describe('Refresh Token Service', () => {
 
       const other = db.prepare('SELECT * FROM refresh_tokens WHERE id = ?').get('rt-2') as RefreshTokenRow | undefined;
       expect(other).toBeDefined();
-      expect(other!.used_at).toBeNull();
+      if (!other) return;
+      expect(other.used_at).toBeNull();
     });
   });
 
