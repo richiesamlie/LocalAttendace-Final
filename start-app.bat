@@ -16,6 +16,10 @@ if /i "%~1"=="--debug" set MODE=debug
 :: Change directory to the location of this batch file
 cd /d "%~dp0"
 
+:: Log file for debugging autostart issues
+set "LOG_FILE=%~dp0server-stdout.log"
+echo [%date% %time%] Starting Teacher Assistant >> "%LOG_FILE%"
+
 :: Ensure Bun is installed (used for package management and building the frontend)
 where bun >nul 2>&1
 IF !errorlevel! NEQ 0 (
@@ -39,17 +43,22 @@ IF !errorlevel! NEQ 0 (
     exit /b 1
 )
 
-echo Installing dependencies with Bun...
-call bun install --frozen-lockfile
-IF !errorlevel! NEQ 0 (
-    echo.
-    echo ERROR: Dependency installation failed!
-    echo.
-    echo Try running: bun install
-    echo If that fails, try: rm -rf node_modules && bun install
-    echo.
-    pause
-    exit /b 1
+IF EXIST "node_modules" (
+    echo [%date% %time%] Dependencies already installed, skipping bun install >> "%LOG_FILE%"
+) else (
+    echo [%date% %time%] Installing dependencies with Bun... >> "%LOG_FILE%"
+    call bun install --frozen-lockfile >> "%LOG_FILE%" 2>&1
+    IF !errorlevel! NEQ 0 (
+        echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
+        echo.
+        echo ERROR: Dependency installation failed!
+        echo.
+        echo Try running: bun install
+        echo If that fails, try: rm -rf node_modules && bun install
+        echo.
+        pause
+        exit /b 1
+    )
 )
 
 :: Check if .env file exists - required before the server can start
@@ -82,28 +91,38 @@ IF !errorlevel! NEQ 0 (
 :: Wait until server responds, then open browser
 start "" powershell -NoProfile -WindowStyle Hidden -Command "$deadline=(Get-Date).AddSeconds(120); while((Get-Date)-lt $deadline){ try { $r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:3000' -TimeoutSec 2; if($r.StatusCode -ge 200){ Start-Process 'http://127.0.0.1:3000'; break } } catch {}; Start-Sleep -Seconds 1 }"
 
+:: Kill any existing process on port 3000 to avoid conflicts
+echo [%date% %time%] Checking for existing server on port 3000... >> "%LOG_FILE%"
+powershell -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; echo 'Killed existing process' } else { echo 'Port 3000 is free' } } catch { echo 'Port check skipped' }" >> "%LOG_FILE%" 2>&1
+timeout /t 2 /nobreak >nul
+
 :: Start the app server
 if "!MODE!"=="debug" (
-    echo Starting Teacher Assistant Server in Debug Mode via Node.js...
-    call npx tsx server.ts
+    echo [%date% %time%] Starting server... >> "%LOG_FILE%"
+    call npx tsx server.ts >> "%LOG_FILE%" 2>&1
 ) else (
-    echo Building the application for production...
-    call bun run build
-    IF !errorlevel! NEQ 0 (
-        echo.
-        echo ERROR: Build failed!
-        echo.
-        echo Try running: bun run build
-        echo Check the error messages above for details.
-        echo.
-        pause
-        exit /b 1
+    IF EXIST "dist\index.html" (
+        echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
+    ) else (
+        echo [%date% %time%] Building the application for production... >> "%LOG_FILE%"
+        call bun run build >> "%LOG_FILE%" 2>&1
+        IF !errorlevel! NEQ 0 (
+            echo [%date% %time%] ERROR: Build failed! >> "%LOG_FILE%"
+            echo.
+            echo ERROR: Build failed!
+            echo.
+            echo Try running: bun run build
+            echo Check the error messages above for details.
+            echo.
+            pause
+            exit /b 1
+        )
     )
-    echo Starting Teacher Assistant Server in Production Mode via Node.js...
+    echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
     set NODE_ENV=production
     :: Local production mode runs on plain HTTP at http://127.0.0.1:3000.
     :: Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
-    call npx tsx server.ts
+    call npx tsx server.ts >> "%LOG_FILE%" 2>&1
 )
 endlocal
