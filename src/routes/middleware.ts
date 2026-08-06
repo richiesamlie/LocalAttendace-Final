@@ -382,7 +382,8 @@ export function parseAuthTokenCookie(
  * F-001: Socket.IO previously accepted any client without authentication.
  */
 export async function verifySocketAuth(headers: { cookie?: string } | undefined): Promise<SocketAuthContext | null> {
-  const token = parseAuthTokenCookie(headers?.cookie);
+  const token = parseAuthTokenCookie(headers?.cookie, ACCESS_COOKIE_NAME)
+           || parseAuthTokenCookie(headers?.cookie, AUTH_COOKIE_NAME);
   if (!token) return null;
 
   let decoded: JwtPayload;

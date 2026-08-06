@@ -232,7 +232,13 @@ async function insertBatch(
 ): Promise<number> {
   if (rows.length === 0) return 0;
 
-  const columns = Object.keys(rows[0]);
+  const SAFE_COLUMN_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  const columns = Object.keys(rows[0]).map(col => {
+    if (!SAFE_COLUMN_RE.test(col)) {
+      throw new Error(`Unsafe column name in migration: ${col}`);
+    }
+    return `"${col}"`;
+  });
   let inserted = 0;
 
   for (let i = 0; i < rows.length; i += batchSize) {

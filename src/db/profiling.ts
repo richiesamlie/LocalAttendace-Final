@@ -202,35 +202,6 @@ function determineSeverity(analysis: ProfileResult['analysis']): ProfileResult['
 }
 
 /**
- * Profile all prepared statements in the application
- */
-export function profileAllStatements(): Map<string, ProfileResult> {
-  const results = new Map<string, ProfileResult>();
-  
-  // Common queries to profile (examples - expand based on actual app queries)
-  const commonQueries = [
-    { name: 'getStudentsByClass', sql: 'SELECT * FROM students WHERE class_id = ? AND archived = 0' },
-    { name: 'getRecordsByClass', sql: 'SELECT * FROM records WHERE class_id = ?' },
-    { name: 'getEventsByClass', sql: 'SELECT * FROM events WHERE class_id = ? ORDER BY date DESC' },
-    { name: 'getTimetableByClass', sql: 'SELECT * FROM timetable WHERE class_id = ?' },
-    { name: 'getDailyNotesByClass', sql: 'SELECT * FROM daily_notes WHERE class_id = ?' },
-    { name: 'getClassesByTeacher', sql: 'SELECT * FROM classes c LEFT JOIN class_teachers ct ON c.id = ct.class_id WHERE ct.teacher_id = ?' },
-    { name: 'getTeacherSessions', sql: 'SELECT * FROM sessions WHERE teacher_id = ? AND is_revoked = 0 AND expires_at > datetime("now")' },
-  ];
-  
-  for (const { name, sql } of commonQueries) {
-    try {
-      const result = profileQuery(sql);
-      results.set(name, result);
-    } catch (error) {
-      console.error(`Failed to profile ${name}:`, error);
-    }
-  }
-  
-  return results;
-}
-
-/**
  * Get list of all indexes in the database
  */
 export function getAllIndexes(): Array<{ name: string; table: string; sql: string | null }> {

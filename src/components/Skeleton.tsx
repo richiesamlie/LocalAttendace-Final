@@ -6,32 +6,6 @@ export function Skeleton({ className }: { className?: string }) {
   );
 }
 
-export function CardSkeleton() {
-  return (
-    <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-      <div className="flex items-center gap-4">
-        <Skeleton className="w-12 h-12 rounded-xl" />
-        <div className="space-y-2">
-          <Skeleton className="w-24 h-4" />
-          <Skeleton className="w-16 h-6" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function TableRowSkeleton({ cols = 4 }: { cols?: number }) {
-  return (
-    <tr className="border-b border-slate-100 dark:border-slate-800">
-      {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-6 py-4">
-          <Skeleton className="w-full h-4" />
-        </td>
-      ))}
-    </tr>
-  );
-}
-
 export function AttendanceGridSkeleton() {
   return (
     <div className="space-y-3">

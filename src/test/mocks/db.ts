@@ -91,6 +91,20 @@ export function createMockDb(): Database.Database {
       FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id TEXT PRIMARY KEY,
+      family_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      teacher_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      rotated_to TEXT,
+      FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE,
+      FOREIGN KEY (session_id) REFERENCES user_sessions (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE daily_notes (
       class_id TEXT NOT NULL,
       date TEXT NOT NULL,
@@ -179,6 +193,7 @@ export function seedMockData(db: Database.Database): void {
       student.is_archived || 0
     );
   }
+
 }
 
 /**

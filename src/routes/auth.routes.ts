@@ -74,22 +74,6 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
     path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
-  // F-004 transition: also set the legacy 7d JWT cookie so older clients
-  // that still read it keep working. Will be removed once all clients
-  // migrate to the access_token cookie.
-  const legacyToken = jwt.sign(
-    { teacherId: teacher.id, username: teacher.username, sessionId },
-    JWT_SECRET,
-    { algorithm: 'HS256', expiresIn: '7d' },
-  );
-  res.cookie(AUTH_COOKIE_NAME, legacyToken, {
-    httpOnly: true,
-    secure: isSecureCookie,
-    sameSite: 'strict',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
   return res.json({ success: true, teacherId: teacher.id, username: teacher.username, name: teacher.name, isAdmin: !!teacher.is_admin });
 });
 
@@ -154,6 +138,7 @@ authRouter.post('/refresh', async (req, res) => {
   // rotated. Treat as compromise — revoke the entire family.
   if (row.used_at) {
     refreshTokenService.revokeFamily(row.family_id);
+    await sessionService.revoke(row.session_id);
     // Also clear the user's cookies so they're forced to re-login
     res.clearCookie(ACCESS_COOKIE_NAME);
     res.clearCookie(REFRESH_COOKIE_NAME);
