@@ -5,12 +5,26 @@ echo Starting Teacher Assistant as an Internal Site
 echo ===================================================
 echo.
 
-:: Change directory to the location of this batch file
-cd /d "%~dp0"
+:: Change directory to the location of this batch file.
+:: pushd also maps a temporary drive letter for network/UNC paths and fails
+:: loudly when the drive is not available (e.g. USB drive not connected).
+pushd "%~dp0" >nul 2>&1
+IF !errorlevel! NEQ 0 (
+    echo.
+    echo ERROR: Cannot access the app folder:
+    echo   %~dp0
+    echo The drive or network location is not available.
+    echo If this is a USB drive, reconnect it and try again.
+    echo.
+    pause
+    exit /b 1
+)
 
 :: Log file for debugging autostart issues
 set "LOG_FILE=%~dp0server-stdout.log"
 echo [%date% %time%] Starting Teacher Assistant (Internal Site) >> "%LOG_FILE%"
+echo [%date% %time%] Script dir : %~dp0 >> "%LOG_FILE%"
+echo [%date% %time%] Working dir: !CD! >> "%LOG_FILE%"
 
 :: Ensure Bun is installed and dependencies are available
 where bun >nul 2>&1
@@ -84,7 +98,7 @@ IF !errorlevel! NEQ 0 (
 :: Kill any existing process on port 3000 to avoid conflicts
 echo [%date% %time%] Checking for existing server on port 3000... >> "%LOG_FILE%"
 powershell -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; echo 'Killed existing process' } else { echo 'Port 3000 is free' } } catch { echo 'Port check skipped' }" >> "%LOG_FILE%" 2>&1
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 
 :: Check for debug flag
 set MODE=production
@@ -94,7 +108,7 @@ if "!MODE!"=="debug" (
     echo.
     echo Starting in Debug Mode via Node.js...
     echo.
-    call npx tsx server.ts --network
+    call npx --no-install tsx server.ts --network
 ) else (
     IF EXIST "dist\index.html" (
         echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
@@ -133,6 +147,7 @@ if "!MODE!"=="debug" (
     :: cookies so auth persists across requests on trusted LAN deployments.
     set COOKIE_SECURE=false
     echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
-    call npx tsx server.ts --network >> "%LOG_FILE%" 2>&1
+    call npx --no-install tsx server.ts --network >> "%LOG_FILE%" 2>&1
 )
+popd
 endlocal
