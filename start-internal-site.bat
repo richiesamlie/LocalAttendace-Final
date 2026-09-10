@@ -108,7 +108,7 @@ if "!MODE!"=="debug" (
     echo.
     echo Starting in Debug Mode via Node.js...
     echo.
-    call npx --no-install tsx server.ts --network
+    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network
 ) else (
     IF EXIST "dist\index.html" (
         echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
@@ -147,7 +147,7 @@ if "!MODE!"=="debug" (
     :: cookies so auth persists across requests on trusted LAN deployments.
     set COOKIE_SECURE=false
     echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
-    call npx --no-install tsx server.ts --network >> "%LOG_FILE%" 2>&1
+    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network >> "%LOG_FILE%" 2>&1
 )
 popd
 endlocal

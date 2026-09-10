@@ -127,7 +127,7 @@ ping -n 3 127.0.0.1 >nul
 :: Start the app server
 if "!MODE!"=="debug" (
     echo [%date% %time%] Starting server... >> "%LOG_FILE%"
-    call npx --no-install tsx server.ts >> "%LOG_FILE%" 2>&1
+    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
 ) else (
     IF EXIST "dist\index.html" (
         echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
@@ -151,7 +151,7 @@ if "!MODE!"=="debug" (
     :: Local production mode runs on plain HTTP at http://127.0.0.1:3000.
     :: Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
-    call npx --no-install tsx server.ts >> "%LOG_FILE%" 2>&1
+    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
 )
 echo [%date% %time%] Server exited (code !errorlevel!) >> "%LOG_FILE%"
 popd
