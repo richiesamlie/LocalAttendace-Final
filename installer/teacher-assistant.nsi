@@ -59,6 +59,7 @@ Section "Install"
   ; Start Menu Shortcuts
   CreateDirectory "$SMPROGRAMS\Teacher Assistant"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
 
   ; Register in Windows "Apps & Features" / "Add or Remove Programs"
@@ -76,6 +77,7 @@ Section "Uninstall"
   ; Remove shortcuts
   Delete "$DESKTOP\Teacher Assistant.lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk"
+  Delete "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk"
   RMDir "$SMPROGRAMS\Teacher Assistant"
 

@@ -1,15 +1,25 @@
 @echo off
 setlocal EnableDelayedExpansion
 echo ===================================================
-echo Starting Teacher Assistant as an Internal Site
+echo   Teacher Assistant - School Network / LAN Mode
 echo ===================================================
 echo.
+echo   DO NOT CLOSE THIS WINDOW while using the app.
+echo   Closing this window will stop the server.
+echo.
+echo ===================================================
+
+:: Check for debug flag (--debug)
+set MODE=production
+if /i "%~1"=="--debug" set MODE=debug
+
+:: Log file for debugging issues
+set "LOG_FILE=%~dp0server-stdout.log"
 
 :: Change directory to the location of this batch file.
-:: pushd also maps a temporary drive letter for network/UNC paths and fails
-:: loudly when the drive is not available (e.g. USB drive not connected).
 pushd "%~dp0" >nul 2>&1
 IF !errorlevel! NEQ 0 (
+    echo [%date% %time%] ERROR: cannot access app folder: %~dp0 >> "%LOG_FILE%"
     echo.
     echo ERROR: Cannot access the app folder:
     echo   %~dp0
@@ -20,134 +30,115 @@ IF !errorlevel! NEQ 0 (
     exit /b 1
 )
 
-:: Log file for debugging autostart issues
-set "LOG_FILE=%~dp0server-stdout.log"
-echo [%date% %time%] Starting Teacher Assistant (Internal Site) >> "%LOG_FILE%"
+echo [%date% %time%] ========================================== >> "%LOG_FILE%"
+echo [%date% %time%] Starting Teacher Assistant Network Mode (args: %*) >> "%LOG_FILE%"
 echo [%date% %time%] Script dir : %~dp0 >> "%LOG_FILE%"
 echo [%date% %time%] Working dir: !CD! >> "%LOG_FILE%"
 
-:: Ensure Bun is installed and dependencies are available
-where bun >nul 2>&1
-IF !errorlevel! NEQ 0 (
-    echo.
-    echo ERROR: Bun is not installed or not in PATH.
-    echo Install Bun first: https://bun.sh/
-    echo.
-    pause
-    exit /b 1
+:: Determine Node.js binary: prefer bundled portable Node.js if present
+set "NODE_EXE=node"
+if exist "%~dp0node\node.exe" (
+    set "NODE_EXE=%~dp0node\node.exe"
+    echo [%date% %time%] Using bundled Node.js: !NODE_EXE! >> "%LOG_FILE%"
+) else (
+    where node >nul 2>&1
+    IF !errorlevel! NEQ 0 (
+        echo [%date% %time%] ERROR: Node.js is not installed or not in PATH >> "%LOG_FILE%"
+        echo.
+        echo ERROR: Node.js is not installed or not in PATH.
+        echo Please install Node.js [LTS recommended]: https://nodejs.org/
+        echo.
+        pause
+        exit /b 1
+    )
+    echo [%date% %time%] Using system Node.js >> "%LOG_FILE%"
 )
 
-:: Ensure Node.js is installed (used to run the Express backend;
-:: better-sqlite3 native bindings do not load in Bun on Windows)
-where node >nul 2>&1
-IF !errorlevel! NEQ 0 (
-    echo.
-    echo ERROR: Node.js is not installed or not in PATH.
-    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations for better-sqlite3.
-    echo Install Node.js first: https://nodejs.org/
-    echo.
-    pause
-    exit /b 1
+:: Set data directory if installed in Program Files to ensure write access
+if not defined DB_FILE (
+    echo "%~dp0" | findstr /i "Program Files" >nul 2>&1
+    if !errorlevel! EQU 0 (
+        if not defined TEACHER_ASSISTANT_DATA (
+            set "TEACHER_ASSISTANT_DATA=%LOCALAPPDATA%\TeacherAssistant\data"
+        )
+        if not exist "!TEACHER_ASSISTANT_DATA!" mkdir "!TEACHER_ASSISTANT_DATA!"
+        set "DB_FILE=!TEACHER_ASSISTANT_DATA!\database.sqlite"
+    )
 )
 
 IF EXIST "node_modules" (
-    echo [%date% %time%] Dependencies already installed, skipping bun install >> "%LOG_FILE%"
+    echo [%date% %time%] Dependencies already installed >> "%LOG_FILE%"
 ) else (
-    echo [%date% %time%] Installing dependencies with Bun... >> "%LOG_FILE%"
-    call bun install --frozen-lockfile >> "%LOG_FILE%" 2>&1
+    echo [%date% %time%] Installing dependencies with npm... >> "%LOG_FILE%"
+    echo First-time setup: installing dependencies [this takes a moment]...
+    call npm install --omit=dev --no-audit --no-fund >> "%LOG_FILE%" 2>&1
     IF !errorlevel! NEQ 0 (
         echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
         echo.
         echo ERROR: Dependency installation failed!
-        echo.
-        echo Try running: bun install
-        echo If that fails, try: rm -rf node_modules && bun install
+        echo Try running: npm install
         echo.
         pause
         exit /b 1
     )
 )
 
-:: Check if .env file exists - required before the server can start
+:: Auto-generate .env on first run if missing
 IF NOT EXIST ".env" (
-    echo.
-    echo ERROR: .env file not found!
-    echo.
-    echo The app requires JWT_SECRET and DEFAULT_ADMIN_PASSWORD to be set.
-    echo Run the setup script to generate secure values automatically:
-    echo.
-    echo   .\setup-env.ps1
-    echo.
-    echo Then re-run this script.
-    pause
-    exit /b 1
+    echo [%date% %time%] First-time setup: generating .env file... >> "%LOG_FILE%"
+    echo Generating default configuration [.env]...
+    call "!NODE_EXE!" -e "const fs=require('fs'); const crypto=require('crypto'); let ex=''; try{ex=fs.readFileSync('.env.example','utf8');}catch(e){}; const jwt=crypto.randomBytes(32).toString('hex'); const pass='admin123'; let out = ex ? ex.replace('JWT_SECRET=change_this_to_a_secure_random_string','JWT_SECRET='+jwt).replace('DEFAULT_ADMIN_PASSWORD=change_this_to_a_secure_password','DEFAULT_ADMIN_PASSWORD='+pass) : 'JWT_SECRET='+jwt+'\nDEFAULT_ADMIN_PASSWORD='+pass+'\n'; fs.writeFileSync('.env', out, 'utf8'); console.log('[setup] Generated .env file automatically.'); console.log('[setup] Initial admin login: admin / admin123');" >> "%LOG_FILE%" 2>&1
 )
 
-:: Check that DEFAULT_ADMIN_PASSWORD is present in .env
-findstr /i "DEFAULT_ADMIN_PASSWORD" ".env" >nul 2>&1
-IF !errorlevel! NEQ 0 (
-    echo.
-    echo ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!
-    echo The server will not start without it.
-    echo.
-    echo Run .\setup-env.ps1 to add it, then re-run this script.
-    pause
-    exit /b 1
-)
+:: Wait until server responds, then open browser on local machine
+start "" powershell -NoProfile -WindowStyle Hidden -Command "$deadline=(Get-Date).AddSeconds(120); while((Get-Date)-lt $deadline){ try { $r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:3000' -TimeoutSec 2 -ErrorAction SilentlyContinue; if($r.StatusCode -ge 200){ Start-Process 'http://127.0.0.1:3000' -ErrorAction SilentlyContinue; break } } catch {}; Start-Sleep -Seconds 1 }"
 
 :: Kill any existing process on port 3000 to avoid conflicts
 echo [%date% %time%] Checking for existing server on port 3000... >> "%LOG_FILE%"
 powershell -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; echo 'Killed existing process' } else { echo 'Port 3000 is free' } } catch { echo 'Port check skipped' }" >> "%LOG_FILE%" 2>&1
 ping -n 3 127.0.0.1 >nul
 
-:: Check for debug flag
-set MODE=production
-if /i "%~1"=="--debug" set MODE=debug
+:: Build application if needed
+IF NOT EXIST "dist\index.html" (
+    echo [%date% %time%] Building the application for production... >> "%LOG_FILE%"
+    echo Building frontend for first run...
+    call npm run build >> "%LOG_FILE%" 2>&1
+    IF !errorlevel! NEQ 0 (
+        echo [%date% %time%] ERROR: Build failed! >> "%LOG_FILE%"
+        echo.
+        echo ERROR: Build failed!
+        echo Try running: npm run build
+        echo.
+        pause
+        exit /b 1
+    )
+)
+
+echo.
+echo ===================================================
+echo Server is starting in Network / School Wi-Fi Mode...
+echo Local PC access:  http://127.0.0.1:3000
+echo.
+echo Devices on your Wi-Fi or LAN can connect using:
+ipconfig | findstr /i "ipv4"
+echo.
+echo Example: If your IPv4 is 192.168.1.5, other devices open:
+echo   http://192.168.1.5:3000
+echo ===================================================
+echo.
+
+set NODE_ENV=production
+REM Network mode runs on plain HTTP across local LAN.
+REM Use non-secure cookies so auth persists across requests.
+set COOKIE_SECURE=false
 
 if "!MODE!"=="debug" (
-    echo.
-    echo Starting in Debug Mode via Node.js...
-    echo.
-    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network
+    echo [%date% %time%] Starting server in debug mode with --network... >> "%LOG_FILE%"
+    call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network
 ) else (
-    IF EXIST "dist\index.html" (
-        echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
-    ) else (
-        echo [%date% %time%] Building the application for production... >> "%LOG_FILE%"
-        call bun run build >> "%LOG_FILE%" 2>&1
-        IF !errorlevel! NEQ 0 (
-            echo [%date% %time%] ERROR: Build failed! >> "%LOG_FILE%"
-            echo.
-            echo ERROR: Build failed!
-            echo.
-            echo Try running: bun run build
-            echo Check the error messages above for details.
-            echo.
-            pause
-            exit /b 1
-        )
-    )
-
-    echo.
-    echo ===================================================
-    echo Server is starting...
-    echo You can access the site from other computers on your network using your IP address.
-    echo.
-    echo To find your IP address, look for "IPv4 Address" below:
-    ipconfig | findstr /i "ipv4"
-    echo.
-    echo Example: If your IP is 192.168.1.5, open http://192.168.1.5:3000 on another device.
-    echo ===================================================
-    echo.
-
-    REM Set NODE_ENV to production and start the server via Node.js
-    REM better-sqlite3 native bindings do not load in Bun on Windows.
-    set NODE_ENV=production
-    REM Internal-site mode commonly runs on plain HTTP. Allow non-secure
-    REM cookies so auth persists across requests on trusted LAN deployments.
-    set COOKIE_SECURE=false
-    echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
-    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network >> "%LOG_FILE%" 2>&1
+    echo [%date% %time%] Starting server in production mode with --network... >> "%LOG_FILE%"
+    call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network >> "%LOG_FILE%" 2>&1
 )
+echo [%date% %time%] Server exited (code !errorlevel!) >> "%LOG_FILE%"
 popd
 endlocal

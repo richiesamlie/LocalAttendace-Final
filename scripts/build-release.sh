@@ -41,7 +41,7 @@ for dir in db lib middleware routes services types; do
     fi
 done
 
-for file in server.ts routes.ts services.ts db.ts tsconfig.json package.json package-lock.json .env.example README.md start-app.bat start-app.sh setup-env.ps1 setup-env.sh; do
+for file in server.ts routes.ts services.ts db.ts tsconfig.json package.json package-lock.json .env.example README.md start-app.bat start-app.sh start-internal-site.bat setup-env.ps1 setup-env.sh; do
     if [ -f "${REPO_ROOT}/${file}" ]; then
         cp "${REPO_ROOT}/${file}" "${RELEASE_DIR}/"
     fi

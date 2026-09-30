@@ -76,18 +76,21 @@ wait_and_open_browser() {
 
 wait_and_open_browser &
 
-# Check for debug param
+# Check for debug / network params
 MODE="production"
+EXTRA_ARGS=()
 for arg in "$@"; do
     if [ "$arg" == "--debug" ]; then
         MODE="debug"
+    elif [ "$arg" == "--network" ]; then
+        EXTRA_ARGS+=("--network")
     fi
 done
 
 # Start the app server
 if [ "$MODE" == "debug" ]; then
     echo "Starting Teacher Assistant Server in Debug Mode via Node.js..."
-    npx tsx server.ts
+    npx tsx server.ts "${EXTRA_ARGS[@]}"
 else
     if [ -f "dist/index.html" ]; then
         echo "Build already exists, skipping build. (Delete dist/ to rebuild)"
@@ -107,5 +110,5 @@ else
     # Local production mode runs on plain HTTP (http://127.0.0.1:3000).
     # Use non-secure cookies so auth persists across requests.
     export COOKIE_SECURE=false
-    npx tsx server.ts
+    npx tsx server.ts "${EXTRA_ARGS[@]}"
 fi
