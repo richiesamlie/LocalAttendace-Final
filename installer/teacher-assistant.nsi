@@ -55,14 +55,14 @@ Section "Install"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; Desktop Shortcuts
-  CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$WINDIR\System32\wscript.exe" '"$INSTDIR\start-app-hidden.vbs"' "$INSTDIR\public\icon.ico" 0
-  CreateShortCut "$DESKTOP\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0
+  CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
+  CreateShortCut "$DESKTOP\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
 
   ; Start Menu Shortcuts
   CreateDirectory "$SMPROGRAMS\Teacher Assistant"
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$WINDIR\System32\wscript.exe" '"$INSTDIR\start-app-hidden.vbs"' "$INSTDIR\public\icon.ico" 0
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in Network Mode"
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
 
   ; Register in Windows "Apps & Features" / "Add or Remove Programs"
@@ -95,5 +95,5 @@ Section "Uninstall"
 SectionEnd
 
 Function LaunchApp
-  ExecShell "open" "$INSTDIR\start-app-hidden.vbs" "" SW_HIDE
+  ExecShell "open" "$INSTDIR\start-app.bat" "" SW_SHOWMINIMIZED
 FunctionEnd

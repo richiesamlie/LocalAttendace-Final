@@ -7,7 +7,7 @@ Option 1: Windows Installer (Recommended for Teachers)
 1. Download and run "TeacherAssistant-Setup.exe".
 2. Follow the setup wizard (no administrator rights needed).
 3. Click the "Teacher Assistant" shortcut on your Desktop or Start Menu.
-4. The application starts silently in the background and opens in your default browser.
+4. The application starts minimized to the taskbar and opens in your default browser.
 
 Option 2: Portable Bundle (No Installation Needed)
 ---------------------------------------------------
