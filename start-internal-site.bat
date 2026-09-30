@@ -140,11 +140,11 @@ if "!MODE!"=="debug" (
     echo ===================================================
     echo.
 
-    :: Set NODE_ENV to production and start the server via Node.js
-    :: better-sqlite3 native bindings do not load in Bun on Windows.
+    REM Set NODE_ENV to production and start the server via Node.js
+    REM better-sqlite3 native bindings do not load in Bun on Windows.
     set NODE_ENV=production
-    :: Internal-site mode commonly runs on plain HTTP. Allow non-secure
-    :: cookies so auth persists across requests on trusted LAN deployments.
+    REM Internal-site mode commonly runs on plain HTTP. Allow non-secure
+    REM cookies so auth persists across requests on trusted LAN deployments.
     set COOKIE_SECURE=false
     echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
     call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts --network >> "%LOG_FILE%" 2>&1

@@ -50,7 +50,7 @@ if exist "%~dp0node\node.exe" (
         echo [%date% %time%] ERROR: Node.js is not installed or not in PATH >> "%LOG_FILE%"
         echo.
         echo ERROR: Node.js is not installed or not in PATH.
-        echo Please install Node.js (LTS recommended): https://nodejs.org/
+        echo Please install Node.js [LTS recommended]: https://nodejs.org/
         echo.
         if /i not "%~1"=="--startup" pause
         exit /b 1
@@ -74,7 +74,7 @@ IF EXIST "node_modules" (
     echo [%date% %time%] Dependencies already installed >> "%LOG_FILE%"
 ) else (
     echo [%date% %time%] Installing dependencies with npm... >> "%LOG_FILE%"
-    echo First-time setup: installing dependencies (this takes a moment)...
+    echo First-time setup: installing dependencies [this takes a moment]...
     call npm install --omit=dev --no-audit --no-fund >> "%LOG_FILE%" 2>&1
     IF !errorlevel! NEQ 0 (
         echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
@@ -90,7 +90,7 @@ IF EXIST "node_modules" (
 :: Auto-generate .env on first run if missing
 IF NOT EXIST ".env" (
     echo [%date% %time%] First-time setup: generating .env file... >> "%LOG_FILE%"
-    echo Generating default configuration (.env)...
+    echo Generating default configuration [.env]...
     call "!NODE_EXE!" -e "const fs=require('fs'); const crypto=require('crypto'); let ex=''; try{ex=fs.readFileSync('.env.example','utf8');}catch(e){}; const jwt=crypto.randomBytes(32).toString('hex'); const pass='admin123'; let out = ex ? ex.replace('JWT_SECRET=change_this_to_a_secure_random_string','JWT_SECRET='+jwt).replace('DEFAULT_ADMIN_PASSWORD=change_this_to_a_secure_password','DEFAULT_ADMIN_PASSWORD='+pass) : 'JWT_SECRET='+jwt+'\nDEFAULT_ADMIN_PASSWORD='+pass+'\n'; fs.writeFileSync('.env', out, 'utf8'); console.log('[setup] Generated .env file automatically.'); console.log('[setup] Initial admin login: admin / admin123');" >> "%LOG_FILE%" 2>&1
 )
 
@@ -128,9 +128,11 @@ if "!MODE!"=="debug" (
         )
     )
     echo [%date% %time%] Starting server in production mode... >> "%LOG_FILE%"
+    echo Server starting at http://127.0.0.1:3000 ...
+    echo Opening your browser automatically...
     set NODE_ENV=production
-    :: Local production mode runs on plain HTTP at http://127.0.0.1:3000.
-    :: Use non-secure cookies so auth persists across requests.
+    REM Local production mode runs on plain HTTP at http://127.0.0.1:3000.
+    REM Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
     call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
 )
