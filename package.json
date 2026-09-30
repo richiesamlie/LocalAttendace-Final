@@ -110,11 +110,12 @@
       "typescript": "$typescript"
     },
     "ip-address": ">=10.4.0",
-    "brace-expansion": ">=5.0.8",
+    "brace-expansion": ">=5.0.11",
     "minimatch": ">=10.2.6",
     "postcss": ">=8.5.23",
     "socket.io-parser": ">=4.2.7",
-    "engine.io": ">=6.6.7",
+    "engine.io": ">=6.6.10",
+    "qs": ">=6.16.0",
     "fast-uri": ">=3.1.5",
     "undici": ">=7.29.0"
   },
@@ -130,11 +131,12 @@
       "typescript": "$typescript"
     },
     "ip-address": ">=10.4.0",
-    "brace-expansion": ">=5.0.8",
+    "brace-expansion": ">=5.0.11",
     "minimatch": ">=10.2.6",
     "postcss": ">=8.5.23",
     "socket.io-parser": ">=4.2.7",
-    "engine.io": ">=6.6.7",
+    "engine.io": ">=6.6.10",
+    "qs": ">=6.16.0",
     "fast-uri": ">=3.1.5",
     "undici": ">=7.29.0"
   }
