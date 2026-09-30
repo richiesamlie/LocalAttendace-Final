@@ -24,25 +24,25 @@ Full audit closeout: [`docs/plans/2026-06-18-phase10-batch6-remediation-report.m
 ## Quick Start
 
 ### Prerequisites
-- **Bun** ≥ 1.1 (frontend + Vite build)
-- **Node.js** ≥ 18 (backend — `better-sqlite3` native bindings don't load in Bun on Windows)
+- **Node.js** ≥ 18 (LTS recommended)
+- (Optional for development: **Bun** ≥ 1.1)
 
 ### Setup
 ```bash
 git clone https://github.com/richiesamlie/LocalAttendace-Final.git
 cd LocalAttendace-Final
-bun install
-bash setup-env.sh        # Linux/macOS — generates .env with secure random secrets
-# or .\setup-env.ps1     # Windows PowerShell
+npm install
+# Note: .env is auto-generated on first run with default credentials (admin / admin123).
+# Or run setup-env.sh (Linux/macOS) / .\setup-env.ps1 (Windows) to customize.
 ```
 
 ### Run
 
 | Mode | Command |
 |------|---------|
-| Production (local) | `bun run build && NODE_ENV=production npx tsx server.ts` |
-| Production (network) | `bun run build && NODE_ENV=production npx tsx server.ts --network` |
-| Development (hot reload) | `npx tsx server.ts` |
+| Production (local) | `npm run build && npm start` |
+| Production (network) | `npm run build && npm run start:network` |
+| Development (hot reload) | `npm run dev` |
 | One-click | Double-click `start-app.bat` (Windows) or `bash start-app.sh` (Linux/macOS) |
 
 Open `http://127.0.0.1:3000` (or the displayed network IP).

@@ -39,76 +39,59 @@ echo [%date% %time%] Starting Teacher Assistant (args: %*) >> "%LOG_FILE%"
 echo [%date% %time%] Script dir : %~dp0 >> "%LOG_FILE%"
 echo [%date% %time%] Working dir: !CD! >> "%LOG_FILE%"
 
-:: Ensure Bun is installed (used for package management and building the frontend)
-where bun >nul 2>&1
-IF !errorlevel! NEQ 0 (
-    echo [%date% %time%] ERROR: Bun is not installed or not in PATH >> "%LOG_FILE%"
-    echo.
-    echo ERROR: Bun is not installed or not in PATH.
-    echo Install Bun first, required for frontend tooling: https://bun.sh/
-    echo.
-    if /i not "%~1"=="--startup" pause
-    exit /b 1
+:: Determine Node.js binary: prefer bundled portable Node.js if present
+set "NODE_EXE=node"
+if exist "%~dp0node\node.exe" (
+    set "NODE_EXE=%~dp0node\node.exe"
+    echo [%date% %time%] Using bundled Node.js: !NODE_EXE! >> "%LOG_FILE%"
+) else (
+    where node >nul 2>&1
+    IF !errorlevel! NEQ 0 (
+        echo [%date% %time%] ERROR: Node.js is not installed or not in PATH >> "%LOG_FILE%"
+        echo.
+        echo ERROR: Node.js is not installed or not in PATH.
+        echo Please install Node.js (LTS recommended): https://nodejs.org/
+        echo.
+        if /i not "%~1"=="--startup" pause
+        exit /b 1
+    )
+    echo [%date% %time%] Using system Node.js >> "%LOG_FILE%"
 )
 
-:: Ensure Node.js is installed (required for executing the Express backend on Windows)
-where node >nul 2>&1
-IF !errorlevel! NEQ 0 (
-    echo [%date% %time%] ERROR: Node.js is not installed or not in PATH >> "%LOG_FILE%"
-    echo.
-    echo ERROR: Node.js is not installed or not in PATH.
-    echo Node.js is required to execute the backend server on Windows due to Bun native C++ addon limitations for better-sqlite3.
-    echo Install Node.js first: https://nodejs.org/
-    echo.
-    if /i not "%~1"=="--startup" pause
-    exit /b 1
+:: Set data directory if installed in Program Files to ensure write access
+if not defined DB_FILE (
+    echo "%~dp0" | findstr /i "Program Files" >nul 2>&1
+    if !errorlevel! EQU 0 (
+        if not defined TEACHER_ASSISTANT_DATA (
+            set "TEACHER_ASSISTANT_DATA=%LOCALAPPDATA%\TeacherAssistant\data"
+        )
+        if not exist "!TEACHER_ASSISTANT_DATA!" mkdir "!TEACHER_ASSISTANT_DATA!"
+        set "DB_FILE=!TEACHER_ASSISTANT_DATA!\database.sqlite"
+    )
 )
 
 IF EXIST "node_modules" (
-    echo [%date% %time%] Dependencies already installed, skipping bun install >> "%LOG_FILE%"
+    echo [%date% %time%] Dependencies already installed >> "%LOG_FILE%"
 ) else (
-    echo [%date% %time%] Installing dependencies with Bun... >> "%LOG_FILE%"
-    call bun install --frozen-lockfile >> "%LOG_FILE%" 2>&1
+    echo [%date% %time%] Installing dependencies with npm... >> "%LOG_FILE%"
+    echo First-time setup: installing dependencies (this takes a moment)...
+    call npm install --omit=dev --no-audit --no-fund >> "%LOG_FILE%" 2>&1
     IF !errorlevel! NEQ 0 (
         echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
         echo.
         echo ERROR: Dependency installation failed!
-        echo.
-        echo Try running: bun install
-        echo If that fails, try: rm -rf node_modules && bun install
+        echo Try running: npm install
         echo.
         if /i not "%~1"=="--startup" pause
         exit /b 1
     )
 )
 
-:: Check if .env file exists - required before the server can start
+:: Auto-generate .env on first run if missing
 IF NOT EXIST ".env" (
-    echo [%date% %time%] ERROR: .env file not found >> "%LOG_FILE%"
-    echo.
-    echo ERROR: .env file not found!
-    echo.
-    echo The app requires JWT_SECRET and DEFAULT_ADMIN_PASSWORD to be set.
-    echo Run the setup script to generate secure values automatically:
-    echo.
-    echo   .\setup-env.ps1
-    echo.
-    echo Then re-run this script.
-    if /i not "%~1"=="--startup" pause
-    exit /b 1
-)
-
-:: Check that DEFAULT_ADMIN_PASSWORD is present in .env
-findstr /i "DEFAULT_ADMIN_PASSWORD" ".env" >nul 2>&1
-IF !errorlevel! NEQ 0 (
-    echo [%date% %time%] ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env >> "%LOG_FILE%"
-    echo.
-    echo ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!
-    echo The server will not start without it.
-    echo.
-    echo Run .\setup-env.ps1 to add it, then re-run this script.
-    if /i not "%~1"=="--startup" pause
-    exit /b 1
+    echo [%date% %time%] First-time setup: generating .env file... >> "%LOG_FILE%"
+    echo Generating default configuration (.env)...
+    call "!NODE_EXE!" -e "const fs=require('fs'); const crypto=require('crypto'); let ex=''; try{ex=fs.readFileSync('.env.example','utf8');}catch(e){}; const jwt=crypto.randomBytes(32).toString('hex'); const pass='admin123'; let out = ex ? ex.replace('JWT_SECRET=change_this_to_a_secure_random_string','JWT_SECRET='+jwt).replace('DEFAULT_ADMIN_PASSWORD=change_this_to_a_secure_password','DEFAULT_ADMIN_PASSWORD='+pass) : 'JWT_SECRET='+jwt+'\nDEFAULT_ADMIN_PASSWORD='+pass+'\n'; fs.writeFileSync('.env', out, 'utf8'); console.log('[setup] Generated .env file automatically.'); console.log('[setup] Initial admin login: admin / admin123');" >> "%LOG_FILE%" 2>&1
 )
 
 :: When launched from Windows startup, skip opening a browser window
@@ -127,20 +110,18 @@ ping -n 3 127.0.0.1 >nul
 :: Start the app server
 if "!MODE!"=="debug" (
     echo [%date% %time%] Starting server... >> "%LOG_FILE%"
-    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
+    call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
 ) else (
     IF EXIST "dist\index.html" (
         echo [%date% %time%] Build already exists, skipping. Delete dist\ to force rebuild. >> "%LOG_FILE%"
     ) else (
         echo [%date% %time%] Building the application for production... >> "%LOG_FILE%"
-        call bun run build >> "%LOG_FILE%" 2>&1
+        call npm run build >> "%LOG_FILE%" 2>&1
         IF !errorlevel! NEQ 0 (
             echo [%date% %time%] ERROR: Build failed! >> "%LOG_FILE%"
             echo.
             echo ERROR: Build failed!
-            echo.
-            echo Try running: bun run build
-            echo Check the error messages above for details.
+            echo Try running: npm run build
             echo.
             if /i not "%~1"=="--startup" pause
             exit /b 1
@@ -151,7 +132,7 @@ if "!MODE!"=="debug" (
     :: Local production mode runs on plain HTTP at http://127.0.0.1:3000.
     :: Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
-    call node "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
+    call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
 )
 echo [%date% %time%] Server exited (code !errorlevel!) >> "%LOG_FILE%"
 popd

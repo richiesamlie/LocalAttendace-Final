@@ -1,0 +1,35 @@
+===================================================
+  Teacher Assistant - Quick Start Guide
+===================================================
+
+Option 1: Windows Installer (Recommended for Teachers)
+---------------------------------------------------
+1. Download and run "TeacherAssistant-Setup.exe".
+2. Follow the setup wizard (no administrator rights needed).
+3. Click the "Teacher Assistant" shortcut on your Desktop or Start Menu.
+4. The application will start and open in your default browser.
+
+Option 2: Portable Bundle (No Installation Needed)
+---------------------------------------------------
+1. Download and extract "TeacherAssistant-v1.0.0-Windows-Portable.zip".
+2. Double-click "start-app.bat".
+3. The app will automatically configure itself and open in your browser.
+
+First-Time Login
+---------------------------------------------------
+- Default Username: admin
+- Default Password: admin123
+
+Important Security Note:
+Please change the default admin password after your first login by navigating to:
+Admin Dashboard -> Settings
+
+Closing the Application
+---------------------------------------------------
+To stop the server, close the command terminal window, or press Ctrl+C in the terminal.
+
+Need Help?
+---------------------------------------------------
+User Guide:      docs/user-guide.md
+Troubleshooting: docs/troubleshooting.md
+===================================================
