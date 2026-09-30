@@ -86,6 +86,10 @@ if (Test-Path (Join-Path $repoRoot "scripts\startup")) {
     Copy-Item (Join-Path $repoRoot "scripts\startup\*") -Destination (Join-Path $releaseDir "scripts\startup") -Recurse
 }
 
+# Remove any test files from the release folder
+Get-ChildItem -Path (Join-Path $releaseDir "src") -Recurse -Directory -Filter "__tests__" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+Get-ChildItem -Path (Join-Path $releaseDir "src") -Recurse -File -Include "*.test.ts", "*.spec.ts" -ErrorAction SilentlyContinue | Remove-Item -Force
+
 # Copy portable Node.js
 Copy-Item $portableNodeExe -Destination (Join-Path $releaseDir "node\node.exe")
 
@@ -93,7 +97,9 @@ Copy-Item $portableNodeExe -Destination (Join-Path $releaseDir "node\node.exe")
 Write-Host "`n[5/6] Installing production dependencies in release directory..." -ForegroundColor Cyan
 Push-Location $releaseDir
 try {
-    npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+    npm ci --omit=dev --no-audit --no-fund
+    # Ensure native bindings (better-sqlite3, bcrypt, esbuild) are built for Windows
+    npm rebuild
 } finally {
     Pop-Location
 }

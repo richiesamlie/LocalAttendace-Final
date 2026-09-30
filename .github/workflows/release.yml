@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: write
 
@@ -26,22 +26,25 @@ jobs:
         run: npm ci
 
       - name: Install NSIS compiler
-        run: sudo apt-get update && sudo apt-get install -y nsis
+        shell: pwsh
+        run: |
+          if (-not (Get-Command "makensis" -ErrorAction SilentlyContinue)) {
+            choco install nsis -y
+            $nsisDir = "C:\Program Files (x86)\NSIS"
+            if (Test-Path $nsisDir) {
+              echo "$nsisDir" >> $env:GITHUB_PATH
+            }
+          }
 
       - name: Set Version
-        id: version
+        shell: pwsh
         # This generates a version like v1.0.1, v1.0.2 based on the GitHub run number
-        run: echo "VERSION=v1.0.${{ github.run_number }}" >> $GITHUB_ENV
+        run: echo "VERSION=v1.0.${{ github.run_number }}" >> $env:GITHUB_ENV
 
-      - name: Build Portable Windows Bundle
+      - name: Build Portable Windows Bundle & Installer
+        shell: pwsh
         run: |
-          bash scripts/build-release.sh
-          # Build NSIS installer
-          if command -v makensis >/dev/null 2>&1; then
-            cd installer
-            makensis teacher-assistant.nsi
-            cd ..
-          fi
+          powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1
 
       - name: Publish Release
         uses: ncipollo/release-action@v1
@@ -50,8 +53,9 @@ jobs:
           name: "Release ${{ env.VERSION }}"
           body: |
             **For Teachers (Zero-Setup):**
-            1. Download `TeacherAssistant-Setup.exe` (installer) or `TeacherAssistant-v${{ env.VERSION }}-Windows-Portable.zip`.
+            1. Download `TeacherAssistant-Setup.exe` (installer) or `TeacherAssistant-v1.0.0-Windows-Portable.zip`.
             2. Run the installer or extract the zip and double-click `start-app.bat`.
+               - Or double-click `start-internal-site.bat` to host for the whole classroom/school over Wi-Fi.
             3. The app will configure itself automatically and open `http://127.0.0.1:3000` in your browser.
             4. Initial login:
                - **Username:** `admin`

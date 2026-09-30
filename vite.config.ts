@@ -70,10 +70,11 @@ export default defineConfig(({mode}) => {
       globals: true,
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
-      exclude: ['**/node_modules/**', '**/e2e/**'],
+      include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+      exclude: ['**/node_modules/**', '**/e2e/**', '**/release/**', '**/dist/**'],
       coverage: {
         reporter: ['text', 'html'],
-        exclude: ['**/node_modules/**', '**/e2e/**', '**/*.d.ts'],
+        exclude: ['**/node_modules/**', '**/e2e/**', '**/release/**', '**/dist/**', '**/*.d.ts'],
         thresholds: {
           lines: 50,
           functions: 50,

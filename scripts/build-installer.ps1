@@ -30,6 +30,9 @@ if (Get-Command "makensis" -ErrorAction SilentlyContinue) {
 }
 
 if (-not $makensis) {
+    if ($env:CI -eq "true") {
+        Write-Error "makensis.exe (NSIS) not found in CI environment. Installer cannot be built."
+    }
     Write-Host "`n⚠️  makensis.exe (NSIS) not found." -ForegroundColor Yellow
     Write-Host "   To build the setup installer (.exe), install NSIS:" -ForegroundColor Gray
     Write-Host "     choco install nsis -y" -ForegroundColor White

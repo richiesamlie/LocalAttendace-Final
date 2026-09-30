@@ -60,12 +60,16 @@ if [ -d "${REPO_ROOT}/scripts/startup" ]; then
     cp -r "${REPO_ROOT}/scripts/startup/"* "${RELEASE_DIR}/scripts/startup/"
 fi
 
+# Remove any test files from release folder
+rm -rf "${RELEASE_DIR}/src"/**/__tests__
+find "${RELEASE_DIR}/src" -name "*.test.ts" -o -name "*.spec.ts" -delete 2>/dev/null || true
+
 cp "${PORTABLE_NODE}" "${RELEASE_DIR}/node/node.exe"
 
 # 5. Install production dependencies inside release folder
 echo ""
 echo "[5/6] Installing production dependencies in release directory..."
-(cd "${RELEASE_DIR}" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund)
+(cd "${RELEASE_DIR}" && npm ci --omit=dev --no-audit --no-fund && npm rebuild)
 
 # 6. Create Zip archive
 echo ""
