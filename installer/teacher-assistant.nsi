@@ -22,8 +22,8 @@ RequestExecutionLevel user
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish Page: Option to launch application immediately
-!define MUI_FINISHPAGE_RUN "$WINDIR\System32\wscript.exe"
-!define MUI_FINISHPAGE_RUN_PARAMETERS '"$INSTDIR\start-app-hidden.vbs"'
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION "LaunchApp"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch Teacher Assistant now"
 !insertmacro MUI_PAGE_FINISH
 
@@ -55,14 +55,14 @@ Section "Install"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; Desktop Shortcuts
-  CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$WINDIR\System32\wscript.exe" '"$INSTDIR\start-app-hidden.vbs"' "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant"
-  CreateShortCut "$DESKTOP\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
+  CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$WINDIR\System32\wscript.exe" '"$INSTDIR\start-app-hidden.vbs"' "$INSTDIR\public\icon.ico" 0
+  CreateShortCut "$DESKTOP\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0
 
   ; Start Menu Shortcuts
   CreateDirectory "$SMPROGRAMS\Teacher Assistant"
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$WINDIR\System32\wscript.exe" '"$INSTDIR\start-app-hidden.vbs"' "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant"
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in Network Mode"
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$WINDIR\System32\wscript.exe" '"$INSTDIR\start-app-hidden.vbs"' "$INSTDIR\public\icon.ico" 0
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
 
   ; Register in Windows "Apps & Features" / "Add or Remove Programs"
@@ -93,3 +93,7 @@ Section "Uninstall"
   ; Remove files
   RMDir /r "$INSTDIR"
 SectionEnd
+
+Function LaunchApp
+  ExecShell "open" "$INSTDIR\start-app-hidden.vbs" "" SW_HIDE
+FunctionEnd
