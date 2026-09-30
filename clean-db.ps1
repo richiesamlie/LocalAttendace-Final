@@ -17,7 +17,7 @@ Write-Host ""
 
 # Confirm if not forced
 if (-not $Force) {
-    Write-Host "⚠️  This will DELETE all database data!" -ForegroundColor Yellow
+    Write-Host "[warn] This will DELETE all database data!" -ForegroundColor Yellow
     Write-Host ""
     $confirm = Read-Host "Are you sure? (yes/no)"
     if ($confirm -ne "yes") {
@@ -30,7 +30,7 @@ if (-not $Force) {
 }
 
 # Check if server is running
-Write-Host "🔍 Checking for running server..." -ForegroundColor Cyan
+Write-Host "[check] Checking for running server..." -ForegroundColor Cyan
 
 # First check port 3000
 $connections = @(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue)
@@ -38,23 +38,25 @@ $stoppedProcesses = @()
 
 if ($connections.Count -gt 0) {
     # Get unique process IDs, excluding 0 (system Idle process)
-    $processIds = $connections | 
+    $processIds = @(
+        $connections | 
         ForEach-Object { $_.OwningProcess } | 
         Where-Object { $_ -gt 0 } | 
         Select-Object -Unique
+    )
     
     foreach ($processId in $processIds) {
         $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
         
         if ($process -and $process.ProcessName -ne "Idle") {
-            Write-Host "⚠️  Server is running on port 3000 (PID: $processId)" -ForegroundColor Yellow
+            Write-Host "[warn] Server is running on port 3000 (PID: $processId)" -ForegroundColor Yellow
             
             try {
                 Stop-Process -Id $processId -Force
                 $stoppedProcesses += $processId
-                Write-Host "   ✓ Stopped process on port 3000" -ForegroundColor Green
+                Write-Host "   [ok] Stopped process on port 3000" -ForegroundColor Green
             } catch {
-                Write-Host "   ⚠️  Could not stop process: $($_.Exception.Message)" -ForegroundColor Yellow
+                Write-Host "   [warn] Could not stop process: $($_.Exception.Message)" -ForegroundColor Yellow
             }
         }
     }
@@ -69,13 +71,13 @@ $nodeProcesses = Get-Process node -ErrorAction SilentlyContinue | Where-Object {
 if ($nodeProcesses) {
     foreach ($proc in $nodeProcesses) {
         if ($proc.Id -notin $stoppedProcesses) {
-            Write-Host "⚠️  Found node process that may have database locked (PID: $($proc.Id))" -ForegroundColor Yellow
+            Write-Host "[warn] Found node process that may have database locked (PID: $($proc.Id))" -ForegroundColor Yellow
             try {
                 Stop-Process -Id $proc.Id -Force
                 $stoppedProcesses += $proc.Id
-                Write-Host "   ✓ Stopped node process" -ForegroundColor Green
+                Write-Host "   [ok] Stopped node process" -ForegroundColor Green
             } catch {
-                Write-Host "   ⚠️  Could not stop process: $($_.Exception.Message)" -ForegroundColor Yellow
+                Write-Host "   [warn] Could not stop process: $($_.Exception.Message)" -ForegroundColor Yellow
             }
         }
     }
@@ -97,12 +99,12 @@ if ($Backup) {
         }
         
         Copy-Item "database.sqlite" $backupPath
-        Write-Host "💾 Backup created: $backupPath" -ForegroundColor Cyan
+        Write-Host "[backup] Backup created: $backupPath" -ForegroundColor Cyan
     }
 }
 
 # Delete database files
-Write-Host "🗑️  Deleting database files..." -ForegroundColor Cyan
+Write-Host "[clean] Deleting database files..." -ForegroundColor Cyan
 
 $dbFiles = @(
     "database.sqlite",
@@ -121,7 +123,7 @@ foreach ($file in $dbFiles) {
         for ($retry = 0; $retry -lt 3; $retry++) {
             try {
                 Remove-Item $file -Force
-                Write-Host "   ✓ Deleted $file" -ForegroundColor Green
+                Write-Host "   [ok] Deleted $file" -ForegroundColor Green
                 $deletedCount++
                 $deleted = $true
                 break
@@ -133,7 +135,7 @@ foreach ($file in $dbFiles) {
         }
         
         if (-not $deleted) {
-            Write-Host "   ✗ Could not delete $file (locked by another process)" -ForegroundColor Red
+            Write-Host "   [fail] Could not delete $file (locked by another process)" -ForegroundColor Red
             $lockedFiles += $file
         }
     }
@@ -141,18 +143,18 @@ foreach ($file in $dbFiles) {
 
 Write-Host ""
 if ($deletedCount -eq 0 -and $lockedFiles.Count -eq 0) {
-    Write-Host "ℹ️  No database files found" -ForegroundColor Gray
+    Write-Host "[info] No database files found" -ForegroundColor Gray
 } elseif ($lockedFiles.Count -gt 0) {
-    Write-Host "⚠️  Some files could not be deleted" -ForegroundColor Yellow
+    Write-Host "[warn] Some files could not be deleted" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "💡 Try these steps:" -ForegroundColor Cyan
-    Write-Host "   1. Run: .\kill-server.ps1  (or: bun run kill)" -ForegroundColor White
+    Write-Host "[hint] Try these steps:" -ForegroundColor Cyan
+    Write-Host "   1. Run: .\kill-server.ps1  (or: npm run kill)" -ForegroundColor White
     Write-Host "   2. Wait a few seconds" -ForegroundColor White
     Write-Host "   3. Run this script again" -ForegroundColor White
 } else {
-    Write-Host "✅ Database cleaned successfully!" -ForegroundColor Green
+    Write-Host "[ok] Database cleaned successfully!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "📝 Next steps:" -ForegroundColor Cyan
+    Write-Host "[steps] Next steps:" -ForegroundColor Cyan
     Write-Host "   1. Run: .\start-app.bat --debug  (or: npx tsx server.ts)" -ForegroundColor White
     Write-Host "   2. Login with: admin / <DEFAULT_ADMIN_PASSWORD from .env>" -ForegroundColor White
 }

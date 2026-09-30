@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './src/lib/ensure-env';
 import express from "express";
 import compression from "compression";
 import cookieParser from "cookie-parser";

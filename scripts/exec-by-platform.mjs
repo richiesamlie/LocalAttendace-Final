@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -9,7 +9,7 @@ const log = globalThis.console;
 const [, , scriptBase, ...scriptArgs] = proc.argv;
 
 if (!scriptBase) {
-  log.error("Usage: bun scripts/exec-by-platform.mjs <script-base> [args...]");
+  log.error("Usage: node scripts/exec-by-platform.mjs <script-base> [args...]");
   proc.exit(1);
 }
 

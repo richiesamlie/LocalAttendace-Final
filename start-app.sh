@@ -6,15 +6,6 @@
 # Change to script directory
 cd "$(dirname "$0")"
 
-# Ensure Bun is installed (used for package management and building the frontend)
-if ! command -v bun >/dev/null 2>&1; then
-    echo ""
-    echo "ERROR: Bun is not installed or not in PATH."
-    echo "Install Bun first (required for frontend tooling): https://bun.sh/"
-    echo ""
-    exit 1
-fi
-
 # Ensure Node.js is installed (required for executing the Express backend consistently)
 if ! command -v node >/dev/null 2>&1; then
     echo ""
@@ -25,40 +16,22 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "Installing dependencies with Bun..."
-bun install --frozen-lockfile
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "ERROR: Dependency installation failed!"
-    echo ""
-    echo "Try running: bun install"
-    echo "If that fails, try: rm -rf node_modules && bun install"
-    echo ""
-    exit 1
+if [ ! -d "node_modules" ]; then
+    echo "Installing dependencies with npm..."
+    npm install --omit=dev --no-audit --no-fund
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "ERROR: Dependency installation failed!"
+        echo "Try running: npm install"
+        echo ""
+        exit 1
+    fi
 fi
 
-# Check if .env file exists - required before the server can start
+# Auto-generate .env file if missing
 if [ ! -f ".env" ]; then
-    echo ""
-    echo "ERROR: .env file not found!"
-    echo ""
-    echo "The app requires JWT_SECRET and DEFAULT_ADMIN_PASSWORD to be set."
-    echo "Run the setup script to generate secure values automatically:"
-    echo ""
-    echo "  bash setup-env.sh"
-    echo ""
-    echo "Then re-run this script."
-    exit 1
-fi
-
-# Check that DEFAULT_ADMIN_PASSWORD is present in .env
-if ! grep -q "DEFAULT_ADMIN_PASSWORD" .env; then
-    echo ""
-    echo "ERROR: DEFAULT_ADMIN_PASSWORD is missing from .env!"
-    echo "The server will not start without it."
-    echo ""
-    echo "Run: bash setup-env.sh   (to add it automatically)"
-    exit 1
+    echo "First-time setup: generating .env configuration..."
+    node -e "const fs=require('fs'); const crypto=require('crypto'); let ex=''; try{ex=fs.readFileSync('.env.example','utf8');}catch(e){}; const jwt=crypto.randomBytes(32).toString('hex'); const pass='admin123'; let out = ex ? ex.replace('JWT_SECRET=change_this_to_a_secure_random_string','JWT_SECRET='+jwt).replace('DEFAULT_ADMIN_PASSWORD=change_this_to_a_secure_password','DEFAULT_ADMIN_PASSWORD='+pass) : 'JWT_SECRET='+jwt+'\nDEFAULT_ADMIN_PASSWORD='+pass+'\n'; fs.writeFileSync('.env', out, 'utf8'); console.log('[setup] Generated .env file automatically.'); console.log('[setup] Initial admin login: admin / admin123');"
 fi
 
 # Function to open browser (cross-platform)
@@ -116,16 +89,18 @@ if [ "$MODE" == "debug" ]; then
     echo "Starting Teacher Assistant Server in Debug Mode via Node.js..."
     npx tsx server.ts
 else
-    echo "Building the application for production..."
-    bun run build
-    if [ $? -ne 0 ]; then
-        echo ""
-        echo "ERROR: Build failed!"
-        echo ""
-        echo "Try running: bun run build"
-        echo "Check the error messages above for details."
-        echo ""
-        exit 1
+    if [ -f "dist/index.html" ]; then
+        echo "Build already exists, skipping build. (Delete dist/ to rebuild)"
+    else
+        echo "Building the application for production..."
+        npm run build
+        if [ $? -ne 0 ]; then
+            echo ""
+            echo "ERROR: Build failed!"
+            echo "Try running: npm run build"
+            echo ""
+            exit 1
+        fi
     fi
     echo "Starting Teacher Assistant Server in Production Mode via Node.js..."
     export NODE_ENV=production

@@ -18,3 +18,7 @@ spikes/
 
 # Audit artifacts (external repo workdir, not project files)
 audit/
+
+# Release distribution builds
+release/
+node-portable/
