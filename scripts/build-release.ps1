@@ -62,7 +62,8 @@ foreach ($dir in $serverSrcDirs) {
 $rootFiles = @(
     "server.ts", "routes.ts", "services.ts", "db.ts", "tsconfig.json",
     "package.json", "package-lock.json", ".env.example", "README.md",
-    "start-app.bat", "start-app.sh", "start-internal-site.bat", "setup-env.ps1", "setup-env.sh"
+    "start-app.bat", "start-app.sh", "start-internal-site.bat",
+    "start-app-hidden.vbs", "stop-app.bat", "setup-env.ps1", "setup-env.sh"
 )
 foreach ($file in $rootFiles) {
     $filePath = Join-Path $repoRoot $file

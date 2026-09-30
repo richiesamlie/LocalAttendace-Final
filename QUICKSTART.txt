@@ -7,12 +7,12 @@ Option 1: Windows Installer (Recommended for Teachers)
 1. Download and run "TeacherAssistant-Setup.exe".
 2. Follow the setup wizard (no administrator rights needed).
 3. Click the "Teacher Assistant" shortcut on your Desktop or Start Menu.
-4. The application will start and open in your default browser.
+4. The application starts silently in the background and opens in your default browser.
 
 Option 2: Portable Bundle (No Installation Needed)
 ---------------------------------------------------
 1. Download and extract "TeacherAssistant-v1.0.0-Windows-Portable.zip".
-2. Double-click "start-app.bat" (for local single-PC use).
+2. Double-click "start-app-hidden.vbs" (silent background launch) or "start-app.bat".
 3. The app will automatically configure itself and open in your browser.
 
 Sharing on School Wi-Fi / Local Network
@@ -32,7 +32,9 @@ Admin Dashboard -> Settings
 
 Closing the Application
 ---------------------------------------------------
-To stop the server, close the command terminal window, or press Ctrl+C in the terminal.
+- Desktop / Start Menu: Double-click "Stop Teacher Assistant".
+- Portable bundle: Double-click "stop-app.bat".
+- If running visible "start-app.bat" or network mode, close the terminal window.
 
 Need Help?
 ---------------------------------------------------

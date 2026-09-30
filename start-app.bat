@@ -97,6 +97,14 @@ IF NOT EXIST ".env" (
 :: When launched from Windows startup, skip opening a browser window
 if /i "%~1"=="--startup" goto :skip_browser
 
+:: If server is already running, open the browser immediately and exit
+powershell -NoProfile -Command "$r = try { (Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:3000/api/health' -TimeoutSec 1 -ErrorAction SilentlyContinue).StatusCode } catch { 0 }; if ($r -eq 200) { Start-Process 'http://127.0.0.1:3000'; exit 0 } else { exit 1 }" >nul 2>&1
+if !errorlevel! EQU 0 (
+    echo [%date% %time%] Server already running on port 3000, opened browser. >> "%LOG_FILE%"
+    popd
+    exit /b 0
+)
+
 :: Wait until server responds, then open browser
 start "" powershell -NoProfile -WindowStyle Hidden -Command "$deadline=(Get-Date).AddSeconds(120); while((Get-Date)-lt $deadline){ try { $r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:3000' -TimeoutSec 2 -ErrorAction SilentlyContinue; if($r.StatusCode -ge 200){ Start-Process 'http://127.0.0.1:3000' -ErrorAction SilentlyContinue; break } } catch {}; Start-Sleep -Seconds 1 }"
 
