@@ -79,7 +79,11 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run Bun audit (prod deps only, blocking at high)
-        run: bun audit --audit-level=high
+        # --production mirrors `npm audit --omit=dev` in the job above. Without
+        # it this also audits devDependencies, so advisories confined to
+        # build-only tooling (eslint/js-yaml, jsdom/undici, postcss/nanoid,
+        # browserslist) fail a gate documented as production-only.
+        run: bun audit --production --audit-level=high
 
       - name: Generate Bun audit report (including dev deps, non-blocking artifact)
         if: always()
