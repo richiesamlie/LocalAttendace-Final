@@ -1,205 +1,124 @@
-# Teacher Assistant App
+# Teacher Assistant
 
-A local-first web application for teachers to manage classrooms: attendance, student rosters, seating charts, timetables, calendar events, reports, and Excel import/export.
+A fast, offline-first web application designed for teachers to manage classrooms: attendance, student rosters, seating charts, timetables, and reports.
 
-**Bahasa Indonesia:** see [Quick Indonesian Notes](#quick-indonesian-notes).
-
-## 🔒 Security
-
-Audit completed **2026-06-18** — **15 of 15 findings closed** across 6 batches. All HIGH-severity CVEs resolved.
-
-| Layer | Status |
-|-------|--------|
-| Auth & sessions | ✅ Access token (1h) + rotating refresh token (7d, reuse-detected) |
-| Rate limiting | ✅ 150 login / 500 writes / 10 invite redeem, per 15min |
-| Input validation | ✅ Zod schemas on all endpoints |
-| Headers | ✅ Helmet CSP |
-| Password hashing | ✅ bcrypt cost 12, async-only |
-| Dependencies | ✅ 0 HIGH npm CVEs; bun smoke clean |
-| Container | ✅ Non-root, capability drops, resource limits |
-| CI gates | ✅ ESLint `--max-warnings=0`, 226 critical tests, bun smoke |
-
-Full audit closeout: [`docs/plans/2026-06-18-phase10-batch6-remediation-report.md`](docs/plans/2026-06-18-phase10-batch6-remediation-report.md)
-
-## 📦 Download & Run (For Teachers & School Staff)
-
-**Zero developer setup required.** No need to install Node.js, Bun, Docker, or Git. Download pre-packaged builds directly from [**GitHub Releases**](https://github.com/richiesamlie/LocalAttendace-Final/releases/latest):
-
-| Package | Recommended For | Description |
-|---|---|---|
-| **`TeacherAssistant-Setup.exe`** | Most Windows Users | Guided installer wizard. Places a shortcut on your Desktop and Start Menu, includes optional Windows autostart on boot, and provides a clean uninstaller. |
-| **`TeacherAssistant-v1.0.0-Windows-Portable.zip`** | USB Flash Drives / No Install | Self-contained portable folder. Extract anywhere (e.g. USB drive, Documents) and run without touching system files or registry. |
-
-### How to Use:
-1. **Launch:** Run `TeacherAssistant.exe` (or double-click the Desktop icon / `start-app.bat`).
-2. **System Tray:** Teacher Assistant runs neatly in your **Windows System Tray** (near the clock, or under the `^` overflow menu).
-   - **Click the tray icon** to instantly open the app in your browser (`http://127.0.0.1:3000`).
-   - **Right-click the tray icon** to see server status, switch modes, copy URL, restart, or exit.
-3. **Classroom Wi-Fi Sharing:** To allow students or other teachers on the same Wi-Fi to access the app, right-click the tray icon and choose *Mode: Network*, or double-click `start-internal-site.bat`.
-4. **First Login:** Username `admin` | Password `admin123` (change immediately in **Admin Dashboard → Settings**).
-5. **Stop App:** Right-click tray icon → **Exit**, or double-click `stop-app.bat`.
+Everything runs locally on your computer — no internet connection is required, and your data never leaves your machine.
 
 ---
 
-## 💻 Developer & Self-Hosted Quick Start
+## What It Does
 
-For developers, contributors, or Linux self-hosters running from source:
+- **Take Attendance:** Mark present, late, absent, or excused in a few clicks. Supports daily homeroom and subject-based attendance.
+- **Student Rosters:** Manage student profiles, contacts, and notes. Import and export rosters using Excel (`.xlsx`).
+- **Seating Charts:** Visual drag-and-drop classroom desk layouts.
+- **Timetables & Calendar:** Plan weekly class schedules and track school events.
+- **Reports:** Generate printable monthly attendance summaries and export them to Excel.
+- **Offline First:** All data is saved on your computer in a single file (`database.sqlite`).
+- **Classroom Wi-Fi Sharing (Optional):** Broadcast the app across your classroom Wi-Fi so you can take attendance from your phone or tablet.
 
-### Prerequisites
-- **Node.js** ≥ 18 (LTS recommended)
-- (Optional for development: **Bun** ≥ 1.1)
+---
 
-### Setup
+## Download & Run (For Teachers)
+
+No installation of Node.js, Git, or command-line tools is required. Download the latest build from [**GitHub Releases**](https://github.com/richiesamlie/LocalAttendace-Final/releases/latest):
+
+| File | Type | Best For |
+|---|---|---|
+| **`TeacherAssistant-Setup.exe`** | Windows Installer | Most Windows users. Installs to your user folder, creates Desktop & Start Menu shortcuts, and includes an uninstaller. |
+| **`TeacherAssistant-v1.0.0-Windows-Portable.zip`** | Portable ZIP | Running from a USB flash drive or computers where you cannot install software. Unzip and run. |
+
+### Quick Start in 3 Steps
+
+1. **Launch:** Double-click the **Teacher Assistant** shortcut on your Desktop (or `TeacherAssistant.exe` in the portable folder).
+   - The app appears in your **Windows System Tray** (near the clock, or under the `^` arrow).
+   - Your web browser opens automatically to `http://127.0.0.1:3000`.
+2. **Log In:**
+   - **Username:** `admin`
+   - **Password:** `admin123`
+   - *Change your password immediately after logging in via **Admin Dashboard → Settings**.*
+3. **Close the App:** Right-click the system tray icon and select **Exit** (or double-click `stop-app.bat`).
+
+> 💡 **Using a phone or tablet in class?** Double-click `start-internal-site.bat` instead. It will display a link (like `http://192.168.1.50:3000`) that any device connected to your classroom Wi-Fi can open.
+
+---
+
+## Backup & Data Safety
+
+- Your data is stored in **`database.sqlite`** inside the app directory.
+- **To back up:** Copy `database.sqlite` to a USB drive or cloud storage, or click **Backup Database** in the Admin Dashboard.
+- **To restore:** Place your saved `database.sqlite` back into the app directory.
+
+---
+
+## For Developers & Linux/macOS Users
+
+If you want to run from source code or host on a server:
+
+### Run from Source (Node.js)
+
+**Prerequisites:** Node.js 18 or newer.
+
 ```bash
+# 1. Clone the repository
 git clone https://github.com/richiesamlie/LocalAttendace-Final.git
 cd LocalAttendace-Final
+
+# 2. Install dependencies
 npm install
-# Note: .env is auto-generated on first run with default credentials (admin / admin123).
-# Or run setup-env.sh (Linux/macOS) / .\setup-env.ps1 (Windows) to customize.
+
+# 3. Start development server (with hot reload)
+npm run dev
+
+# Or build and run production server
+npm run build
+npm start
 ```
 
-### Run
-
-| Mode | Command |
-|------|---------|
-| Production (local) | `npm run build && npm start` |
-| Production (network) | `npm run build && npm run start:network` |
-| Development (hot reload) | `npm run dev` |
-| One-click | Double-click `start-app.bat` (Windows) or `bash start-app.sh` (Linux/macOS) |
-
-Open `http://127.0.0.1:3000` (or the displayed network IP).
-
-#### LAN / Internal-Site Note (HTTP)
-
-If you run in production mode over plain HTTP (no HTTPS), secure auth cookies may not persist in some browsers. In that case, set this in `.env` for trusted internal networks:
-
-```env
-COOKIE_SECURE=false
-```
-
-Then restart the server and log in again.
-
-`start-app.bat`, `start-app.sh`, `start-internal-site.bat`, and `start-internal-site.sh` now set `COOKIE_SECURE=false` automatically for local/internal HTTP runs.
-
-#### Automatic Startup on Windows Login (Optional)
-
-To have Teacher Assistant automatically launch in the background when Windows starts:
-- **Enable:** Double-click `enable-autostart.bat` (or check the option during Windows installer setup).
-- **Disable:** Double-click `disable-autostart.bat` (or toggle off in Windows Task Manager → Startup Apps).
-- **Policy:** Completely per-user, requires zero administrator rights, and is 100% compliant with standard school laptop security policies.
-
-### First Login
-
-- **Username:** `admin`
-- **Password:** Value of `DEFAULT_ADMIN_PASSWORD` from your `.env`
-
-The app refuses to start if `DEFAULT_ADMIN_PASSWORD` is unset. Change the password after first login via **Admin Dashboard → Settings**.
-
-If login fails after you changed `.env` or restored an older database, sync the admin password hash in the DB with your current `.env` value:
+### Run with Docker (Linux Server / NAS)
 
 ```bash
-npm run db:sync-admin-password
-```
-
-## Docker
-
-```bash
-# Generate .env (one time)
+# 1. Generate environment file
 bash setup-env.sh
 
-# Build + run
+# 2. Start container
 docker-compose up -d
 ```
 
-Available at `http://localhost:3000`. Container runs as non-root (UID 1001), drops all Linux capabilities, capped at 512MB RAM / 1 CPU / 100 processes. Database persists via named volume `teacher-assistant-data` (defined in `docker-compose.yml`).
+The app will be available at `http://localhost:3000`. Data is stored in the Docker volume `teacher-assistant-data`.
 
-## Quick Indonesian Notes
-
-- Login awal: gunakan akun `admin` dengan password dari `DEFAULT_ADMIN_PASSWORD` di file `.env`.
-- Untuk pemakaian sekolah harian: fokus ke Dashboard, Student Roster, Take Attendance, dan Monthly Reports.
-- Import Excel memakai `exceljs` dengan guardrails aktif (batas ukuran file/sheet).
-- Untuk masalah umum, cek [`docs/troubleshooting.md`](docs/troubleshooting.md) dulu sebelum eskalasi.
-
-## Multi-Teacher Roles
-
-| Role | Scope | Permissions |
-|------|-------|-------------|
-| **Administrator** | Global | Access any class, register teachers |
-| **Owner (Homeroom)** | Class | Full control of their class |
-| **Subject Teacher** | Class | Read/write attendance, students, events, invites |
-| **Assistant** | Class | Limited helper access |
-
-Full multi-teacher guide: [User Guide](docs/user-guide.md)
+---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
-| State | Zustand 5, React Query 5 |
-| Backend | Express 4.21, better-sqlite3 12 |
-| Auth | JWT (access 1h + refresh 7d), bcrypt cost 12, HttpOnly `__Host-` cookies |
-| Realtime | Socket.IO 4 (JWT handshake + origin allowlist) |
-| Validation | Zod 4 |
-| Security | Helmet CSP, express-rate-limit, prepared statements, PII log redaction |
-| Database | SQLite (default) or PostgreSQL (optional) |
-| Excel | exceljs |
-| Container | Docker multi-stage alpine, non-root, capability drops |
-| CI | GitHub Actions dual-runtime (Bun + npm) |
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Zustand, React Query
+- **Backend:** Express, better-sqlite3 (SQLite) or optional PostgreSQL
+- **Desktop:** Native C# System Tray runner (`TeacherAssistant.exe`), NSIS installer
+- **Security:** bcrypt password hashing (cost 12), JWT with rotating refresh tokens, Helmet CSP, rate limiting
 
-## CI/CD
-
-GitHub Actions runs three workflows on every push to `develop` and `main`:
-
-| Workflow | develop | main |
-|----------|:-------:|:----:|
-| **CI**: TypeScript Check | ✓ | ✓ |
-| **CI**: ESLint (`--max-warnings=0`) | ✓ | ✓ |
-| **CI**: Build Verification | ✓ | ✓ |
-| **CI**: Docs Link Check | ✓ | ✓ |
-| **CI**: Bun Parity Smoke (blocking) | ✓ | — |
-| **CI**: Critical Tests (226, fast gate) | ✓ | — |
-| **CI**: Full Test Suite (510, main/PR gate) | — | ✓ |
-| **CI**: Test Coverage (main baseline) | — | ✓ |
-| **Security**: npm audit (`--omit=dev --audit-level=high`) | ✓ | ✓ |
-| **Security**: CodeQL Analysis | ✓ | ✓ |
-| **Security**: Bun Security Smoke (blocking at high) | ✓ | — |
-| **Automated Release** | — | ✓ |
-
-**`develop` = blocking/hardening lane. `main` = stable/production lane.** Promotion to `main` requires explicit user approval and uses `git merge --no-ff`.
-
-### Local CI parity
-
-```bash
-npm run lint                              # TypeScript check
-npm run lint:eslint -- --max-warnings=0   # ESLint blocking gate
-npm run test:critical                     # 226 tests (fast)
-npm test                                  # 510 tests (full suite)
-bun install --frozen-lockfile && bun run lint
-bun audit --audit-level=high              # Bun security gate
-```
+---
 
 ## Documentation
 
-| Audience | Document |
-|----------|----------|
-| End users (teachers) | [User Guide](docs/user-guide.md) |
-| Troubleshooting | [Troubleshooting](docs/troubleshooting.md) |
-| Developers | [Developer Guide](docs/developer-guide.md), [Contributing](docs/contributing.md) |
-| Architecture | [Architecture](docs/architecture.md) |
-| API contracts | [API Reference](docs/api-reference.md) |
-| Operations / CI | [Operations Runbook](docs/operations.md) |
-| Dependencies | [Dependency Governance](docs/dependency-governance.md) |
-| All docs | [Documentation Map](docs/documentation-map.md) |
+| Guide | Description |
+|---|---|
+| [User Guide](docs/user-guide.md) | Full tutorial on classes, attendance, grading, and settings |
+| [Troubleshooting](docs/troubleshooting.md) | Solutions for common questions, port issues, and firewall alerts |
+| [Developer Guide](docs/developer-guide.md) | Coding standards, folder structure, and test commands |
+| [Architecture](docs/architecture.md) | Technical architecture, data flow, and Windows packaging |
+| [API Reference](docs/api-reference.md) | REST API endpoints and data schemas |
+| [Operations Runbook](docs/operations.md) | CI/CD workflows, release packaging, and deployment |
+| [Documentation Map](docs/documentation-map.md) | Full index of all documentation files |
 
-## Performance Highlights
+---
 
-- Pre-compiled SQL statements (~40% faster queries)
-- WAL-mode SQLite with auto-checkpointing
-- Gzip compression (60-80% smaller responses)
-- React Query caching (5min stale, 30min cache)
-- Pagination for records/events (handles 10k+ records)
-- All fs operations async (no event-loop blocking)
+## Ringkasan Singkat (Bahasa Indonesia)
+
+- **Aplikasi Offline:** Bekerja 100% tanpa internet di laptop atau komputer sekolah.
+- **Login Awal:** Username `admin`, Password `admin123`. Segera ganti password setelah login pertama di menu Admin Settings.
+- **Backup Data:** Salin file `database.sqlite` ke flashdisk atau Google Drive untuk mencadangkan seluruh data siswa dan absensi.
+- **Panduan Lengkap:** Buka [User Guide](docs/user-guide.md) untuk panduan langkah demi langkah.
+
+---
 
 ## License
 
