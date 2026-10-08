@@ -23,3 +23,4 @@ audit/
 # Release distribution builds
 release/
 node-portable/
+tray/*.exe

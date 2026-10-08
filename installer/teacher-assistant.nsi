@@ -60,13 +60,24 @@ Section "Install"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; Desktop Shortcuts
-  CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
+  IfFileExists "$INSTDIR\TeacherAssistant.exe" 0 +3
+    CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$INSTDIR\TeacherAssistant.exe" "" "$INSTDIR\TeacherAssistant.exe" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant"
+    Goto +2
+    CreateShortCut "$DESKTOP\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
   CreateShortCut "$DESKTOP\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
 
   ; Start Menu Shortcuts
   CreateDirectory "$SMPROGRAMS\Teacher Assistant"
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
-  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in Network Mode"
+  IfFileExists "$INSTDIR\TeacherAssistant.exe" 0 +3
+    CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$INSTDIR\TeacherAssistant.exe" "" "$INSTDIR\TeacherAssistant.exe" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant"
+    Goto +2
+    CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
+
+  IfFileExists "$INSTDIR\TeacherAssistant.exe" 0 +3
+    CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\TeacherAssistant.exe" "--network" "$INSTDIR\TeacherAssistant.exe" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in Network Mode"
+    Goto +2
+    CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in Network Mode"
+
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Enable Autostart on Boot.lnk" "$INSTDIR\enable-autostart.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Enable Automatic Startup on Login"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Disable Autostart on Boot.lnk" "$INSTDIR\disable-autostart.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Disable Automatic Startup"
@@ -107,9 +118,15 @@ Section "Uninstall"
 SectionEnd
 
 Function LaunchApp
+  IfFileExists "$INSTDIR\TeacherAssistant.exe" 0 +3
+    Exec "$INSTDIR\TeacherAssistant.exe"
+    Return
   ExecShell "open" "$INSTDIR\start-app.bat" "" SW_SHOWMINIMIZED
 FunctionEnd
 
 Function EnableAutoStart
+  IfFileExists "$INSTDIR\TeacherAssistant.exe" 0 +3
+    CreateShortCut "$SMSTARTUP\Teacher Assistant.lnk" "$INSTDIR\TeacherAssistant.exe" "--startup" "$INSTDIR\TeacherAssistant.exe" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in system tray on Windows startup"
+    Return
   CreateShortCut "$SMSTARTUP\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant on Windows startup"
 FunctionEnd

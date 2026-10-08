@@ -29,10 +29,17 @@ if (-not $SkipBuild) {
     }
 }
 
-# 2. Download portable Node.js if needed
-Write-Host "`n[2/6] Ensuring portable Node.js..." -ForegroundColor Cyan
+# 2. Download portable Node.js and compile Tray runner
+Write-Host "`n[2/6] Ensuring portable Node.js and building Tray runner..." -ForegroundColor Cyan
 & (Join-Path $PSScriptRoot "download-node-portable.ps1")
 $portableNodeExe = Join-Path $repoRoot "node-portable\node.exe"
+
+try {
+    & (Join-Path $PSScriptRoot "build-tray.ps1")
+} catch {
+    Write-Warning "Could not build tray runner: $_"
+}
+$trayExe = Join-Path $repoRoot "tray\TeacherAssistant.exe"
 
 # 3. Clean and create release directory
 Write-Host "`n[3/6] Preparing release directory..." -ForegroundColor Cyan
@@ -52,6 +59,10 @@ Write-Host "`n[4/6] Copying application files..." -ForegroundColor Cyan
 # Built frontend and pre-bundled backend server
 Copy-Item (Join-Path $repoRoot "dist") -Destination (Join-Path $releaseDir "dist") -Recurse
 Copy-Item (Join-Path $repoRoot "dist-server") -Destination (Join-Path $releaseDir "dist-server") -Recurse
+
+if (Test-Path $trayExe) {
+    Copy-Item $trayExe -Destination (Join-Path $releaseDir "TeacherAssistant.exe")
+}
 
 # Root files
 $rootFiles = @(
