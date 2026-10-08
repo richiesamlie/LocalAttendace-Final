@@ -64,15 +64,89 @@ jobs:
           tag: ${{ env.VERSION }}
           name: "Release ${{ env.VERSION }}"
           body: |
-            **For Teachers (Zero-Setup):**
-            1. Download `TeacherAssistant-Setup.exe` (installer) or `TeacherAssistant-v1.0.0-Windows-Portable.zip`.
-            2. Run the installer or extract the zip and double-click `start-app.bat`.
-               - Or double-click `start-internal-site.bat` to host for the whole classroom/school over Wi-Fi.
-            3. The app will configure itself automatically and open `http://127.0.0.1:3000` in your browser.
-            4. Initial login:
-               - **Username:** `admin`
-               - **Password:** `admin123` (or custom value if you configured `.env`)
-            5. Change your password after login via **Admin Dashboard → Settings**.
+            # 🍎 Teacher Assistant — Beginner's Guide (Panduan Pengguna)
+
+            Welcome! This application requires **zero developer setup** (Node.js, Git, or command-line tools are not needed). Everything is pre-bundled and runs directly on Windows.
+
+            ---
+
+            ### 📦 Step 1: Which file should I download?
+
+            Choose **one** of the two assets below based on your preference:
+
+            1. **`TeacherAssistant-Setup.exe` (Recommended for most Windows users)**
+               - Standard Windows installer wizard.
+               - Automatically installs to your user programs folder and places a **Teacher Assistant** shortcut on your Desktop and Start Menu.
+               - Includes a clean uninstaller in Windows Settings / Apps.
+
+            2. **`TeacherAssistant-v1.0.0-Windows-Portable.zip` (Portable / USB Flash Drive)**
+               - **No installation required.**
+               - Unzip anywhere (e.g. `Downloads`, `Documents`, or a portable USB drive).
+               - Keeps all settings and attendance data self-contained inside the folder without touching the Windows registry.
+
+            ---
+
+            ### 🚀 Step 2: How to start the app?
+
+            You can choose between two modes depending on your teaching scenario:
+
+            #### Mode A: Personal / Single-Computer Mode (Private & Local)
+            * **If you used the installer:** Double-click the **Teacher Assistant** icon on your Desktop.
+            * **If you downloaded the portable zip:** Double-click **`start-app.bat`**.
+            * **What happens:**
+              - Starts the server in private loopback mode (`http://127.0.0.1:3000`).
+              - Automatically opens your default web browser to the login screen.
+              - No other computers or phones on the network can access your app.
+
+            #### Mode B: Classroom / Intra-Site Mode (Share with other devices via Wi-Fi)
+            * Double-click **`start-internal-site.bat`**.
+            * **What happens:**
+              - Broadcasts the application across your classroom Wi-Fi or school local area network.
+              - The black terminal window displays your network link, for example:  
+                👉 `Available on your local network at: http://192.168.1.50:3000`
+              - Any phone, tablet, or laptop connected to the same Wi-Fi can open that link in a browser to take attendance or view classes.
+
+            ---
+
+            ### 🔑 Step 3: Default Login Credentials
+
+            On first launch, sign in with the default administrator account:
+            * **Username:** `admin`
+            * **Password:** `admin123`
+
+            > ⚠️ **Important Security Step:** Change your default password immediately after logging in by visiting **Admin Dashboard → Settings** in the top navigation bar.
+
+            ---
+
+            ### 🛑 Step 4: How to stop or close the app
+
+            * Double-click **`stop-app.bat`** (or simply close the open terminal window).
+            * All attendance records, grades, and student lists are saved immediately to disk.
+
+            ---
+
+            ### 💾 Where is my data saved? (Backup & Restore)
+
+            * All your data is saved inside a single database file named **`database.sqlite`** located in the app directory.
+            * **To back up your data:**
+              - Make a copy of `database.sqlite` and save it to Google Drive, an external flash drive, or cloud storage.
+              - You can also trigger an automatic backup from the **Admin Dashboard**.
+            * **To restore:**
+              - Place your backup `database.sqlite` file back into the app folder.
+
+            ---
+
+            ### ❓ Troubleshooting & Frequently Asked Questions
+
+            * **"Windows protected your PC" (SmartScreen popup):**
+              - Click **"More info"** → click **"Run anyway"**.
+              - *Why this appears:* Community open-source software is not signed by commercial certificates. The code is 100% open-source and audited.
+            * **Windows Firewall popup:**
+              - If you run in Mode B (`start-internal-site.bat`), click **"Allow access"** on private networks so student devices on the same Wi-Fi can reach the server.
+            * **"Port 3000 is already in use" error:**
+              - Double-click **`stop-app.bat`** to kill any lingering background processes, then launch again.
+            * **Does this require internet access?**
+              - **No.** The application is completely local-first and works 100% offline without an active internet connection.
 
             ---
             ### 📝 Changelog
