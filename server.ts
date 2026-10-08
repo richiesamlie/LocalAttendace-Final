@@ -200,19 +200,30 @@ async function startServer() {
   // Global error handler (must be after routes)
   app.use(errorHandler);
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        // In network mode, allow Vite to accept requests from LAN IPs
-        host: isNetwork ? '0.0.0.0' : '127.0.0.1',
-        allowedHosts: isNetwork ? true : undefined,
-      },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+  // Vite middleware for development (only when dist does not exist or explicitly non-production)
+  const distExists = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isProduction = process.env.NODE_ENV === "production" || distExists;
+
+  if (!isProduction) {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: {
+          middlewareMode: true,
+          // In network mode, allow Vite to accept requests from LAN IPs
+          host: isNetwork ? '0.0.0.0' : '127.0.0.1',
+          allowedHosts: isNetwork ? true : undefined,
+        },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (viteErr) {
+      console.warn('[vite] Dev middleware unavailable, serving static dist:', (viteErr as Error).message);
+      app.use(express.static('dist'));
+      app.get('*', (_req, res) => {
+        res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+      });
+    }
   } else {
     // Serve static files in production
     app.use(express.static('dist'));

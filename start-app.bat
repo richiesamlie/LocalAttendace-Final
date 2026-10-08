@@ -145,10 +145,19 @@ if "!MODE!"=="debug" (
     REM Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
     IF EXIST "dist-server\index.cjs" (
-        call "!NODE_EXE!" "%~dp0dist-server\index.cjs" >> "%LOG_FILE%" 2>&1
+        call "!NODE_EXE!" "%~dp0dist-server\index.cjs"
     ) else (
-        call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
+        call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts
     )
+)
+IF !errorlevel! NEQ 0 (
+    echo.
+    echo ===================================================
+    echo  ERROR: Server stopped unexpectedly (exit code !errorlevel!).
+    echo  See the log file for details: %LOG_FILE%
+    echo ===================================================
+    echo.
+    if /i not "%~1"=="--startup" pause
 )
 echo [%date% %time%] Server exited (code !errorlevel!) >> "%LOG_FILE%"
 popd

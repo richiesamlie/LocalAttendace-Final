@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import type { Pool } from 'pg';
 
 const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://localhost:5432/teacher_assistant';
 
@@ -7,13 +7,15 @@ let _pool: Pool | null = null;
 
 export function getPool(): Pool {
   if (!_pool) {
-    _pool = new Pool({
+    // Dynamically require pg so SQLite mode does not require pg to be installed
+    const { Pool: PgPool } = require('pg');
+    _pool = new PgPool({
       connectionString: DATABASE_URL,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     });
-    _pool.on('error', (err) => {
+    _pool.on('error', (err: Error) => {
       console.error('[db] Unexpected error on idle client', err);
     });
   }
