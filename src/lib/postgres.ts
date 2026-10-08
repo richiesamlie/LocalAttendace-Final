@@ -8,16 +8,18 @@ let _pool: Pool | null = null;
 export function getPool(): Pool {
   if (!_pool) {
     // Dynamically require pg so SQLite mode does not require pg to be installed
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Pool: PgPool } = require('pg');
-    _pool = new PgPool({
+    const pool = new PgPool({
       connectionString: DATABASE_URL,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
-    });
-    _pool.on('error', (err: Error) => {
+    }) as Pool;
+    pool.on('error', (err: Error) => {
       console.error('[db] Unexpected error on idle client', err);
     });
+    _pool = pool;
   }
   return _pool;
 }
