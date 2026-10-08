@@ -12,7 +12,7 @@ namespace TeacherAssistant
 {
     static class Program
     {
-        private const string AppGuid = "Global\\TeacherAssistant_Tray_SingleInstance_App";
+        private const string AppGuid = "Local\\TeacherAssistant_Tray_SingleInstance_App";
 
         [STAThread]
         static void Main(string[] args)
@@ -20,21 +20,63 @@ namespace TeacherAssistant
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            bool isFirstInstance;
-            using (var mutex = new Mutex(true, AppGuid, out isFirstInstance))
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                if (!isFirstInstance)
+                try
                 {
-                    // If already running, simply open browser and exit
-                    try
-                    {
-                        Process.Start(new ProcessStartInfo("http://127.0.0.1:3000") { UseShellExecute = true });
-                    }
-                    catch { }
-                    return;
+                    File.AppendAllText(
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tray-error.log"),
+                        DateTime.Now.ToString("s") + " [AppDomain] " + e.ExceptionObject + Environment.NewLine
+                    );
                 }
+                catch { }
+            };
+            Application.ThreadException += (s, e) =>
+            {
+                try
+                {
+                    File.AppendAllText(
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tray-error.log"),
+                        DateTime.Now.ToString("s") + " [Thread] " + e.Exception + Environment.NewLine
+                    );
+                }
+                catch { }
+            };
 
+            bool isFirstInstance = true;
+            Mutex mutex = null;
+            try
+            {
+                mutex = new Mutex(true, AppGuid, out isFirstInstance);
+            }
+            catch
+            {
+                isFirstInstance = true;
+            }
+
+            if (!isFirstInstance)
+            {
+                // If already running, simply open browser and exit
+                try
+                {
+                    Process.Start(new ProcessStartInfo("http://127.0.0.1:3000") { UseShellExecute = true });
+                }
+                catch { }
+                return;
+            }
+
+            try
+            {
                 Application.Run(new TrayApplicationContext(args));
+            }
+            finally
+            {
+                if (mutex != null)
+                {
+                    try { mutex.ReleaseMutex(); } catch { }
+                    mutex.Dispose();
+                }
             }
         }
     }
@@ -48,10 +90,12 @@ namespace TeacherAssistant
         private bool isStartupMode = false;
         private string baseDir;
         private ToolStripMenuItem statusMenuItem;
+        private SynchronizationContext syncContext;
 
         public TrayApplicationContext(string[] args)
         {
             baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            syncContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
 
             foreach (var arg in args)
             {
@@ -138,12 +182,20 @@ namespace TeacherAssistant
 
             UpdateTrayText("Teacher Assistant: Starting...");
 
+            notifyIcon.MouseClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    OpenBrowser();
+                }
+            };
             notifyIcon.DoubleClick += (s, e) => OpenBrowser();
             notifyIcon.BalloonTipClicked += (s, e) => OpenBrowser();
         }
 
         private void UpdateTrayText(string text)
         {
+            if (notifyIcon == null) return;
             if (text.Length > 63)
             {
                 text = text.Substring(0, 63);
@@ -208,58 +260,79 @@ namespace TeacherAssistant
         {
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                var deadline = DateTime.Now.AddSeconds(60);
-                bool healthy = false;
+                try
+                {
+                    var deadline = DateTime.Now.AddSeconds(60);
+                    bool healthy = false;
 
-                while (DateTime.Now < deadline)
+                    while (DateTime.Now < deadline)
+                    {
+                        if (nodeProcess != null && nodeProcess.HasExited)
+                        {
+                            break;
+                        }
+
+                        try
+                        {
+                            var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:3000/api/health");
+                            req.Timeout = 1500;
+                            using (var resp = (HttpWebResponse)req.GetResponse())
+                            {
+                                if (resp.StatusCode == HttpStatusCode.OK)
+                                {
+                                    healthy = true;
+                                    break;
+                                }
+                            }
+                        }
+                        catch { }
+
+                        Thread.Sleep(1000);
+                    }
+
+                    syncContext.Post(__ =>
+                    {
+                        try
+                        {
+                            if (healthy)
+                            {
+                                statusMenuItem.Text = "🟢 Server: Running (Port 3000)";
+                                UpdateTrayText("Teacher Assistant: Running\n" + appUrl);
+
+                                notifyIcon.ShowBalloonTip(3000, "Teacher Assistant is Ready",
+                                    "Running at " + appUrl + "\nClick icon to open in browser.", ToolTipIcon.Info);
+
+                                if (!isStartupMode)
+                                {
+                                    OpenBrowser();
+                                }
+                            }
+                            else
+                            {
+                                string failMsg = (nodeProcess != null && nodeProcess.HasExited)
+                                    ? "Server exited unexpectedly (exit code " + nodeProcess.ExitCode + ")"
+                                    : "Server failed to respond on port 3000";
+
+                                statusMenuItem.Text = "⚠️ Server: Failed / Stopped";
+                                UpdateTrayText("Teacher Assistant: Stopped");
+
+                                notifyIcon.ShowBalloonTip(4000, "Teacher Assistant",
+                                    failMsg + ".\nRight-click tray icon to restart.", ToolTipIcon.Warning);
+                            }
+                        }
+                        catch { }
+                    }, null);
+                }
+                catch (Exception ex)
                 {
                     try
                     {
-                        var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:3000/api/health");
-                        req.Timeout = 1500;
-                        using (var resp = (HttpWebResponse)req.GetResponse())
-                        {
-                            if (resp.StatusCode == HttpStatusCode.OK)
-                            {
-                                healthy = true;
-                                break;
-                            }
-                        }
+                        File.AppendAllText(
+                            Path.Combine(baseDir, "tray-error.log"),
+                            DateTime.Now.ToString("s") + " [HealthCheck] " + ex + Environment.NewLine
+                        );
                     }
                     catch { }
-
-                    Thread.Sleep(1000);
-                }
-
-                if (healthy)
-                {
-                    if (notifyIcon != null && notifyIcon.ContextMenuStrip != null)
-                    {
-                        notifyIcon.ContextMenuStrip.Invoke((Action)(() =>
-                        {
-                            statusMenuItem.Text = "🟢 Server: Running (Port 3000)";
-                            UpdateTrayText("Teacher Assistant: Running\n" + appUrl);
-
-                            notifyIcon.ShowBalloonTip(3000, "Teacher Assistant is Ready",
-                                "Running at " + appUrl + "\nClick icon to open in browser.", ToolTipIcon.Info);
-                        }));
-                    }
-
-                    // If not started in silent background startup mode, open browser automatically
-                    if (!isStartupMode)
-                    {
-                        OpenBrowser();
-                    }
-                }
-                else
-                {
-                    if (notifyIcon != null && notifyIcon.ContextMenuStrip != null)
-                    {
-                        notifyIcon.ContextMenuStrip.Invoke((Action)(() =>
-                        {
-                            statusMenuItem.Text = "⚠️ Server: Starting or Error";
-                        }));
-                    }
                 }
             });
         }
@@ -270,7 +343,11 @@ namespace TeacherAssistant
             StopServer();
             StartServer();
             WaitForServerHealth();
-            notifyIcon.ShowBalloonTip(2000, "Teacher Assistant", "Server is restarting...", ToolTipIcon.Info);
+            try
+            {
+                notifyIcon.ShowBalloonTip(2000, "Teacher Assistant", "Server is restarting...", ToolTipIcon.Info);
+            }
+            catch { }
         }
 
         private void StopServer()
@@ -295,7 +372,7 @@ namespace TeacherAssistant
                 var psi = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = "-NoProfile -Command \"try { $c = Get-NetTCPConnection -LocalPort " + port + " -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } } catch {}\"",
+                    Arguments = "-NoProfile -Command \"try { $c = Get-NetTCPConnection -LocalPort " + port + " -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 0 }; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } } catch {}\"",
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false
