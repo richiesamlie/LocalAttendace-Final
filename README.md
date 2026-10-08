@@ -21,7 +21,29 @@ Audit completed **2026-06-18** — **15 of 15 findings closed** across 6 batches
 
 Full audit closeout: [`docs/plans/2026-06-18-phase10-batch6-remediation-report.md`](docs/plans/2026-06-18-phase10-batch6-remediation-report.md)
 
-## Quick Start
+## 📦 Download & Run (For Teachers & School Staff)
+
+**Zero developer setup required.** No need to install Node.js, Bun, Docker, or Git. Download pre-packaged builds directly from [**GitHub Releases**](https://github.com/richiesamlie/LocalAttendace-Final/releases/latest):
+
+| Package | Recommended For | Description |
+|---|---|---|
+| **`TeacherAssistant-Setup.exe`** | Most Windows Users | Guided installer wizard. Places a shortcut on your Desktop and Start Menu, includes optional Windows autostart on boot, and provides a clean uninstaller. |
+| **`TeacherAssistant-v1.0.0-Windows-Portable.zip`** | USB Flash Drives / No Install | Self-contained portable folder. Extract anywhere (e.g. USB drive, Documents) and run without touching system files or registry. |
+
+### How to Use:
+1. **Launch:** Run `TeacherAssistant.exe` (or double-click the Desktop icon / `start-app.bat`).
+2. **System Tray:** Teacher Assistant runs neatly in your **Windows System Tray** (near the clock, or under the `^` overflow menu).
+   - **Click the tray icon** to instantly open the app in your browser (`http://127.0.0.1:3000`).
+   - **Right-click the tray icon** to see server status, switch modes, copy URL, restart, or exit.
+3. **Classroom Wi-Fi Sharing:** To allow students or other teachers on the same Wi-Fi to access the app, right-click the tray icon and choose *Mode: Network*, or double-click `start-internal-site.bat`.
+4. **First Login:** Username `admin` | Password `admin123` (change immediately in **Admin Dashboard → Settings**).
+5. **Stop App:** Right-click tray icon → **Exit**, or double-click `stop-app.bat`.
+
+---
+
+## 💻 Developer & Self-Hosted Quick Start
+
+For developers, contributors, or Linux self-hosters running from source:
 
 ### Prerequisites
 - **Node.js** ≥ 18 (LTS recommended)
@@ -137,7 +159,6 @@ GitHub Actions runs three workflows on every push to `develop` and `main`:
 | **CI**: Docs Link Check | ✓ | ✓ |
 | **CI**: Bun Parity Smoke (blocking) | ✓ | — |
 | **CI**: Critical Tests (226, fast gate) | ✓ | — |
-| **CI**: Bun Parity Smoke (blocking) | ✓ | — |
 | **CI**: Full Test Suite (510, main/PR gate) | — | ✓ |
 | **CI**: Test Coverage (main baseline) | — | ✓ |
 | **Security**: npm audit (`--omit=dev --audit-level=high`) | ✓ | ✓ |

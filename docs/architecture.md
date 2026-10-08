@@ -1,4 +1,4 @@
-﻿# Architecture — Teacher Assistant
+# Architecture — Teacher Assistant
 
 **Last Updated:** 2026-08-04
 **Branch:** `develop`
@@ -279,6 +279,37 @@ adminRouter.get('/settings', async (_req, res) => {
   // req.adminTeacher available for audit logging
 });
 ```
+
+## Windows Desktop & Deployment Architecture
+
+### Native System Tray Runner (`TeacherAssistant.exe`)
+
+For standard Windows desktop environments, the application includes a native, lightweight GUI tray runner written in C# WinForms ([`tray/TeacherAssistantTray.cs`](../tray/TeacherAssistantTray.cs)):
+
+```
+[ TeacherAssistant.exe (C# WinForms, ~20KB) ]
+  ├── Single-Instance Mutex (Local\TeacherAssistant_Tray_SingleInstance_App)
+  ├── System Tray NotifyIcon & Context Menu (Open, Mode, Restart, Exit)
+  ├── Background Thread: Polling /api/health with SynchronizationContext.Post()
+  └── Child Process: Hidden Node.js runtime (dist-server/index.cjs)
+```
+
+1. **Zero-Dependency Compilation**:
+   - Compiled using the built-in Windows .NET Framework compiler (`%windir%\Microsoft.NET\Framework64\v4.0.30319\csc.exe`) via [`scripts/build-tray.ps1`](../scripts/build-tray.ps1).
+   - Produces a standalone `/target:winexe` binary (~20 KB) with no external runtimes required.
+2. **Single-Instance Enforcement**:
+   - Uses a session-scoped `Local\` mutex. If launched while already running, the secondary instance sends a browser open signal to `http://127.0.0.1:3000` and exits immediately.
+3. **Thread-Safe Asynchronous Health Monitoring**:
+   - Spawns the backend engine asynchronously, then polls `http://127.0.0.1:3000/api/health` from a background worker thread.
+   - Dispatches UI status and balloon tips to the main WinForms thread using `SynchronizationContext.Post()`, ensuring stability even before context menu Win32 window handles (`HWND`) are allocated.
+4. **Lifecycle & Clean Shutdown**:
+   - Listens to `Application.ApplicationExit` and `SystemEvents.SessionEnding` to gracefully terminate the backend child process and free port 3000.
+
+### Release Packaging Pipeline
+
+The release pipeline ([`scripts/build-release.ps1`](../scripts/build-release.ps1)) generates two release artifacts:
+1. **`TeacherAssistant-Setup.exe`**: Built via NSIS (`installer/teacher-assistant.nsi`). Installs per-user to `$LOCALAPPDATA\Programs\Teacher Assistant` (zero admin rights required), registers uninstaller with running process termination hooks, and supports opt-in autostart via `$SMSTARTUP`.
+2. **`TeacherAssistant-v1.0.0-Windows-Portable.zip`**: Self-contained portable distribution bundling portable Node.js 20 LTS, production SQLite driver, bundled frontend assets, and `TeacherAssistant.exe`.
 
 ## See Also
 

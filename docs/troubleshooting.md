@@ -16,6 +16,63 @@
 
 ## Common Issues
 
+### App runs but no window appears (System Tray Runner)
+
+**Cause:** `TeacherAssistant.exe` is designed as a background Windows System Tray application. It does not open a standard window frame.
+
+**Fix:**
+1. Look at your Windows Taskbar System Tray near the digital clock.
+2. In Windows 11 and Windows 10, new icons are hidden by default in the notification overflow menu. Click the small **`^` (chevron)** icon on the taskbar.
+3. Find the red apple **Teacher Assistant** icon.
+4. **Left-click** it to immediately open the app in your browser (`http://127.0.0.1:3000`).
+5. **Right-click** it to view server status, switch to Network Mode, restart, or exit.
+
+---
+
+### "Port 3000 is already in use" or server fails to bind
+
+**Cause:** A previously running background server instance or another program is occupying port 3000.
+
+**Fix:**
+1. Run `stop-app.bat` by double-clicking it in the app directory.
+2. `stop-app.bat` forcefully terminates all active port 3000 listeners and lingering `node.exe` or `TeacherAssistant.exe` processes bound to the directory.
+3. Relaunch `TeacherAssistant.exe` or `start-app.bat`.
+
+---
+
+### "Windows protected your PC" (Microsoft Defender SmartScreen)
+
+**Cause:** SmartScreen displays an alert for newly compiled open-source binaries that lack expensive commercial EV signing certificates.
+
+**Fix:**
+1. Click **"More info"** on the blue dialog.
+2. Click **"Run anyway"**.
+3. The software is 100% open-source and audited against security vulnerabilities.
+
+---
+
+### File locked or cannot delete directory during uninstallation
+
+**Cause:** Windows prevents deleting directories containing active running processes (`node.exe` or `database.sqlite` file locks).
+
+**Fix:**
+1. If uninstalling via the Windows Settings / Control Panel, run the uninstaller (`Uninstall Teacher Assistant.exe`), which automatically terminates running processes before deleting files.
+2. If deleting manually, run `stop-app.bat` first, then delete the folder.
+
+---
+
+### Devices on classroom Wi-Fi cannot connect to Teacher Assistant
+
+**Cause:** Running in local loopback mode (`http://127.0.0.1:3000`) instead of network broadcast mode, or Windows Firewall is blocking incoming connections.
+
+**Fix:**
+1. Launch using **`start-internal-site.bat`** (or right-click the System Tray icon and ensure Network Mode is active).
+2. Note the Wi-Fi IP printed in the terminal (e.g. `http://192.168.1.50:3000`).
+3. Ensure both teacher and student devices are connected to the exact same Wi-Fi SSID / local subnet.
+4. If Windows Firewall prompt appeared, verify that private network access is allowed.
+
+---
+
 ### App won't start — "DEFAULT_ADMIN_PASSWORD environment variable is required"
 
 **Cause:** Missing required environment variable.

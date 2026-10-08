@@ -47,93 +47,110 @@ Catatan bahasa: Dokumen ini berbahasa Inggris sederhana agar konsisten, dengan i
 ### System Requirements:
 - Windows 10 or later
 
-## 2. Installation
+## 2. Installation & Getting Started
 
-You have two options to install the app. Choose the one that works best for you.
+Choose the setup option that matches your scenario:
 
 ---
 
-### Option A: Using Docker (Recommended for Easy Setup)
+### Option 1: Windows Setup Wizard (`TeacherAssistant-Setup.exe`) — Recommended
 
-> **Best for:** Users who want a quick, clean installation without installing Bun.
+> **Best for:** Most teachers and Windows users. Standard setup wizard with zero technical prerequisites.
+
+1. **Download:** Get `TeacherAssistant-Setup.exe` from the latest [GitHub Releases](https://github.com/richiesamlie/LocalAttendace-Final/releases/latest).
+2. **Install:** Double-click the installer and follow the guided prompts.
+   - Installs cleanly to your user profile directory (requires **zero Administrator privileges**).
+   - Automatically places a **Teacher Assistant** shortcut on your Desktop and Start Menu.
+   - **Optional Autostart:** Check `Start Teacher Assistant automatically when Windows starts` on the finish page if you want the app ready whenever you turn on your PC.
+3. **Launch:** Double-click the **Teacher Assistant** icon on your Desktop.
+   - The application starts quietly in your **Windows System Tray** (near the clock).
+   - Your default browser opens automatically to `http://127.0.0.1:3000`.
+
+---
+
+### Option 2: Portable Windows Bundle (`TeacherAssistant-v1.0.0-Windows-Portable.zip`)
+
+> **Best for:** Running from a USB flash drive or computers where you cannot install software.
+
+1. **Download:** Get `TeacherAssistant-v1.0.0-Windows-Portable.zip` from the latest [GitHub Releases](https://github.com/richiesamlie/LocalAttendace-Final/releases/latest).
+2. **Extract:** Unzip the folder anywhere (e.g. `Downloads`, `Documents`, or your USB flash drive).
+3. **Launch:** Double-click `TeacherAssistant.exe` (or `start-app.bat`).
+   - Starts the application with an icon in your system tray and opens your browser.
+   - All attendance records, grades, and databases remain completely self-contained inside the folder.
+
+---
+
+### 🎛️ Using the Windows System Tray Runner (`TeacherAssistant.exe`)
+
+When Teacher Assistant is running:
+- Look for the apple icon in your Windows Taskbar System Tray (near the clock).
+  > **Note for Windows 11/10:** If you do not see the icon directly, click the small upward arrow (`^`) next to the clock to expand hidden tray icons.
+- **Left-Click (Single or Double Click):** Instantly opens the app in your default browser.
+- **Right-Click Context Menu:**
+  - **🌐 Open Teacher Assistant:** Launches the web interface.
+  - **📋 Copy Link:** Copies the web address to your clipboard.
+  - **🟢 Server Status:** Displays whether the server is running and which port is in use.
+  - **📡 Mode:** Shows whether you are in Local Loopback or Network / Intra-Site mode.
+  - **🔄 Restart Server:** Restarts the background backend engine.
+  - **❌ Exit:** Gracefully terminates the server and frees port 3000.
+
+---
+
+### Option 3: Classroom / Intra-Site Mode (Share via Wi-Fi)
+
+> **Best for:** Sharing the attendance app with student devices, phones, or other teachers on the same school Wi-Fi network.
+
+1. Open the app folder and double-click **`start-internal-site.bat`** (or switch to Network Mode in the System Tray).
+2. The terminal displays your classroom network link:
+   ```text
+   👉 Available on your local network at: http://192.168.1.50:3000
+   ```
+3. Any device connected to the same Wi-Fi can open that address in their mobile or tablet browser to access the app.
+4. *Firewall Note:* If Windows Firewall prompts you on first run, select **"Allow access"** on private networks.
+
+---
+
+### Option 4: Using Docker (For Linux / Server Self-Hosters)
+
+> **Best for:** Linux users or administrators running on an internal home/school server.
 
 #### Prerequisites
-1. Install Docker Desktop: `https://www.docker.com/products/docker-desktop/`
-2. Run the installer and follow the prompts
-3. Restart your computer after installation
-4. Open Docker Desktop and wait for it to show "Docker is running"
+1. Install Docker Desktop or Docker Engine + Compose.
 
-#### Step 1: Download the App
-1. Download the ZIP file from: `https://github.com/richiesamlie/LocalAttendace-Final`
-2. Click the green **Code** button → **Download ZIP**
-3. Extract the ZIP to a folder (e.g., `C:\TeacherAssistant`)
-
-#### Step 2: Configure the App
-1. Open the extracted folder
-2. Create a new file named `.env`
-3. Add this line to the file:
+#### Steps
+1. Clone the repository and generate your `.env`:
+   ```bash
+   git clone https://github.com/richiesamlie/LocalAttendace-Final.git
+   cd LocalAttendace-Final
+   bash setup-env.sh
    ```
-   JWT_SECRET=change_this_to_a_secure_random_string
-   ```
-4. Save the file
-
-#### Step 3: Start with Docker Compose
-1. Open Command Prompt as Administrator
-2. Navigate to the app folder:
-   ```
-   cd C:\TeacherAssistant
-   ```
-3. Run:
-   ```
+2. Start the container:
+   ```bash
    docker-compose up -d
    ```
-4. Wait for the download and setup (first time only)
-5. Open your browser to: `http://127.0.0.1:3000`
-
-> **Note:** Your data is stored in the `data` folder. Never delete this folder or you'll lose your data.
-
-#### Docker Commands Reference
-| Command | Description |
-|---------|-------------|
-| `docker-compose up -d` | Start the app |
-| `docker-compose down` | Stop the app |
-| `docker-compose logs -f` | View logs |
-| `docker-compose pull` | Update to latest version |
+3. Open `http://127.0.0.1:3000` in your browser. Data is saved in the `teacher-assistant-data` volume.
 
 ---
 
-### Option B: Using Bun & Node.js (Traditional Method)
+### Option 5: From Source Code (Developers / Bun & Node.js)
 
-> **Best for:** Users who prefer direct control and don't want to install Docker.
+> **Best for:** Developers modifying code or testing pull requests.
 
-> [!NOTE]
-> This application uses **Bun** for rapid frontend package management and asset compilation (Vite), and **Node.js** to execute the Express/SQLite backend server (since Bun on Windows cannot load native C++ modules like `better-sqlite3` yet).
-
-#### Step 1: Download the App
-1. Download the ZIP file from: `https://github.com/richiesamlie/LocalAttendace-Final`
-2. Click the green **Code** button → **Download ZIP**
-3. Extract the ZIP to a folder (e.g., `C:\TeacherAssistant`)
-
-#### Step 2: Install Prerequisites
-1. **Install Bun**: Open PowerShell on Windows and run this command:
-   ```powershell
-   powershell -c "irm bun.sh/install.ps1 | iex"
+1. Install Node.js (v18+) and Bun (v1.1+).
+2. Clone repository and install dependencies:
+   ```bash
+   git clone https://github.com/richiesamlie/LocalAttendace-Final.git
+   cd LocalAttendace-Final
+   npm install
    ```
-2. **Install Node.js**: Download and install Node.js (v18 or higher) from `https://nodejs.org/`.
-3. Restart your computer after both installations complete.
-
-#### Step 3: Install Dependencies & Start the App
-1. Open the extracted folder.
-2. Double-click **`start-app.bat`** to launch the app in optimized Production Mode.
-   - *Optional:* To run in Debug mode instead, open a Command Prompt in the folder and type `start-app.bat --debug`.
-3. A command line window will appear and automatically:
-   - Verify both Bun and Node.js are available.
-   - Install all necessary dependencies using Bun.
-   - Build the high-performance production assets using Bun.
-   - Boot the backend server safely using Node.js/npx.
-4. Wait until you see "Starting Teacher Assistant Server in Production Mode via Node.js..."
-
-> **Note:** Dependency installation and building only happen on the first run. Subsequent starts will be nearly instant.
+3. Run development server:
+   ```bash
+   npm run dev
+   ```
+   Or production server:
+   ```bash
+   npm run build && npm start
+   ```
 
 ---
 
@@ -426,28 +443,57 @@ Your SQLite data is preserved — the app uses it again on restart.
 
 ## 11. Windows Auto-Start
 
-### Set Up Auto-Start
-1. Open the app folder
-2. Double-click `setup-windows-startup.bat`
-3. A confirmation message will appear
-4. The app will now start automatically when you log in
+You can configure Teacher Assistant to automatically start in the background when your computer boots up, so attendance is always ready without manual steps.
 
-### Remove Auto-Start
-1. Press `Windows + R`
-2. Type `shell:startup` and press Enter
-3. Delete `TeacherAssistantStartup.vbs`
+### Policy-Safe & School Compliant
+- Runs strictly in your per-user profile (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`).
+- Requires **zero Administrator rights** and complies with school/government device security policies.
+- Starts quietly in the background directly into the System Tray.
+
+### How to Turn ON Auto-Start
+- **During Installation:** Check `[x] Start Teacher Assistant automatically when Windows starts` on the finish page of `TeacherAssistant-Setup.exe`.
+- **At Any Time (Installer or Portable):** Double-click **`enable-autostart.bat`** (or click the *Enable Auto-Start* shortcut in your Windows Start Menu).
+
+### How to Turn OFF Auto-Start
+- Double-click **`disable-autostart.bat`** (or click *Disable Auto-Start* in your Windows Start Menu).
+- Alternatively, open Windows **Task Manager** (`Ctrl+Shift+Esc`) → **Startup apps** → right-click **Teacher Assistant** → **Disable**.
 
 ---
 
 ## 12. Troubleshooting
 
-### App Won't Start (Bun Method)
-**Problem:** Command line window closes immediately
-**Solution:**
-1. Open Command Prompt
-2. Navigate to the app folder: `cd C:\TeacherAssistant`
-3. Run: `start-app.bat` (or `bun run start`)
-4. Read the error message
+### Can't Find the App Window After Launching
+**Symptoms:** You double-clicked `TeacherAssistant.exe`, but no regular application window appears on screen.  
+**Resolution:**
+1. Teacher Assistant runs as a background service in your **Windows System Tray** (near the clock).
+2. On Windows 11 and 10, new tray icons are tucked into the hidden overflow menu by default. Click the small **`^` (chevron)** icon next to your Wi-Fi/volume indicators on the taskbar.
+3. You will see the red apple **Teacher Assistant** icon. Click it to open your web browser.
+
+### "Teacher Assistant is already running" or Port 3000 in Use
+**Symptoms:** Starting the app fails because port 3000 is occupied by a lingering process.  
+**Resolution:**
+1. Double-click **`stop-app.bat`** in the application folder.
+2. This safely kills any lingering server processes and frees the port.
+3. Launch `TeacherAssistant.exe` or `start-app.bat` again.
+
+### "Windows protected your PC" (Microsoft Defender SmartScreen)
+**Symptoms:** Windows displays a blue popup warning when launching the installer or executable.  
+**Resolution:**
+1. Click **"More info"**.
+2. Click **"Run anyway"**.
+3. *Why this happens:* Open-source community software is not signed with costly commercial EV certificates. The code is 100% open source, malware-free, and audited.
+
+### Files Cannot Be Deleted When Uninstalling
+**Symptoms:** Windows reports that a file in the app directory (`node.exe` or `database.sqlite`) is locked or in use.  
+**Resolution:**
+1. Double-click **`stop-app.bat`** to terminate running processes before manual deletion.
+2. If using the official installer, running `Uninstall Teacher Assistant.exe` automatically stops background processes before removing files.
+
+### App Won't Start (Command line closes immediately)
+**Resolution:**
+1. Open Command Prompt or PowerShell in the app directory.
+2. Run `.\start-app.bat` directly in the terminal to inspect the error log.
+3. Verify that `node\node.exe` (or your local Node installation) exists.
 
 ### App Won't Start (Docker Method)
 **Problem:** `docker-compose up` fails

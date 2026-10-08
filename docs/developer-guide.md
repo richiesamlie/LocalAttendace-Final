@@ -337,9 +337,27 @@ gh pr create --title "feat: description"
 
 ---
 
+## Building Windows Releases Locally
+
+You can build the native system tray runner and complete installer packages on a Windows workstation:
+
+```powershell
+# 1. Compile native System Tray executable (TeacherAssistant.exe):
+powershell -ExecutionPolicy Bypass -File scripts\build-tray.ps1
+
+# 2. Build complete pre-bundled portable distribution and NSIS installer:
+powershell -ExecutionPolicy Bypass -File scripts\build-release.ps1
+```
+
+The output artifacts will be placed in:
+- `release/TeacherAssistant-Setup.exe`
+- `release/TeacherAssistant-v1.0.0-Windows-Portable.zip`
+
+---
+
 ## See Also
 
-- `architecture.md` — System design and data flow
-- `api-reference.md` — All API endpoints
-- `troubleshooting.md` — Common issues and fixes
-- `documentation-map.md` — Active documentation index
+- [Architecture](architecture.md) — System design and data flow
+- [API Reference](api-reference.md) — All API endpoints
+- [Troubleshooting](troubleshooting.md) — Common issues and fixes
+- [Documentation Map](documentation-map.md) — Active documentation index

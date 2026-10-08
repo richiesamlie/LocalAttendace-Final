@@ -21,17 +21,19 @@
 | [dependency-governance.md](dependency-governance.md) | Dependency update cadence, validation, and rollback strategy | Maintainers |
 | [release-notes-template.md](release-notes-template.md) | Standard release note template for promote `develop` -> `main` | Maintainers |
 | [repository-artifact-policy.md](repository-artifact-policy.md) | Source vs runtime artifact boundaries for clean commits | Contributors |
+| [operations.md](operations.md) | Operations runbook, CI/CD triage, and desktop release pipeline | Maintainers / Ops |
 
 ---
 
 ## Current Repository Status
 
+- **Windows Desktop Release Pipeline**: Automated NSIS installer (`TeacherAssistant-Setup.exe`), portable zip, and native C# system tray runner (`TeacherAssistant.exe`) with autostart support.
 - **Security audit completed 2026-06-18** — 15 of 15 findings closed (Phase 10, Batches 1-6)
 - Audit closeout docs in `docs/plans/2026-06-18-phase10-batch{1..6}-remediation-report.md`
 - Cumulative release notes in `docs/release-notes-develop-to-main-2026-06-18-audit-remediation-batch{1..6}.md`
 - Excel engine: `exceljs` (with import/export guardrails)
 - Runtime: bcrypt cost 12, async-only paths
-- CI: GitHub Actions dual-runtime (Bun + npm); `develop` is blocking/hardening lane, `main` is stable
+- CI: GitHub Actions dual-runtime (Bun + npm) with Automated Release workflow; `develop` is blocking/hardening lane, `main` is stable
 
 ---
 
