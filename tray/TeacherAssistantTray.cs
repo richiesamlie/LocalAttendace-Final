@@ -90,6 +90,8 @@ namespace TeacherAssistant
         private bool isStartupMode = false;
         private string baseDir;
         private ToolStripMenuItem statusMenuItem;
+        private ToolStripMenuItem modeToggleItem;
+        private ToolStripMenuItem copyItem;
         private SynchronizationContext syncContext;
 
         public TrayApplicationContext(string[] args)
@@ -123,7 +125,7 @@ namespace TeacherAssistant
             StartServer();
 
             // Wait for server health in background and optionally open browser
-            WaitForServerHealth();
+            WaitForServerHealth(!isStartupMode);
         }
 
         private void InitializeTray()
@@ -134,7 +136,7 @@ namespace TeacherAssistant
             openItem.Font = new Font(openItem.Font, FontStyle.Bold);
             menu.Items.Add(openItem);
 
-            var copyItem = new ToolStripMenuItem("📋 Copy Link (" + appUrl + ")", null, (s, e) => {
+            copyItem = new ToolStripMenuItem("📋 Copy Link (" + appUrl + ")", null, (s, e) => {
                 try
                 {
                     Clipboard.SetText(appUrl);
@@ -150,9 +152,12 @@ namespace TeacherAssistant
             statusMenuItem.Enabled = false;
             menu.Items.Add(statusMenuItem);
 
-            var modeItem = new ToolStripMenuItem(isNetworkMode ? "📡 Mode: Network / Intra-Site" : "🔒 Mode: Local Loopback", null);
-            modeItem.Enabled = false;
-            menu.Items.Add(modeItem);
+            modeToggleItem = new ToolStripMenuItem(
+                isNetworkMode ? "🔒 Switch to Local Mode (This PC Only)" : "📡 Switch to Classroom Wi-Fi Mode",
+                null,
+                (s, e) => ToggleNetworkMode()
+            );
+            menu.Items.Add(modeToggleItem);
 
             var restartItem = new ToolStripMenuItem("🔄 Restart Server", null, (s, e) => RestartServer());
             menu.Items.Add(restartItem);
@@ -193,6 +198,56 @@ namespace TeacherAssistant
             notifyIcon.BalloonTipClicked += (s, e) => OpenBrowser();
         }
 
+        private int currentEpoch = 0;
+
+        private void ToggleNetworkMode()
+        {
+            isNetworkMode = !isNetworkMode;
+            UpdateModeUI();
+
+            statusMenuItem.Text = "⏳ Server: Switching mode...";
+            StopServer();
+            StartServer();
+            WaitForServerHealth(true);
+
+            try
+            {
+                string switchMsg = isNetworkMode
+                    ? "Switched to Classroom Wi-Fi Mode.\nAccessible at: " + appUrl
+                    : "Switched to Local Mode.\nPrivate to this computer: " + appUrl;
+                notifyIcon.ShowBalloonTip(2500, "Teacher Assistant", switchMsg, ToolTipIcon.Info);
+            }
+            catch { }
+        }
+
+        private void UpdateModeUI()
+        {
+            if (isNetworkMode)
+            {
+                string localIp = GetLocalIPAddress();
+                appUrl = "http://" + localIp + ":3000";
+                if (modeToggleItem != null)
+                {
+                    modeToggleItem.Text = "🔒 Switch to Local Mode (This PC Only)";
+                }
+            }
+            else
+            {
+                appUrl = "http://127.0.0.1:3000";
+                if (modeToggleItem != null)
+                {
+                    modeToggleItem.Text = "📡 Switch to Classroom Wi-Fi Mode";
+                }
+            }
+
+            if (copyItem != null)
+            {
+                copyItem.Text = "📋 Copy Link (" + appUrl + ")";
+            }
+
+            UpdateTrayText("Teacher Assistant: " + (isNetworkMode ? "Wi-Fi" : "Local") + "\n" + appUrl);
+        }
+
         private void UpdateTrayText(string text)
         {
             if (notifyIcon == null) return;
@@ -230,8 +285,8 @@ namespace TeacherAssistant
                 // Dev fallback if not pre-bundled
                 if (!File.Exists(serverScript))
                 {
-                    nodeExe = "npx";
-                    args = "tsx server.ts" + (isNetworkMode ? " --network" : "");
+                    nodeExe = "cmd.exe";
+                    args = "/c npx tsx server.ts" + (isNetworkMode ? " --network" : "");
                 }
 
                 var psi = new ProcessStartInfo
@@ -256,8 +311,9 @@ namespace TeacherAssistant
             }
         }
 
-        private void WaitForServerHealth()
+        private void WaitForServerHealth(bool openBrowserOnSuccess = true)
         {
+            int myEpoch = Interlocked.Increment(ref currentEpoch);
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -267,6 +323,11 @@ namespace TeacherAssistant
 
                     while (DateTime.Now < deadline)
                     {
+                        if (myEpoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+                        {
+                            return;
+                        }
+
                         if (nodeProcess != null && nodeProcess.HasExited)
                         {
                             break;
@@ -290,19 +351,35 @@ namespace TeacherAssistant
                         Thread.Sleep(1000);
                     }
 
+                    if (myEpoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+                    {
+                        return;
+                    }
+
                     syncContext.Post(__ =>
                     {
+                        if (myEpoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+                        {
+                            return;
+                        }
+
                         try
                         {
                             if (healthy)
                             {
-                                statusMenuItem.Text = "🟢 Server: Running (Port 3000)";
-                                UpdateTrayText("Teacher Assistant: Running\n" + appUrl);
+                                statusMenuItem.Text = isNetworkMode
+                                    ? "🟢 Server: Wi-Fi (" + appUrl.Replace("http://", "") + ")"
+                                    : "🟢 Server: Running (Local)";
+                                UpdateTrayText("Teacher Assistant: " + (isNetworkMode ? "Wi-Fi" : "Local") + "\n" + appUrl);
 
-                                notifyIcon.ShowBalloonTip(3000, "Teacher Assistant is Ready",
-                                    "Running at " + appUrl + "\nClick icon to open in browser.", ToolTipIcon.Info);
+                                string tipTitle = isNetworkMode ? "Classroom Wi-Fi Mode Ready" : "Teacher Assistant is Ready";
+                                string tipBody = isNetworkMode
+                                    ? "Available on Wi-Fi at:\n" + appUrl + "\nClick icon to open in browser."
+                                    : "Running at " + appUrl + "\nClick icon to open in browser.";
 
-                                if (!isStartupMode)
+                                notifyIcon.ShowBalloonTip(3000, tipTitle, tipBody, ToolTipIcon.Info);
+
+                                if (openBrowserOnSuccess)
                                 {
                                     OpenBrowser();
                                 }
@@ -342,7 +419,7 @@ namespace TeacherAssistant
             statusMenuItem.Text = "⏳ Server: Restarting...";
             StopServer();
             StartServer();
-            WaitForServerHealth();
+            WaitForServerHealth(false);
             try
             {
                 notifyIcon.ShowBalloonTip(2000, "Teacher Assistant", "Server is restarting...", ToolTipIcon.Info);
@@ -365,8 +442,24 @@ namespace TeacherAssistant
             KillProcessOnPort(3000);
         }
 
+        private bool IsPortInUse(int port)
+        {
+            try
+            {
+                var listeners = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+                foreach (var endpoint in listeners)
+                {
+                    if (endpoint.Port == port) return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
         private void KillProcessOnPort(int port)
         {
+            if (!IsPortInUse(port)) return;
+
             try
             {
                 var psi = new ProcessStartInfo
