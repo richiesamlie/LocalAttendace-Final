@@ -93,7 +93,7 @@ The app will be available at `http://localhost:3000`. Data is stored in the Dock
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Zustand, React Query
 - **Backend:** Express, better-sqlite3 (SQLite) or optional PostgreSQL
 - **Desktop:** Native C# System Tray runner (`TeacherAssistant.exe`), NSIS installer
-- **Security:** bcrypt password hashing (cost 12), JWT with rotating refresh tokens, Helmet CSP, rate limiting
+- **Security:** bcrypt password hashing (cost 12), JWT with rotating refresh tokens, Helmet CSP, and rate limiting (150 login / 500 write requests per 15min)
 
 ---
 
