@@ -21,10 +21,15 @@ RequestExecutionLevel user
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 
-; Finish Page: Option to launch application immediately
+; Finish Page: Option to launch application immediately and optional autostart
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchApp"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch Teacher Assistant now"
+
+!define MUI_FINISHPAGE_SHOWREADME ""
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "Start Teacher Assistant automatically when Windows starts"
+!define MUI_FINISHPAGE_SHOWREADME_FUNCTION "EnableAutoStart"
 !insertmacro MUI_PAGE_FINISH
 
 ; Uninstaller Pages
@@ -63,6 +68,8 @@ Section "Install"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk" "$INSTDIR\start-internal-site.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Launch Teacher Assistant in Network Mode"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk" "$INSTDIR\stop-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Stop Teacher Assistant"
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Enable Autostart on Boot.lnk" "$INSTDIR\enable-autostart.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Enable Automatic Startup on Login"
+  CreateShortCut "$SMPROGRAMS\Teacher Assistant\Disable Autostart on Boot.lnk" "$INSTDIR\disable-autostart.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWNORMAL "" "Disable Automatic Startup"
   CreateShortCut "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\Uninstall.exe" 0
 
   ; Register in Windows "Apps & Features" / "Add or Remove Programs"
@@ -77,12 +84,17 @@ Section "Install"
 SectionEnd
 
 Section "Uninstall"
+  ; Remove startup shortcut if enabled
+  Delete "$SMSTARTUP\Teacher Assistant.lnk"
+
   ; Remove shortcuts
   Delete "$DESKTOP\Teacher Assistant.lnk"
   Delete "$DESKTOP\Stop Teacher Assistant.lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Teacher Assistant (Network Mode).lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Stop Teacher Assistant.lnk"
+  Delete "$SMPROGRAMS\Teacher Assistant\Enable Autostart on Boot.lnk"
+  Delete "$SMPROGRAMS\Teacher Assistant\Disable Autostart on Boot.lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk"
   RMDir "$SMPROGRAMS\Teacher Assistant"
 
@@ -96,4 +108,8 @@ SectionEnd
 
 Function LaunchApp
   ExecShell "open" "$INSTDIR\start-app.bat" "" SW_SHOWMINIMIZED
+FunctionEnd
+
+Function EnableAutoStart
+  CreateShortCut "$SMSTARTUP\Teacher Assistant.lnk" "$INSTDIR\start-app.bat" "" "$INSTDIR\public\icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Teacher Assistant on Windows startup"
 FunctionEnd

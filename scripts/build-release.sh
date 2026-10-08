@@ -36,7 +36,7 @@ echo "[4/6] Copying application files..."
 cp -r "${REPO_ROOT}/dist" "${RELEASE_DIR}/"
 cp -r "${REPO_ROOT}/dist-server" "${RELEASE_DIR}/"
 
-for file in .env.example README.md start-app.bat start-app.sh start-internal-site.bat start-internal-site.sh start-app-hidden.vbs stop-app.bat setup-env.ps1 setup-env.sh; do
+for file in .env.example README.md start-app.bat start-app.sh start-internal-site.bat start-internal-site.sh start-app-hidden.vbs stop-app.bat setup-env.ps1 setup-env.sh enable-autostart.bat disable-autostart.bat; do
     if [ -f "${REPO_ROOT}/${file}" ]; then
         cp "${REPO_ROOT}/${file}" "${RELEASE_DIR}/"
     fi

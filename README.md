@@ -59,6 +59,13 @@ Then restart the server and log in again.
 
 `start-app.bat`, `start-app.sh`, `start-internal-site.bat`, and `start-internal-site.sh` now set `COOKIE_SECURE=false` automatically for local/internal HTTP runs.
 
+#### Automatic Startup on Windows Login (Optional)
+
+To have Teacher Assistant automatically launch in the background when Windows starts:
+- **Enable:** Double-click `enable-autostart.bat` (or check the option during Windows installer setup).
+- **Disable:** Double-click `disable-autostart.bat` (or toggle off in Windows Task Manager → Startup Apps).
+- **Policy:** Completely per-user, requires zero administrator rights, and is 100% compliant with standard school laptop security policies.
+
 ### First Login
 
 - **Username:** `admin`

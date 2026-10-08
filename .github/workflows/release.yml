@@ -136,6 +136,16 @@ jobs:
 
             ---
 
+            ### ⚡ Optional: Automatic Startup on Windows Boot
+            * **During installation:** Simply check the box on the finish page:  
+              `[x] Start Teacher Assistant automatically when Windows starts`
+            * **At any time (Installer or Portable ZIP):**
+              - To turn autostart **ON**: Double-click **`enable-autostart.bat`** (or use the Start Menu shortcut).
+              - To turn autostart **OFF**: Double-click **`disable-autostart.bat`** (or toggle it in Windows Task Manager → Startup Apps).
+            * **Policy safe:** Requires **zero Administrator privileges**, works on restricted school laptops, and starts minimized in the background.
+
+            ---
+
             ### ❓ Troubleshooting & Frequently Asked Questions
 
             * **"Windows protected your PC" (SmartScreen popup):**

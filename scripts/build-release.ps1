@@ -57,7 +57,8 @@ Copy-Item (Join-Path $repoRoot "dist-server") -Destination (Join-Path $releaseDi
 $rootFiles = @(
     ".env.example", "README.md",
     "start-app.bat", "start-app.sh", "start-internal-site.bat", "start-internal-site.sh",
-    "start-app-hidden.vbs", "stop-app.bat", "setup-env.ps1", "setup-env.sh"
+    "start-app-hidden.vbs", "stop-app.bat", "setup-env.ps1", "setup-env.sh",
+    "enable-autostart.bat", "disable-autostart.bat"
 )
 foreach ($file in $rootFiles) {
     $filePath = Join-Path $repoRoot $file
