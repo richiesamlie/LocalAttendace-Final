@@ -95,10 +95,15 @@ Section "Install"
 SectionEnd
 
 Section "Uninstall"
-  ; Remove startup shortcut if enabled
+  ; 1. Terminate any running instances of Teacher Assistant or Node.js in $INSTDIR
+  nsExec::Exec 'cmd.exe /c "taskkill /F /IM TeacherAssistant.exe /T >nul 2>&1"'
+  nsExec::Exec 'powershell.exe -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } } catch {}; Get-Process -Name node,TeacherAssistant -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path -like \"$INSTDIR*\" } | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"'
+  Sleep 1000
+
+  ; 2. Remove startup shortcut if enabled
   Delete "$SMSTARTUP\Teacher Assistant.lnk"
 
-  ; Remove shortcuts
+  ; 3. Remove shortcuts
   Delete "$DESKTOP\Teacher Assistant.lnk"
   Delete "$DESKTOP\Stop Teacher Assistant.lnk"
   Delete "$SMPROGRAMS\Teacher Assistant\Teacher Assistant.lnk"
@@ -109,12 +114,36 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\Teacher Assistant\Uninstall Teacher Assistant.lnk"
   RMDir "$SMPROGRAMS\Teacher Assistant"
 
-  ; Remove registry keys
+  ; 4. Remove registry keys
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant"
   DeleteRegKey HKCU "Software\TeacherAssistant"
 
-  ; Remove files
+  ; 5. Prompt to keep or remove attendance database
+  MessageBox MB_YESNO|MB_ICONQUESTION "Do you want to completely remove your database and attendance data?$\n$\nSelect 'Yes' to remove all data.$\nSelect 'No' to keep database.sqlite as a backup." IDNO KeepDatabase
+
   RMDir /r "$INSTDIR"
+  Goto FinishUninstall
+
+KeepDatabase:
+  RMDir /r "$INSTDIR\dist"
+  RMDir /r "$INSTDIR\dist-server"
+  RMDir /r "$INSTDIR\node"
+  RMDir /r "$INSTDIR\node_modules"
+  RMDir /r "$INSTDIR\public"
+  RMDir /r "$INSTDIR\scripts"
+  Delete "$INSTDIR\TeacherAssistant.exe"
+  Delete "$INSTDIR\*.bat"
+  Delete "$INSTDIR\*.sh"
+  Delete "$INSTDIR\*.vbs"
+  Delete "$INSTDIR\*.ps1"
+  Delete "$INSTDIR\*.md"
+  Delete "$INSTDIR\*.txt"
+  Delete "$INSTDIR\*.log"
+  Delete "$INSTDIR\package.json"
+  Delete "$INSTDIR\Uninstall.exe"
+  RMDir "$INSTDIR"
+
+FinishUninstall:
 SectionEnd
 
 Function LaunchApp
