@@ -34,14 +34,9 @@ mkdir -p "${RELEASE_DIR}/src"
 echo ""
 echo "[4/6] Copying application files..."
 cp -r "${REPO_ROOT}/dist" "${RELEASE_DIR}/"
+cp -r "${REPO_ROOT}/dist-server" "${RELEASE_DIR}/"
 
-for dir in db lib middleware routes services types; do
-    if [ -d "${REPO_ROOT}/src/${dir}" ]; then
-        cp -r "${REPO_ROOT}/src/${dir}" "${RELEASE_DIR}/src/"
-    fi
-done
-
-for file in server.ts routes.ts services.ts db.ts tsconfig.json package.json package-lock.json .env.example README.md start-app.bat start-app.sh start-internal-site.bat start-app-hidden.vbs stop-app.bat setup-env.ps1 setup-env.sh; do
+for file in .env.example README.md start-app.bat start-app.sh start-internal-site.bat start-internal-site.sh start-app-hidden.vbs stop-app.bat setup-env.ps1 setup-env.sh; do
     if [ -f "${REPO_ROOT}/${file}" ]; then
         cp "${REPO_ROOT}/${file}" "${RELEASE_DIR}/"
     fi
@@ -60,16 +55,28 @@ if [ -d "${REPO_ROOT}/scripts/startup" ]; then
     cp -r "${REPO_ROOT}/scripts/startup/"* "${RELEASE_DIR}/scripts/startup/"
 fi
 
-# Remove any test files from release folder
-rm -rf "${RELEASE_DIR}/src"/**/__tests__
-find "${RELEASE_DIR}/src" -name "*.test.ts" -o -name "*.spec.ts" -delete 2>/dev/null || true
-
 cp "${PORTABLE_NODE}" "${RELEASE_DIR}/node/node.exe"
 
-# 5. Install production dependencies inside release folder
+# 5. Assemble minimal runtime native dependencies
 echo ""
-echo "[5/6] Installing production dependencies in release directory..."
-(cd "${RELEASE_DIR}" && npm ci --omit=dev --no-audit --no-fund && npm rebuild)
+echo "[5/6] Assembling minimal runtime native dependencies..."
+cat <<EOF > "${RELEASE_DIR}/package.json"
+{
+  "name": "teacher-assistant",
+  "version": "${VERSION}",
+  "private": true,
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "bcrypt": "^6.0.0"
+  }
+}
+EOF
+mkdir -p "${RELEASE_DIR}/node_modules"
+for dep in better-sqlite3 bcrypt node-gyp-build bindings file-uri-to-path; do
+    if [ -d "${REPO_ROOT}/node_modules/${dep}" ]; then
+        cp -r "${REPO_ROOT}/node_modules/${dep}" "${RELEASE_DIR}/node_modules/"
+    fi
+done
 
 # 6. Create Zip archive
 echo ""

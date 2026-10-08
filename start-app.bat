@@ -73,17 +73,19 @@ if not defined DB_FILE (
 IF EXIST "node_modules" (
     echo [%date% %time%] Dependencies already installed >> "%LOG_FILE%"
 ) else (
-    echo [%date% %time%] Installing dependencies with npm... >> "%LOG_FILE%"
-    echo First-time setup: installing dependencies [this takes a moment]...
-    call npm install --omit=dev --no-audit --no-fund >> "%LOG_FILE%" 2>&1
-    IF !errorlevel! NEQ 0 (
-        echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
-        echo.
-        echo ERROR: Dependency installation failed!
-        echo Try running: npm install
-        echo.
-        if /i not "%~1"=="--startup" pause
-        exit /b 1
+    IF NOT EXIST "dist-server\index.cjs" (
+        echo [%date% %time%] Installing dependencies with npm... >> "%LOG_FILE%"
+        echo First-time setup: installing dependencies [this takes a moment]...
+        call npm install --omit=dev --no-audit --no-fund >> "%LOG_FILE%" 2>&1
+        IF !errorlevel! NEQ 0 (
+            echo [%date% %time%] ERROR: Dependency installation failed! >> "%LOG_FILE%"
+            echo.
+            echo ERROR: Dependency installation failed!
+            echo Try running: npm install
+            echo.
+            if /i not "%~1"=="--startup" pause
+            exit /b 1
+        )
     )
 )
 
@@ -142,7 +144,11 @@ if "!MODE!"=="debug" (
     REM Local production mode runs on plain HTTP at http://127.0.0.1:3000.
     REM Use non-secure cookies so auth persists across requests.
     set COOKIE_SECURE=false
-    call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
+    IF EXIST "dist-server\index.cjs" (
+        call "!NODE_EXE!" "%~dp0dist-server\index.cjs" >> "%LOG_FILE%" 2>&1
+    ) else (
+        call "!NODE_EXE!" "%~dp0node_modules\tsx\dist\cli.mjs" server.ts >> "%LOG_FILE%" 2>&1
+    )
 )
 echo [%date% %time%] Server exited (code !errorlevel!) >> "%LOG_FILE%"
 popd

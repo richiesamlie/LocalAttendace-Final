@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-and-release:
@@ -45,6 +48,15 @@ jobs:
         shell: pwsh
         run: |
           powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeacherAssistant-Windows-Release
+          path: |
+            release/*.zip
+            release/*.exe
+          if-no-files-found: warn
 
       - name: Publish Release
         uses: ncipollo/release-action@v1

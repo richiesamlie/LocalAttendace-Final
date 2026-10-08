@@ -36,6 +36,10 @@ $portableNodeExe = Join-Path $repoRoot "node-portable\node.exe"
 
 # 3. Clean and create release directory
 Write-Host "`n[3/6] Preparing release directory..." -ForegroundColor Cyan
+Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$releaseDir*" } | ForEach-Object {
+    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+}
+Start-Sleep -Milliseconds 300
 if (Test-Path $releaseDir) {
     Remove-Item $releaseDir -Recurse -Force
 }
@@ -45,24 +49,14 @@ New-Item -ItemType Directory -Path (Join-Path $releaseDir "node") -Force | Out-N
 # 4. Copy required runtime files
 Write-Host "`n[4/6] Copying application files..." -ForegroundColor Cyan
 
-# Built frontend
+# Built frontend and pre-bundled backend server
 Copy-Item (Join-Path $repoRoot "dist") -Destination (Join-Path $releaseDir "dist") -Recurse
-
-# Backend server code
-New-Item -ItemType Directory -Path (Join-Path $releaseDir "src") -Force | Out-Null
-$serverSrcDirs = @("db", "lib", "middleware", "routes", "services", "types")
-foreach ($dir in $serverSrcDirs) {
-    $srcPath = Join-Path $repoRoot "src\$dir"
-    if (Test-Path $srcPath) {
-        Copy-Item $srcPath -Destination (Join-Path $releaseDir "src\$dir") -Recurse
-    }
-}
+Copy-Item (Join-Path $repoRoot "dist-server") -Destination (Join-Path $releaseDir "dist-server") -Recurse
 
 # Root files
 $rootFiles = @(
-    "server.ts", "routes.ts", "services.ts", "db.ts", "tsconfig.json",
-    "package.json", "package-lock.json", ".env.example", "README.md",
-    "start-app.bat", "start-app.sh", "start-internal-site.bat",
+    ".env.example", "README.md",
+    "start-app.bat", "start-app.sh", "start-internal-site.bat", "start-internal-site.sh",
     "start-app-hidden.vbs", "stop-app.bat", "setup-env.ps1", "setup-env.sh"
 )
 foreach ($file in $rootFiles) {
@@ -87,22 +81,31 @@ if (Test-Path (Join-Path $repoRoot "scripts\startup")) {
     Copy-Item (Join-Path $repoRoot "scripts\startup\*") -Destination (Join-Path $releaseDir "scripts\startup") -Recurse
 }
 
-# Remove any test files from the release folder
-Get-ChildItem -Path (Join-Path $releaseDir "src") -Recurse -Directory -Filter "__tests__" -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-Get-ChildItem -Path (Join-Path $releaseDir "src") -Recurse -File -Include "*.test.ts", "*.spec.ts" -ErrorAction SilentlyContinue | Remove-Item -Force
-
 # Copy portable Node.js
 Copy-Item $portableNodeExe -Destination (Join-Path $releaseDir "node\node.exe")
 
-# 5. Install production dependencies inside release folder
-Write-Host "`n[5/6] Installing production dependencies in release directory..." -ForegroundColor Cyan
-Push-Location $releaseDir
-try {
-    npm ci --omit=dev --no-audit --no-fund
-    # Ensure native bindings (better-sqlite3, bcrypt, esbuild) are built for Windows
-    npm rebuild
-} finally {
-    Pop-Location
+# 5. Assemble minimal runtime native dependencies (better-sqlite3, bcrypt, node-gyp-build, bindings)
+Write-Host "`n[5/6] Assembling minimal runtime native dependencies..." -ForegroundColor Cyan
+$runtimePkg = @{
+    name = "teacher-assistant"
+    version = $version
+    private = $true
+    dependencies = @{
+        "better-sqlite3" = $pkgJson.dependencies."better-sqlite3"
+        "bcrypt" = $pkgJson.dependencies."bcrypt"
+    }
+} | ConvertTo-Json
+Set-Content -Path (Join-Path $releaseDir "package.json") -Value $runtimePkg -Encoding utf8
+
+$releaseNodeModules = Join-Path $releaseDir "node_modules"
+New-Item -ItemType Directory -Path $releaseNodeModules -Force | Out-Null
+
+$nativeDeps = @("better-sqlite3", "bcrypt", "node-gyp-build", "bindings", "file-uri-to-path")
+foreach ($dep in $nativeDeps) {
+    $srcDep = Join-Path $repoRoot "node_modules\$dep"
+    if (Test-Path $srcDep) {
+        Copy-Item $srcDep -Destination $releaseNodeModules -Recurse -Force
+    }
 }
 
 # 6. Create Zip archive
