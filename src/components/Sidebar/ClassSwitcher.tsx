@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings as SettingsIcon, CheckSquare, Edit2, Trash2, Plus } from 'lucide-react';
+import { Settings as SettingsIcon, CheckSquare, Edit2, Trash2, Plus, X } from 'lucide-react';
 import { useStore } from '../../store';
 import { confirmToast } from '../../utils/confirmToast';
 
@@ -76,11 +76,27 @@ export function ClassSwitcher() {
                       onChange={(e) => setEditingName(e.target.value)}
                       className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus-ring"
                       autoFocus
-                      onKeyDown={(e) => e.key === 'Enter' && handleUpdateClass(c.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleUpdateClass(c.id);
+                        } else if (e.key === 'Escape') {
+                          setEditingId(null);
+                          setEditingName('');
+                        }
+                      }}
                       aria-label="Edit class name"
                     />
                     <button type="button" onClick={() => handleUpdateClass(c.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded focus-ring" title="Save" aria-label="Save class name">
                       <CheckSquare className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingId(null); setEditingName(''); }}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded focus-ring"
+                      title="Cancel"
+                      aria-label="Cancel editing class name"
+                    >
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (

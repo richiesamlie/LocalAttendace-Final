@@ -34,7 +34,7 @@ export function initStatements(): void {
   preparedStatements.deleteEvent = _db.prepare('DELETE FROM events WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
   preparedStatements.deleteTimetableSlot = _db.prepare('DELETE FROM timetable_slots WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
   preparedStatements.archiveStudent = _db.prepare('UPDATE students SET is_archived = 1 WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
-  preparedStatements.getStudentById = _db.prepare('SELECT s.id, s.name, s.roll_number, s.parent_name, s.parent_phone, s.is_flagged, s.is_archived FROM students s JOIN class_teachers ct ON s.class_id = ct.class_id WHERE s.id = ? AND ct.teacher_id = ?');
+  preparedStatements.getStudentById = _db.prepare('SELECT s.id, s.class_id, s.name, s.roll_number, s.parent_name, s.parent_phone, s.is_flagged, s.is_archived FROM students s JOIN class_teachers ct ON s.class_id = ct.class_id WHERE s.id = ? AND ct.teacher_id = ?');
   preparedStatements.getEventById = _db.prepare('SELECT e.id, e.date, e.title, e.type, e.description FROM events e JOIN class_teachers ct ON e.class_id = ct.class_id WHERE e.id = ? AND ct.teacher_id = ?');
   preparedStatements.getTimetableSlotById = _db.prepare('SELECT t.id, t.day_of_week, t.start_time, t.end_time, t.subject, t.lesson FROM timetable_slots t JOIN class_teachers ct ON t.class_id = ct.class_id WHERE t.id = ? AND ct.teacher_id = ?');
   preparedStatements.getClassById = _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id = ? AND c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');

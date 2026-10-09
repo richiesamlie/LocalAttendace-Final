@@ -385,10 +385,16 @@ const StudentAttendanceRow = React.memo(function StudentAttendanceRow({
       <td className="px-6 py-4">
         {status && status !== 'Present' ? (
           <input
+            key={`${student.id}-${record?.date || ''}`}
             type="text"
             placeholder={`Reason for being ${status.toLowerCase()}...`}
             defaultValue={record?.reason || ''}
             onBlur={(e) => onReasonChange(student.id, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur();
+              }
+            }}
             className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm transition-all dark:text-white focus-ring"
             aria-label={`Reason for ${student.name} being ${status.toLowerCase()}`}
           />

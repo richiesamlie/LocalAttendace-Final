@@ -40,12 +40,21 @@ export default function SlotForm({ mode, editingSlot, selectedDay, onSave, onCan
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-900/30 p-5 animate-in fade-in slide-in-from-top-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSave();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onCancel();
+      }}
+      className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-900/30 p-5 animate-in fade-in slide-in-from-top-4"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-slate-900 dark:text-white">
           {mode === 'edit' ? 'Edit Class' : `Add Class for ${DAYS_MAP[selectedDay]}`}
         </h3>
-        <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Cancel">
+        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Cancel">
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -92,13 +101,14 @@ export default function SlotForm({ mode, editingSlot, selectedDay, onSave, onCan
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <button
+          type="button"
           onClick={onCancel}
           className="px-4 py-2 min-h-[40px] text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors focus-ring"
         >
           Cancel
         </button>
         <button
-          onClick={handleSave}
+          type="submit"
           disabled={!formData.subject.trim()}
           className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 focus-ring"
         >
@@ -106,6 +116,6 @@ export default function SlotForm({ mode, editingSlot, selectedDay, onSave, onCan
           Save Class
         </button>
       </div>
-    </div>
+    </form>
   );
 }

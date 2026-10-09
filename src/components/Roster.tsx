@@ -295,6 +295,7 @@ export default function Roster() {
                       placeholder="Roll No"
                       value={addRoll}
                       onChange={(e) => setAddRoll(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveAddStudent(); else if (e.key === 'Escape') cancelAdd(); }}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white focus-ring"
                       autoFocus
                     />
@@ -305,6 +306,7 @@ export default function Roster() {
                       placeholder="Student Name"
                       value={addName}
                       onChange={(e) => setAddName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveAddStudent(); else if (e.key === 'Escape') cancelAdd(); }}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white focus-ring"
                     />
                   </td>
@@ -314,6 +316,7 @@ export default function Roster() {
                       placeholder="Parent Name"
                       value={addParentName}
                       onChange={(e) => setAddParentName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveAddStudent(); else if (e.key === 'Escape') cancelAdd(); }}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white focus-ring"
                     />
                   </td>
@@ -323,6 +326,7 @@ export default function Roster() {
                       placeholder="Phone Number"
                       value={addParentPhone}
                       onChange={(e) => setAddParentPhone(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') saveAddStudent(); else if (e.key === 'Escape') cancelAdd(); }}
                       className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white focus-ring"
                     />
                   </td>

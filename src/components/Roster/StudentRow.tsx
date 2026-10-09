@@ -41,12 +41,12 @@ function StudentRow({
   const [editIsFlagged, setEditIsFlagged] = useState(student.isFlagged || false);
 
   // Track previous student and editing state to adjust state during render
-  const [prevStudent, setPrevStudent] = useState(student);
+  const [prevStudentId, setPrevStudentId] = useState(student.id);
   const [prevIsEditing, setPrevIsEditing] = useState(isEditing);
 
-  if (student !== prevStudent || isEditing !== prevIsEditing) {
-    setPrevStudent(student);
+  if (isEditing !== prevIsEditing || student.id !== prevStudentId) {
     setPrevIsEditing(isEditing);
+    setPrevStudentId(student.id);
     if (isEditing) {
       setEditName(student.name);
       setEditRoll(student.rollNumber);
@@ -67,6 +67,16 @@ function StudentRow({
     });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  };
+
   return (
     <tr className={cn(
       "hover:bg-slate-100/50 dark:hover:bg-slate-800/80 transition-colors",
@@ -82,6 +92,7 @@ function StudentRow({
                 type="text"
                 value={editRoll}
                 onChange={(e) => setEditRoll(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white w-full focus-ring"
                 aria-label="Roll number"
               />
@@ -92,6 +103,7 @@ function StudentRow({
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={handleKeyDown}
                 autoFocus
                 className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white w-full focus-ring"
                 aria-label="Student name"
@@ -103,6 +115,7 @@ function StudentRow({
                 type="text"
                 value={editParentName}
                 onChange={(e) => setEditParentName(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white w-full focus-ring"
                 aria-label="Parent name"
               />
@@ -113,6 +126,7 @@ function StudentRow({
                 type="text"
                 value={editParentPhone}
                 onChange={(e) => setEditParentPhone(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white w-full focus-ring"
                 aria-label="Parent phone"
               />

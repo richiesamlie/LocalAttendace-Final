@@ -61,14 +61,24 @@ export function useStudentForm(
     setIsAdding(false);
   }, []);
 
-  const saveEditStudent = useCallback(() => {
-    if (!editingId || !editName.trim() || !editRoll.trim()) return;
-    updateStudent(editingId, { 
-      name: editName, 
-      rollNumber: editRoll,
-      parentName: editParentName,
-      parentPhone: editParentPhone,
-      isFlagged: editIsFlagged
+  const saveEditStudent = useCallback((
+    id?: string,
+    data?: { name: string; rollNumber: string; parentName?: string; parentPhone?: string; isFlagged?: boolean }
+  ) => {
+    const targetId = id || editingId;
+    const targetName = (data?.name ?? editName).trim();
+    const targetRoll = (data?.rollNumber ?? editRoll).trim();
+    const targetParentName = (data?.parentName ?? editParentName).trim();
+    const targetParentPhone = (data?.parentPhone ?? editParentPhone).trim();
+    const targetIsFlagged = data?.isFlagged ?? editIsFlagged;
+
+    if (!targetId || !targetName || !targetRoll) return;
+    updateStudent(targetId, { 
+      name: targetName, 
+      rollNumber: targetRoll,
+      parentName: targetParentName,
+      parentPhone: targetParentPhone,
+      isFlagged: targetIsFlagged
     });
     setEditingId(null);
   }, [editingId, editName, editRoll, editParentName, editParentPhone, editIsFlagged, updateStudent]);
