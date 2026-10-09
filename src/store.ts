@@ -153,7 +153,9 @@ export const useStore = create<AppState>()((set, get) => ({
       try {
         const stored = localStorage.getItem('ta-theme');
         if (stored === 'dark' || stored === 'light') localTheme = stored;
-      } catch {}
+      } catch (_err) {
+        void 0;
+      }
 
       let settings: Record<string, string> = { theme: localTheme };
       try {
@@ -161,8 +163,9 @@ export const useStore = create<AppState>()((set, get) => ({
         if (fetchedSettings) {
           settings = fetchedSettings;
         }
-      } catch (err) {
+      } catch (_err) {
         // Expected for non-admins
+        void 0;
       }
 
       if (classesData.length > 0) {
@@ -666,7 +669,9 @@ export const useStore = create<AppState>()((set, get) => ({
     set({ theme: newTheme });
     try {
       localStorage.setItem('ta-theme', newTheme);
-    } catch {}
+    } catch (_err) {
+      void 0;
+    }
     try {
       await api.saveSetting('theme', newTheme);
     } catch (e) {
