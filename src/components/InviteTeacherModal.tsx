@@ -165,9 +165,9 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
               <UserPlus className="w-5 h-5 text-indigo-500" />
               Class Teachers
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{className}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{className}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors" title="Close" aria-label="Close modal">
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors focus-ring" title="Close" aria-label="Close modal">
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
@@ -176,10 +176,10 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
           <button
             onClick={() => { setActiveTab('current'); setSearchQuery(''); }}
             className={cn(
-              "flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2",
+              "flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2 focus-ring",
               activeTab === 'current'
                 ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10"
-                : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             )}
           >
             Current ({classTeachers.length})
@@ -189,10 +189,10 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
               <button
                 onClick={() => { setActiveTab('add'); setSearchQuery(''); }}
                 className={cn(
-                  "flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2",
+                  "flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2 focus-ring",
                   activeTab === 'add'
                     ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10"
-                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )}
               >
                 Add ({availableTeachers.length})
@@ -200,10 +200,10 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
               <button
                 onClick={() => { setActiveTab('invites'); setSearchQuery(''); }}
                 className={cn(
-                  "flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2",
+                  "flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2 focus-ring",
                   activeTab === 'invites'
                     ? "border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10"
-                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )}
               >
                 Invites ({invites.filter(i => !i.used_by && new Date(i.expires_at) > new Date()).length})
@@ -220,7 +220,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
               placeholder="Search by name or username..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm focus-ring"
             />
           </div>
         </div>
@@ -229,19 +229,19 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-              <span className="ml-3 text-sm text-slate-500">Loading...</span>
+              <span className="ml-3 text-sm text-slate-600 dark:text-slate-300">Loading...</span>
             </div>
           ) : activeTab === 'current' ? (
             filteredCurrent.length === 0 ? (
               <div className="text-center py-16">
                 <UserCircle className="w-14 h-14 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {searchQuery ? 'No teachers match your search' : 'No teachers in this class yet'}
                 </p>
                 {!searchQuery && canManageTeachers && (
                   <button
                     onClick={() => setActiveTab('add')}
-                    className="mt-4 px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                    className="mt-4 px-4 py-2 min-h-[36px] text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors focus-ring"
                   >
                     Add a teacher
                   </button>
@@ -277,7 +277,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                     {t.role !== 'owner' && canManageTeachers && (
                       <button
                         onClick={() => handleRemove(t.teacher_id)}
-                        className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+                        className="px-3 py-1.5 min-h-[36px] text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors focus-ring"
                       >
                         Remove
                       </button>
@@ -290,7 +290,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
             filteredAvailable.length === 0 ? (
               <div className="text-center py-16">
                 <UserCircle className="w-14 h-14 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {searchQuery ? 'No teachers match your search' : 'All teachers are already in this class'}
                 </p>
               </div>
@@ -303,13 +303,13 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">{t.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">@{t.username}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">@{t.username}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => handleAdd(t.id)}
                     disabled={adding === t.id}
-                    className="px-4 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg transition-colors disabled:opacity-50"
+                    className="px-4 py-2 min-h-[36px] text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg transition-colors disabled:opacity-50 focus-ring"
                   >
                     {adding === t.id ? (
                       <span className="flex items-center gap-1.5">
@@ -330,7 +330,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
                     aria-label="Invite role"
-                    className="flex-1 text-sm rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 text-sm rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 focus-ring"
                   >
                     <option value="teacher">Subject Teacher</option>
                     <option value="assistant">Assistant</option>
@@ -339,7 +339,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                   <button
                     onClick={handleCreateInvite}
                     disabled={creatingInvite}
-                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="px-4 py-2 min-h-[40px] text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5 focus-ring"
                   >
                     {creatingInvite ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
                     Create
@@ -350,7 +350,7 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
               {invites.length === 0 ? (
                 <div className="text-center py-12">
                   <Key className="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
-                  <p className="text-sm text-slate-500 dark:text-slate-400">No invite codes yet</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">No invite codes yet</p>
                 </div>
               ) : (
                 invites.map((inv) => {
@@ -371,8 +371,9 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                           {isActive && (
                             <button
                               onClick={() => handleCopyInvite(inv.code)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors"
+                              className="p-1.5 text-slate-500 hover:text-indigo-500 transition-colors focus-ring rounded"
                               title="Copy link"
+                              aria-label="Copy invite link"
                             >
                               <Copy className="w-4 h-4" />
                             </button>
@@ -380,8 +381,9 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                           {isActive && (
                             <button
                               onClick={() => handleDeleteInvite(inv.code)}
-                              className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                              className="p-1.5 text-slate-500 hover:text-red-500 transition-colors focus-ring rounded"
                               title="Revoke"
+                              aria-label="Revoke invite code"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

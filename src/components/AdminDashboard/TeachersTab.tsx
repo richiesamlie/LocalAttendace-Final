@@ -54,7 +54,7 @@ export default function TeachersTab() {
           <UserPlus className="w-5 h-5" />
           Bulk Add Teachers
         </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
           Enter one teacher per line: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">username,name</code>
         </p>
         
@@ -67,7 +67,7 @@ export default function TeachersTab() {
               type="text"
               value={defaultPassword}
               onChange={(e) => setDefaultPassword(e.target.value)}
-              className="w-full max-w-xs px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full max-w-xs px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none focus-ring"
               placeholder="Enter default password"
               aria-label="Default password for new teachers"
             />
@@ -77,13 +77,13 @@ export default function TeachersTab() {
             value={bulkInput}
             onChange={(e) => setBulkInput(e.target.value)}
             placeholder="johnsmith,John Smith&#10;jane Doe,jane@example.com"
-            className="w-full h-40 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
+            className="w-full h-40 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm focus-ring"
           />
           
           <button
             type="submit"
             disabled={registerMutation.isPending || !bulkInput.trim()}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2 min-h-[40px] bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 focus-ring"
           >
             {registerMutation.isPending ? (
               <>Adding...</>

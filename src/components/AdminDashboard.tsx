@@ -211,7 +211,7 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
           <Shield className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Admin Dashboard</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-8">Enter the admin password to access the database viewer and management tools.</p>
+        <p className="text-slate-600 dark:text-slate-300 mb-8">Enter the admin password to access the database viewer and management tools.</p>
         
         <form onSubmit={handleUnlock} className="space-y-4">
           <div>
@@ -220,14 +220,14 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
               placeholder="Admin Password"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all focus-ring"
               autoFocus
             />
             {error && <p className="text-red-500 text-sm mt-2 text-left">{error}</p>}
           </div>
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 min-h-[44px] bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors focus-ring"
           >
             <Lock className="w-5 h-5" />
             Unlock Dashboard
@@ -271,11 +271,11 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
             <Database className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             Admin Database Viewer
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">View and manage all application data across all classes.</p>
+          <p className="text-slate-600 dark:text-slate-300 mt-1">View and manage all application data across all classes.</p>
         </div>
         <button 
           onClick={() => setIsUnlocked(false)}
-          className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2"
+          className="px-4 py-2 min-h-[40px] text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 focus-ring"
         >
           <Lock className="w-4 h-4" />
           Lock Dashboard
@@ -287,25 +287,25 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
           <Shield className="w-4 h-4 text-indigo-500" /> Admin Tools
         </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Monitoring tools dipindahkan dari sidebar ke dashboard admin.</p>
+        <p className="text-xs text-slate-600 dark:text-slate-300">System monitoring tools moved from sidebar to admin dashboard.</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
             onClick={() => navigate('performance')}
-            className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-3 py-2 min-h-[40px] bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors focus-ring"
           >
             <Activity className="w-4 h-4" />
             Performance
           </button>
           <button
             onClick={() => navigate('profiler')}
-            className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-3 py-2 min-h-[40px] bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 transition-colors focus-ring"
           >
             <Database className="w-4 h-4" />
             Query Profiler
           </button>
           <button
             onClick={() => navigate('resources')}
-            className="flex items-center justify-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-3 py-2 min-h-[40px] bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors focus-ring"
           >
             <Server className="w-4 h-4" />
             Resources
@@ -323,7 +323,7 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
             <button
               onClick={handleMassiveBackup}
               disabled={isMassiveBackingUp}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+              className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-amber-600 text-white rounded-xl font-medium shadow-sm hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs focus-ring"
             >
               <Archive className={`w-4 h-4 ${isMassiveBackingUp ? 'animate-pulse' : ''}`} />
               {isMassiveBackingUp ? 'Generating...' : 'Massive Backup'}
@@ -338,14 +338,14 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm focus-ring"
             >
               <Upload className="w-4 h-4" />
               Import Backup
             </button>
             <button
               onClick={handleResetData}
-              className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-rose-600 text-white rounded-xl font-medium shadow-sm hover:bg-rose-700 transition-colors text-sm focus-ring"
             >
               <Trash2 className="w-4 h-4" />
               Reset Academic Year
@@ -363,18 +363,18 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="New password"
-              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 focus-ring"
             />
             <input 
               type="password" 
               value={confirmNewPassword}
               onChange={(e) => setConfirmNewPassword(e.target.value)}
               placeholder="Confirm"
-              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 focus-ring"
             />
             <button
               onClick={handleUpdatePassword}
-              className="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-xs font-medium hover:bg-slate-700 transition-colors"
+              className="px-4 py-2 min-h-[40px] bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-xs font-medium hover:bg-slate-700 transition-colors focus-ring"
             >
               Update
             </button>
@@ -394,13 +394,13 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col lg:flex-row min-h-[500px]">
         {/* Sidebar Tabs */}
         <div className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-4 space-y-1">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3">Data Tables</h3>
+          <h3 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3 px-3">Data Tables</h3>
           <TabButton active={activeTab === 'classes'} onClick={() => setActiveTab('classes')} icon={<BookOpen />} label="Classes" count={classes.length} />
           <TabButton active={activeTab === 'students'} onClick={() => setActiveTab('students')} icon={<Users />} label="Students" count={totalStudents} />
           <TabButton active={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} icon={<FileText />} label="Attendance" count={totalAttendance} />
           <TabButton active={activeTab === 'events'} onClick={() => setActiveTab('events')} icon={<Calendar />} label="Events" count={totalEvents} />
           
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-3 mt-6">Management</h3>
+          <h3 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3 px-3 mt-6">Management</h3>
           <TabButton active={activeTab === 'teachers'} onClick={() => setActiveTab('teachers')} icon={<Shield />} label="Teachers" count={0} />
         </div>
 
@@ -414,7 +414,7 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
                 placeholder={`Search ${activeTab}...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white focus-ring"
               />
             </div>
           </div>

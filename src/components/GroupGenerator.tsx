@@ -82,11 +82,11 @@ export default function GroupGenerator() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Smart Group Generator</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Randomly divide your class into groups.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Randomly divide your class into groups.</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl shadow-sm">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 cursor-pointer select-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 rounded-xl shadow-sm">
             <input
               type="checkbox"
               checked={preventFlaggedGrouping}
@@ -100,7 +100,7 @@ export default function GroupGenerator() {
             <select
               value={generationMode}
               onChange={(e) => setGenerationMode(e.target.value as 'groupCount' | 'groupSize')}
-              className="px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-800 outline-none cursor-pointer"
+              className="px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-800 outline-none cursor-pointer"
               aria-label="Generation mode"
             >
               <option value="groupCount">Number of Groups</option>
@@ -133,7 +133,7 @@ export default function GroupGenerator() {
           <button
             onClick={generateGroups}
             disabled={isGenerating || students.length === 0}
-            className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+            className="flex items-center gap-2 px-6 py-2 min-h-[44px] bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 focus-ring"
           >
             <Shuffle className={cn("w-4 h-4", isGenerating && "animate-spin")} />
             {isGenerating ? 'Generating...' : 'Generate Groups'}
@@ -142,12 +142,12 @@ export default function GroupGenerator() {
       </div>
 
       {students.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-12 text-center">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-12 text-center">
           <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">No students available</h3>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Add students in the Roster tab to generate groups.</p>
+          <p className="text-slate-600 dark:text-slate-300 mt-1">Add students in the Roster tab to generate groups.</p>
         </div>
       ) : groups.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -185,8 +185,8 @@ export default function GroupGenerator() {
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-12 text-center border-dashed">
-          <p className="text-slate-500 dark:text-slate-400">Click &quot;Generate Groups&quot; to randomly divide your {students.length} students.</p>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-12 text-center border-dashed">
+          <p className="text-slate-600 dark:text-slate-300">Click &quot;Generate Groups&quot; to randomly divide your {students.length} students.</p>
         </div>
       )}
     </div>

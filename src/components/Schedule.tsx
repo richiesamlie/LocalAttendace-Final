@@ -131,13 +131,13 @@ export default function Schedule() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Class Schedule</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage classwork, tests, and exams.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Manage classwork, tests, and exams.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-ring"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span className="hidden sm:inline">Excel Tools</span>
@@ -159,7 +159,7 @@ export default function Schedule() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors text-left focus-ring"
                   >
                     <Upload className="w-4 h-4 text-slate-400" />
                     Import Schedule
@@ -171,7 +171,7 @@ export default function Schedule() {
                       setShowExportMenu(false);
                     }}
                     disabled={events.length === 0}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-xl transition-colors text-left disabled:opacity-50"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-xl transition-colors text-left disabled:opacity-50 focus-ring"
                   >
                     <Download className="w-4 h-4" />
                     Export Schedule
@@ -185,7 +185,7 @@ export default function Schedule() {
             type="month"
             value={format(currentDate, 'yyyy-MM')}
             onChange={(e) => setCurrentDate(parseISO(`${e.target.value}-01`))}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white"
+            className="px-4 py-2 min-h-[40px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white focus-ring"
             aria-label="Select month"
           />
         </div>
@@ -193,10 +193,10 @@ export default function Schedule() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar View */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6">
           <div className="grid grid-cols-7 gap-2 mb-2">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider py-2">
+              <div key={day} className="text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider py-2">
                 {day}
               </div>
             ))}
@@ -218,7 +218,7 @@ export default function Schedule() {
                   key={dateStr}
                   onClick={() => setSelectedDate(dateStr)}
                   className={cn(
-                    "aspect-square rounded-xl border p-2 flex flex-col items-start justify-start transition-all relative overflow-hidden",
+                    "aspect-square rounded-xl border p-2 flex flex-col items-start justify-start transition-all relative overflow-hidden focus-ring",
                     isSelected 
                       ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm" 
                       : isTodayDate
@@ -240,7 +240,7 @@ export default function Schedule() {
                       </div>
                     ))}
                     {dayEvents.length > 2 && (
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium px-1">
+                      <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium px-1">
                         +{dayEvents.length - 2} more
                       </div>
                     )}
@@ -252,7 +252,7 @@ export default function Schedule() {
         </div>
 
         {/* Daily Events Sidebar */}
-        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col h-[600px]">
+        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col h-[600px]">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
               {format(parseISO(selectedDate), 'MMMM do, yyyy')}
@@ -265,7 +265,7 @@ export default function Schedule() {
                 setEventDesc('');
                 setEventType('Classwork');
               }}
-              className="p-2 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors"
+              className="p-2 min-w-[36px] min-h-[36px] bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/60 transition-colors focus-ring"
               title="Add Event"
             >
               <Plus className="w-5 h-5" />
@@ -281,7 +281,7 @@ export default function Schedule() {
                 <button type="button" onClick={() => {
                   setIsAddingEvent(false);
                   setIsEditingEvent(false);
-                }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Close" aria-label="Close form">
+                }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus-ring rounded" title="Close" aria-label="Close form">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -291,7 +291,7 @@ export default function Schedule() {
                 placeholder="Event Title"
                 value={eventTitle}
                 onChange={(e) => setEventTitle(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white focus-ring"
                 autoFocus
                 required
               />
@@ -299,7 +299,7 @@ export default function Schedule() {
               <select
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value as EventType)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white focus-ring"
                 aria-label="Event type"
               >
                 <option value="Classwork">Classwork</option>
@@ -313,12 +313,12 @@ export default function Schedule() {
                 placeholder="Description (optional)"
                 value={eventDesc}
                 onChange={(e) => setEventDesc(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white resize-none h-20"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white resize-none h-20 focus-ring"
               />
               
               <button
                 type="submit"
-                className="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors"
+                className="w-full py-2 min-h-[40px] bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors focus-ring"
               >
                 {isEditingEvent ? 'Update Event' : 'Save Event'}
               </button>
@@ -336,7 +336,7 @@ export default function Schedule() {
                 <button
                   key={event.id}
                   onClick={() => setSelectedEvent(event)}
-                  className={cn("w-full text-left rounded-2xl p-4 border relative group transition-all hover:shadow-md", getEventColor(event.type))}
+                  className={cn("w-full text-left rounded-2xl p-4 border relative group transition-all hover:shadow-md focus-ring", getEventColor(event.type))}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 font-semibold mb-1">
@@ -358,7 +358,7 @@ export default function Schedule() {
       {/* Event Details Modal */}
       {selectedEvent && !isEditingEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className={cn("p-6 border-b", getEventColor(selectedEvent.type).replace('bg-', 'bg-opacity-50 bg-'))}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -376,7 +376,7 @@ export default function Schedule() {
                 </div>
                 <button
                   onClick={() => setSelectedEvent(null)}
-                  className="p-2 bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 rounded-full transition-colors"
+                  className="p-2 bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 rounded-full transition-colors focus-ring"
                   title="Close"
                   aria-label="Close event details"
                 >
@@ -401,14 +401,14 @@ export default function Schedule() {
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
               <button
                 onClick={() => handleDeleteEvent(selectedEvent.id)}
-                className="flex items-center gap-2 px-4 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl font-medium transition-colors text-sm"
+                className="flex items-center gap-2 px-4 py-2 min-h-[40px] text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl font-medium transition-colors text-sm focus-ring"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
               </button>
               <button
                 onClick={() => handleEditEvent(selectedEvent)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm text-sm"
+                className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-medium transition-colors shadow-sm text-sm focus-ring"
               >
                 <Edit2 className="w-4 h-4" />
                 Edit Event

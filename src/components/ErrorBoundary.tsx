@@ -12,12 +12,12 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
           <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
         </div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Something went wrong</h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+        <p className="text-slate-600 dark:text-slate-300 text-sm mb-6">
           {errorMessage}
         </p>
         <button
           onClick={resetErrorBoundary}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 min-h-[44px] bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors focus-ring"
         >
           <RefreshCw className="w-4 h-4" />
           Reload App

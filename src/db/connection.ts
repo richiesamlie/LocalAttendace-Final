@@ -55,6 +55,16 @@ export function initConnection(): void {
   _db.pragma('mmap_size = 268435456');
 }
 
+export function checkpointWal(): void {
+  try {
+    if (_db && _db.open) {
+      _db.pragma('wal_checkpoint(TRUNCATE)');
+    }
+  } catch (_err) {
+    // Non-critical during shutdown
+  }
+}
+
 export function openDatabase(): Database.Database {
   _db = new Database(DB_FILE, { timeout: 5000 });
   initConnection();

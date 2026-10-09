@@ -26,7 +26,7 @@ export default function SlotListItem({ slot, onEdit, onDelete, onLessonChange }:
           <div className="font-semibold text-slate-900 dark:text-white tracking-tight">
             {slot.startTime} - {slot.endTime}
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
+          <div className="text-xs text-slate-600 dark:text-slate-300 font-medium uppercase tracking-wider">
             Time
           </div>
         </div>
@@ -39,7 +39,7 @@ export default function SlotListItem({ slot, onEdit, onDelete, onLessonChange }:
             <div className={cn("font-medium", slot.subject ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500 italic")}>
               {slot.subject || 'Unassigned Subject'}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Subject</div>
+            <div className="text-xs text-slate-600 dark:text-slate-300">Subject</div>
           </div>
         </div>
 
@@ -58,25 +58,27 @@ export default function SlotListItem({ slot, onEdit, onDelete, onLessonChange }:
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.currentTarget.blur();
               }}
-              className="w-full bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-indigo-300 dark:focus:border-indigo-700 rounded-md -ml-2 px-2 py-0.5 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-0 transition-colors truncate"
+              className="w-full bg-transparent border border-transparent hover:border-slate-200 dark:hover:border-slate-700 focus:border-indigo-300 dark:focus:border-indigo-700 rounded-md -ml-2 px-2 py-0.5 text-slate-700 dark:text-slate-300 focus:outline-none focus-ring transition-colors truncate"
             />
-            <div className="text-xs text-slate-500 dark:text-slate-400 ml-0.5">Lesson / Topic</div>
+            <div className="text-xs text-slate-600 dark:text-slate-300 ml-0.5">Lesson / Topic</div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 sm:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         <button
           onClick={() => onEdit(slot)}
-          className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
+          className="p-2 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors focus-ring"
           title="Edit Class"
+          aria-label="Edit class"
         >
           <Edit2 className="w-4 h-4" />
         </button>
         <button
           onClick={() => onDelete(slot.id)}
-          className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+          className="p-2 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors focus-ring"
           title="Remove Class"
+          aria-label="Remove class"
         >
           <Trash2 className="w-4 h-4" />
         </button>

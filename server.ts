@@ -13,6 +13,7 @@ import { errorHandler } from "./src/lib/errorHandler";
 import { performanceMonitor } from "./src/middleware/performance";
 import { verifySocketAuth } from "./src/routes/middleware";
 import { classService, teacherService, sessionService, refreshTokenService } from "./services";
+import { checkpointWal } from "./src/db/connection";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
@@ -308,5 +309,15 @@ process.on('unhandledRejection', (reason) => {
   // F-017: async write via stream (no longer blocks event loop)
   logServerError('UNHANDLED REJECTION', reason);
 });
+
+const handleShutdown = () => {
+  try {
+    checkpointWal();
+  } catch (_e) {
+    void 0;
+  }
+};
+process.on('SIGTERM', handleShutdown);
+process.on('SIGINT', handleShutdown);
 
 startServer();

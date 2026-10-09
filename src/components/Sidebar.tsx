@@ -208,8 +208,10 @@ export default function Sidebar({
         </div>
 
         <button
+          type="button"
           onClick={toggleTheme}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          aria-label={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-ring font-medium text-sm"
         >
           {theme === 'light' ? (
             <><Moon className="w-4 h-4" /> Dark Mode</>
@@ -219,17 +221,19 @@ export default function Sidebar({
         </button>
         {showLogoutConfirm ? (
           <div className="flex flex-col gap-2 p-3 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200 dark:border-rose-800/50">
-            <p className="text-xs font-medium text-rose-700 dark:text-rose-300 text-center">Log out?</p>
+            <p className="text-xs font-semibold text-rose-700 dark:text-rose-300 text-center">Log out?</p>
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => logoutMutation.mutate()}
-                className="flex-1 px-3 py-1.5 bg-rose-600 text-white text-xs font-medium rounded-lg hover:bg-rose-700 transition-colors"
+                className="flex-1 px-3 py-2 min-h-[40px] bg-rose-600 text-white text-xs font-semibold rounded-lg hover:bg-rose-700 transition-colors focus-ring"
               >
                 Yes, log out
               </button>
               <button
+                type="button"
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                className="flex-1 px-3 py-2 min-h-[40px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-ring"
               >
                 Cancel
               </button>
@@ -237,8 +241,9 @@ export default function Sidebar({
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => setShowLogoutConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors focus-ring font-medium text-sm"
           >
             Log Out
           </button>

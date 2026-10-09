@@ -21,7 +21,7 @@ export default function StatCard({ icon, label, value, color }: StatCardProps) {
         {React.cloneElement(icon, { className: 'w-6 h-6' })}
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{label}</p>
         <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
       </div>
     </div>

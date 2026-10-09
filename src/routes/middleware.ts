@@ -191,6 +191,8 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       if (decoded.sessionId) {
         const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
         if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
+          res.clearCookie(ACCESS_COOKIE_NAME);
+          res.clearCookie(REFRESH_COOKIE_NAME);
           res.clearCookie(AUTH_COOKIE_NAME);
           return res.status(401).json({ error: 'Session expired or revoked' });
         }
@@ -202,6 +204,8 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       if (error instanceof Error && !error.message.includes('jwt')) {
         return res.status(503).json({ error: 'Authentication service unavailable' });
       }
+      res.clearCookie(ACCESS_COOKIE_NAME);
+      res.clearCookie(REFRESH_COOKIE_NAME);
       res.clearCookie(AUTH_COOKIE_NAME);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }

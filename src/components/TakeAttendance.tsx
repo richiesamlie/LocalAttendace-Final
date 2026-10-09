@@ -1,5 +1,5 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { useStore, AttendanceStatus } from '../store';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
+import { useStore, AttendanceStatus, Student, AttendanceRecord } from '../store';
 import { format } from 'date-fns';
 import { cn } from '../utils/cn';
 import { Check, X, Thermometer, Clock, Calendar as CalendarIcon, Search, ChevronDown, ChevronRight, FileText, Upload, Download, Undo2 } from 'lucide-react';
@@ -24,6 +24,7 @@ export default function TakeAttendance() {
   const currentClassId = useStore((state) => state.currentClassId);
   const allRecords = useStore((state) => state.records);
   const records = useMemo(() => allRecords.filter((r) => r.date === date), [allRecords, date]);
+  const recordsByStudentId = useMemo(() => new Map(records.map(r => [r.studentId, r])), [records]);
   const setRecord = useStore((state) => state.setRecord);
   const markAllPresent = useStore((state) => state.markAllPresent);
   const undoLastAttendance = useStore((state) => state.undoLastAttendance);
@@ -61,8 +62,8 @@ export default function TakeAttendance() {
     }
   };
 
-  const handleStatusChange = async (studentId: string, status: AttendanceStatus) => {
-    const existing = records.find(r => r.studentId === studentId);
+  const handleStatusChange = useCallback(async (studentId: string, status: AttendanceStatus) => {
+    const existing = recordsByStudentId.get(studentId);
     await setRecord({
       studentId,
       date,
@@ -70,10 +71,10 @@ export default function TakeAttendance() {
       reason: existing?.reason || '',
     });
     toast.success('Attendance saved', { id: 'attendance-save' });
-  };
+  }, [recordsByStudentId, setRecord, date]);
 
-  const handleReasonChange = async (studentId: string, reason: string) => {
-    const existing = records.find(r => r.studentId === studentId);
+  const handleReasonChange = useCallback(async (studentId: string, reason: string) => {
+    const existing = recordsByStudentId.get(studentId);
     if (existing) {
       await setRecord({
         ...existing,
@@ -81,7 +82,7 @@ export default function TakeAttendance() {
       });
       toast.success('Reason saved', { id: 'attendance-save' });
     }
-  };
+  }, [recordsByStudentId, setRecord]);
 
   const filteredStudents = useMemo(() => students
     .filter(student =>
@@ -117,7 +118,7 @@ export default function TakeAttendance() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Take Attendance</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Record daily presence and reasons for absence.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Record daily presence and reasons for absence.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
@@ -127,7 +128,7 @@ export default function TakeAttendance() {
               placeholder="Search students..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
+              className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus-ring"
             />
           </div>
           <div className="relative">
@@ -142,7 +143,7 @@ export default function TakeAttendance() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isImporting}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 focus-ring"
             >
               <Upload className="w-4 h-4" />
               {isImporting ? 'Importing...' : 'Import Excel'}
@@ -153,7 +154,7 @@ export default function TakeAttendance() {
               const { generateAttendanceTemplate } = await getExcelUtils();
               generateAttendanceTemplate();
             }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-ring"
           >
             <Download className="w-4 h-4" />
             Template
@@ -164,20 +165,20 @@ export default function TakeAttendance() {
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
               max={format(new Date(), 'yyyy-MM-dd')}
-              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white"
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm outline-none dark:text-white focus-ring"
               aria-label="Select date"
             />
           )}
           <button
             onClick={() => setShowUnmarkedOnly((prev) => !prev)}
             className={cn(
-              "px-4 py-2 rounded-xl border font-medium transition-colors",
+              "px-4 py-2 rounded-xl border font-medium transition-colors focus-ring",
               showUnmarkedOnly
                 ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
                 : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
             )}
           >
-            {showUnmarkedOnly ? 'Show All' : 'Belum Ditandai'}
+            {showUnmarkedOnly ? 'Show All' : 'Unmarked Only'}
           </button>
           <button
             onClick={markAllPresentHandler}
@@ -272,10 +273,10 @@ export default function TakeAttendance() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-24">Roll No</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Student Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-1/3">Reason (if not present)</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-24">Roll No</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Student Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-1/3">Reason (if not present)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -299,76 +300,19 @@ export default function TakeAttendance() {
                     {searchQuery
                       ? 'No students match your search'
                       : showUnmarkedOnly
-                        ? 'Semua siswa sudah ditandai untuk tanggal ini'
+                        ? 'All students are marked for this date'
                         : 'No students in this class'}
                   </td>
                 </tr>
-              ) : visibleStudents.map((student) => {
-                const record = records.find(r => r.studentId === student.id);
-                const status = record?.status;
-
-                const isUnmarked = !status;
-
-                return (
-                  <tr
-                    key={`${date}-${student.id}`}
-                    className={cn(
-                      "transition-colors",
-                      isUnmarked
-                        ? "bg-rose-50/60 dark:bg-rose-900/10 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-                        : "hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
-                    )}
-                  >
-                    <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{student.name}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <StatusButton
-                          active={status === 'Present'}
-                          onClick={() => handleStatusChange(student.id, 'Present')}
-                          color="emerald"
-                          icon={<Check className="w-4 h-4" />}
-                          label="Present"
-                        />
-                        <StatusButton
-                          active={status === 'Absent'}
-                          onClick={() => handleStatusChange(student.id, 'Absent')}
-                          color="rose"
-                          icon={<X className="w-4 h-4" />}
-                          label="Absent"
-                        />
-                        <StatusButton
-                          active={status === 'Sick'}
-                          onClick={() => handleStatusChange(student.id, 'Sick')}
-                          color="amber"
-                          icon={<Thermometer className="w-4 h-4" />}
-                          label="Sick"
-                        />
-                        <StatusButton
-                          active={status === 'Late'}
-                          onClick={() => handleStatusChange(student.id, 'Late')}
-                          color="orange"
-                          icon={<Clock className="w-4 h-4" />}
-                          label="Late"
-                        />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {status && status !== 'Present' ? (
-                        <input
-                          type="text"
-                          placeholder={`Reason for being ${status.toLowerCase()}...`}
-                          defaultValue={record?.reason || ''}
-                          onBlur={(e) => handleReasonChange(student.id, e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm transition-all dark:text-white"
-                        />
-                      ) : (
-                        <span className="text-slate-300 dark:text-slate-600 text-sm italic">-</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              ) : visibleStudents.map((student) => (
+                <StudentAttendanceRow
+                  key={`${date}-${student.id}`}
+                  student={student}
+                  record={recordsByStudentId.get(student.id)}
+                  onStatusChange={handleStatusChange}
+                  onReasonChange={handleReasonChange}
+                />
+              ))}
             </tbody>
           </table>
         </div>
@@ -377,39 +321,122 @@ export default function TakeAttendance() {
   );
 }
 
+const StudentAttendanceRow = React.memo(function StudentAttendanceRow({
+  student,
+  record,
+  onStatusChange,
+  onReasonChange,
+}: {
+  student: Student;
+  record?: AttendanceRecord;
+  onStatusChange: (studentId: string, status: AttendanceStatus) => void;
+  onReasonChange: (studentId: string, reason: string) => void;
+}) {
+  const status = record?.status;
+  const isUnmarked = !status;
+
+  return (
+    <tr
+      className={cn(
+        "transition-colors",
+        isUnmarked
+          ? "bg-rose-50/60 dark:bg-rose-900/10 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+          : "hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
+      )}
+    >
+      <td className="px-6 py-4 font-mono text-sm text-slate-600 dark:text-slate-300">{student.rollNumber}</td>
+      <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{student.name}</td>
+      <td className="px-6 py-4">
+        <div className="flex items-center justify-center gap-2">
+          <StatusButton
+            active={status === 'Present'}
+            onClick={() => onStatusChange(student.id, 'Present')}
+            color="emerald"
+            icon={<Check className="w-5 h-5" />}
+            label="Present"
+            studentName={student.name}
+          />
+          <StatusButton
+            active={status === 'Absent'}
+            onClick={() => onStatusChange(student.id, 'Absent')}
+            color="rose"
+            icon={<X className="w-5 h-5" />}
+            label="Absent"
+            studentName={student.name}
+          />
+          <StatusButton
+            active={status === 'Sick'}
+            onClick={() => onStatusChange(student.id, 'Sick')}
+            color="amber"
+            icon={<Thermometer className="w-5 h-5" />}
+            label="Sick"
+            studentName={student.name}
+          />
+          <StatusButton
+            active={status === 'Late'}
+            onClick={() => onStatusChange(student.id, 'Late')}
+            color="orange"
+            icon={<Clock className="w-5 h-5" />}
+            label="Late"
+            studentName={student.name}
+          />
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        {status && status !== 'Present' ? (
+          <input
+            type="text"
+            placeholder={`Reason for being ${status.toLowerCase()}...`}
+            defaultValue={record?.reason || ''}
+            onBlur={(e) => onReasonChange(student.id, e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm transition-all dark:text-white focus-ring"
+            aria-label={`Reason for ${student.name} being ${status.toLowerCase()}`}
+          />
+        ) : (
+          <span className="text-slate-500 dark:text-slate-400 text-sm italic font-medium select-none">-</span>
+        )}
+      </td>
+    </tr>
+  );
+});
+
 function StatusButton({ 
   active, 
   onClick, 
   color, 
   icon, 
-  label 
+  label,
+  studentName,
 }: { 
   active: boolean; 
   onClick: () => void; 
   color: 'emerald' | 'rose' | 'amber' | 'orange';
   icon: React.ReactNode;
   label: string;
+  studentName: string;
 }) {
   const colorStyles = {
-    emerald: "hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-200 dark:hover:border-emerald-800",
-    rose: "hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-800",
-    amber: "hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-200 dark:hover:border-amber-800",
-    orange: "hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400 hover:border-orange-200 dark:hover:border-orange-800",
+    emerald: "hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-300 dark:hover:border-emerald-700 text-slate-500 dark:text-slate-400",
+    rose: "hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-700 dark:hover:text-rose-300 hover:border-rose-300 dark:hover:border-rose-700 text-slate-500 dark:text-slate-400",
+    amber: "hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700 dark:hover:text-amber-300 hover:border-amber-300 dark:hover:border-amber-700 text-slate-500 dark:text-slate-400",
+    orange: "hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-700 dark:hover:text-orange-300 hover:border-orange-300 dark:hover:border-orange-700 text-slate-500 dark:text-slate-400",
   };
 
   const activeStyles = {
-    emerald: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 shadow-inner",
-    rose: "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-700 shadow-inner",
-    amber: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700 shadow-inner",
-    orange: "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border-orange-300 dark:border-orange-700 shadow-inner",
+    emerald: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border-emerald-400 dark:border-emerald-600 shadow-inner font-semibold",
+    rose: "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300 border-rose-400 dark:border-rose-600 shadow-inner font-semibold",
+    amber: "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-400 dark:border-amber-600 shadow-inner font-semibold",
+    orange: "bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 border-orange-400 dark:border-orange-600 shadow-inner font-semibold",
   };
 
   return (
     <button
+      type="button"
       onClick={onClick}
-      title={label}
+      title={`${label} (${studentName})`}
+      aria-label={`Mark ${label} for ${studentName}`}
       className={cn(
-        "p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 transition-all",
+        "min-w-[44px] min-h-[44px] p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center focus-ring",
         active ? activeStyles[color] : colorStyles[color]
       )}
     >

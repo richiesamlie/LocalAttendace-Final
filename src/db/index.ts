@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 
-import { _db, DB_FILE, openDatabase } from './connection';
+import { _db, DB_FILE, openDatabase, checkpointWal } from './connection';
 import { initSchema } from './schema';
 import { preparedStatements, initStatements } from './statements';
 import { cacheGet, cacheSet, cacheInvalidate, cached } from './cache';
@@ -26,15 +26,17 @@ function startCheckpointInterval(): void {
 
 startCheckpointInterval();
 
-process.on('beforeExit', () => {
+function closeDatabase(): void {
   if (checkpointInterval) clearInterval(checkpointInterval);
+  checkpointWal();
   try {
-    _db.pragma('wal_checkpoint(TRUNCATE)');
     _db.close();
   } catch (_e) {
-    // Ignore close/checkpoint errors during shutdown.
+    // Ignore close errors during shutdown.
   }
-});
+}
+
+process.on('beforeExit', closeDatabase);
 
 function reinitConnection(): void {
   openDatabase();

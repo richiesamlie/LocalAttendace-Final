@@ -21,11 +21,11 @@ export default function EventsTab({ events, searchTerm }: EventsTabProps) {
     <div className="overflow-x-auto">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-slate-800 text-sm text-slate-500 dark:text-slate-400">
-            <th className="pb-3 font-medium">Date</th>
-            <th className="pb-3 font-medium">Class</th>
-            <th className="pb-3 font-medium">Title</th>
-            <th className="pb-3 font-medium">Type</th>
+          <tr className="border-b border-slate-200 dark:border-slate-800 text-sm font-semibold text-slate-600 dark:text-slate-300">
+            <th className="pb-3 font-semibold">Date</th>
+            <th className="pb-3 font-semibold">Class</th>
+            <th className="pb-3 font-semibold">Title</th>
+            <th className="pb-3 font-semibold">Type</th>
           </tr>
         </thead>
         <tbody className="text-sm">
@@ -34,7 +34,7 @@ export default function EventsTab({ events, searchTerm }: EventsTabProps) {
               <td className="py-3 text-slate-900 dark:text-white">{e.date}</td>
               <td className="py-3 text-slate-600 dark:text-slate-300">{e.className}</td>
               <td className="py-3 font-medium text-slate-900 dark:text-white">{e.title}</td>
-              <td className="py-3 capitalize text-slate-600 dark:text-slate-400">{e.type}</td>
+              <td className="py-3 capitalize text-slate-700 dark:text-slate-300">{e.type}</td>
             </tr>
           ))}
         </tbody>

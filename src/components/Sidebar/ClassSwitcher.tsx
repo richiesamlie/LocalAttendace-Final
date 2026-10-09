@@ -37,13 +37,15 @@ export function ClassSwitcher() {
   return (
     <div className="px-4 py-3 mb-2 border-b border-slate-100 dark:border-slate-800/60">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Current Class</h3>
+        <h3 className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Current Class</h3>
         <button 
+          type="button"
           onClick={() => setIsEditing(!isEditing)}
-          className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="p-1.5 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-ring"
           title="Manage Classes"
+          aria-label="Manage Classes"
         >
-          <SettingsIcon className="w-3.5 h-3.5" />
+          <SettingsIcon className="w-4 h-4" />
         </button>
       </div>
 
@@ -51,7 +53,7 @@ export function ClassSwitcher() {
         <select
           value={currentClassId || ''}
           onChange={(e) => setCurrentClass(e.target.value)}
-          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5"
+          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg focus-ring block p-2.5"
           aria-label="Select class"
         >
           {classes.map((c) => (
@@ -72,11 +74,12 @@ export function ClassSwitcher() {
                       type="text"
                       value={editingName}
                       onChange={(e) => setEditingName(e.target.value)}
-                      className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                      className="flex-1 px-2 py-1 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus-ring"
                       autoFocus
                       onKeyDown={(e) => e.key === 'Enter' && handleUpdateClass(c.id)}
+                      aria-label="Edit class name"
                     />
-                    <button onClick={() => handleUpdateClass(c.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded" title="Save" aria-label="Save class name">
+                    <button type="button" onClick={() => handleUpdateClass(c.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded focus-ring" title="Save" aria-label="Save class name">
                       <CheckSquare className="w-4 h-4" />
                     </button>
                   </div>
@@ -84,15 +87,17 @@ export function ClassSwitcher() {
                   <>
                     <span className="flex-1 text-sm truncate text-slate-700 dark:text-slate-300">{c.name}</span>
                     <button 
+                      type="button"
                       onClick={() => { setEditingId(c.id); setEditingName(c.name); }}
-                      className="p-1 text-slate-400 hover:text-indigo-600 rounded"
+                      className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded focus-ring"
                       title="Edit"
-                      aria-label="Edit class name"
+                      aria-label={`Edit ${c.name}`}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     {classes.length > 1 && (
                       <button 
+                        type="button"
                         onClick={() => {
                           confirmToast(
                             `Delete "${c.name}"?`,
@@ -101,9 +106,9 @@ export function ClassSwitcher() {
                             { duration: 8000, confirmLabel: 'Delete', isDangerous: true }
                           );
                         }}
-                        className="p-1 text-slate-400 hover:text-red-600 rounded"
+                        className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded focus-ring"
                         title="Delete"
-                        aria-label="Delete class"
+                        aria-label={`Delete ${c.name}`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -121,14 +126,16 @@ export function ClassSwitcher() {
               placeholder="New class name..."
               aria-label="New class name"
               disabled={!canCreateClass}
-              className="flex-1 px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900 text-slate-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed focus-ring"
               onKeyDown={(e) => e.key === 'Enter' && canCreateClass && handleAddClass()}
             />
             <button 
+              type="button"
               onClick={handleAddClass}
               disabled={!newClassName.trim() || !canCreateClass}
               title={!canCreateClass ? "You already manage a Homeroom class." : "Add new class"}
-              className="p-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Add new class"
+              className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed focus-ring"
             >
               <Plus className="w-4 h-4" />
             </button>

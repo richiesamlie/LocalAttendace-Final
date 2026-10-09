@@ -225,20 +225,20 @@ export default function SeatingChart() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Visual Seating Chart</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Arrange student seating. Select a student, then click a seat to place them.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Arrange student seating. Select a student, then click a seat to place them.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={autoFillSeats}
             disabled={unseatedStudents.length === 0}
-            className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
+            className="px-4 py-2 min-h-[44px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50 focus-ring"
           >
             Auto-Fill
           </button>
           <button
             onClick={clearAllSeats}
             disabled={seatedStudentIds.length === 0}
-            className="px-4 py-2 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors disabled:opacity-50"
+            className="px-4 py-2 min-h-[44px] bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-xl font-medium hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors disabled:opacity-50 focus-ring"
           >
             Clear All
           </button>
@@ -248,7 +248,7 @@ export default function SeatingChart() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Unseated Students Sidebar */}
         <div 
-          className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 flex flex-col h-[600px]"
+          className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 flex flex-col h-[600px]"
           onDragOver={handleDragOver}
           onDrop={handleDropOnUnseated}
         >
@@ -273,7 +273,7 @@ export default function SeatingChart() {
                   onDragStart={(e) => handleDragStart(e, student.id)}
                   onClick={() => setSelectedStudent(selectedStudent === student.id ? null : student.id)}
                   className={cn(
-                    "w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between cursor-grab active:cursor-grabbing",
+                    "w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between cursor-grab active:cursor-grabbing focus-ring",
                     selectedStudent === student.id
                       ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-sm"
                       : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700",
@@ -294,10 +294,10 @@ export default function SeatingChart() {
         </div>
 
         {/* Seating Grid */}
-        <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 overflow-x-auto">
+        <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 overflow-x-auto">
           <div className="min-w-max flex flex-col items-center">
             {/* Teacher Desk Indicator */}
-            <div className="w-64 h-12 bg-slate-200 dark:bg-slate-800 rounded-xl mb-12 flex items-center justify-center text-slate-500 dark:text-slate-400 font-medium uppercase tracking-widest text-sm shadow-inner">
+            <div className="w-64 h-12 bg-slate-200 dark:bg-slate-800 rounded-xl mb-12 flex items-center justify-center text-slate-600 dark:text-slate-300 font-medium uppercase tracking-widest text-sm shadow-inner">
               Teacher&apos;s Desk
             </div>
 
@@ -322,7 +322,7 @@ export default function SeatingChart() {
                     draggable={!!student}
                     onDragStart={(e) => student && handleDragStart(e, student.id)}
                     className={cn(
-                      "w-24 h-24 rounded-2xl border-2 flex flex-col items-center justify-center p-2 transition-all relative group",
+                      "w-24 h-24 rounded-2xl border-2 flex flex-col items-center justify-center p-2 transition-all relative group focus-ring",
                       student
                         ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 hover:border-rose-300 dark:hover:border-rose-700 cursor-grab active:cursor-grabbing"
                         : selectedStudent || draggedStudent

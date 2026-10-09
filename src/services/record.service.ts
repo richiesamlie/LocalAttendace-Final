@@ -8,8 +8,17 @@ import { db, isPostgres, pgQuery } from './utils';
  */
 
 export const recordService = {
-  getByClass(classId: string) {
+  getByClass(classId: string, startDate?: string, endDate?: string) {
     if (isPostgres()) {
+      if (startDate && endDate) {
+        return pgQuery<{ student_id: string; date: string; status: string; reason: string | null }>(
+          `SELECT ar.student_id, ar.date, ar.status, ar.reason FROM attendance_records ar
+           JOIN students s ON ar.student_id = s.id
+           WHERE s.class_id = $1 AND ar.date >= $2 AND ar.date <= $3
+           ORDER BY ar.date DESC, s.roll_number`,
+          [classId, startDate, endDate]
+        );
+      }
       return pgQuery<{ student_id: string; date: string; status: string; reason: string | null }>(
         `SELECT ar.student_id, ar.date, ar.status, ar.reason FROM attendance_records ar
          JOIN students s ON ar.student_id = s.id
@@ -17,6 +26,14 @@ export const recordService = {
          ORDER BY ar.date DESC, s.roll_number`,
         [classId]
       );
+    }
+    if (startDate && endDate) {
+      return db.prepare(`
+        SELECT ar.student_id, ar.date, ar.status, ar.reason FROM attendance_records ar
+        JOIN students s ON ar.student_id = s.id
+        WHERE s.class_id = ? AND ar.date >= ? AND ar.date <= ?
+        ORDER BY ar.date DESC, s.roll_number
+      `).all(classId, startDate, endDate);
     }
     return db.stmt.getRecordsByClass.all(classId);
   },

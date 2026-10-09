@@ -1,5 +1,5 @@
 import express from 'express';
-import { recordService, classService, studentService } from '../../services';
+import { recordService, classService, studentService, teacherService } from '../../services';
 import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, attendanceRecordsPayloadSchema } from '../../src/lib/validation';
@@ -24,7 +24,12 @@ export const recordRouter = express.Router();
 recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
-    const records = await recordService.getByClass(classId) as AttendanceDbRow[];
+    const { from, to } = req.query as { from?: string; to?: string };
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    const startDate = from && dateRegex.test(from) ? from : undefined;
+    const endDate = to && dateRegex.test(to) ? to : undefined;
+
+    const records = await recordService.getByClass(classId, startDate, endDate) as AttendanceDbRow[];
     const mapped = records.map((r) => ({
       studentId: r.student_id,
       date: r.date,
@@ -41,10 +46,13 @@ recordRouter.post('/', requireAuth, postLimiter, validate(attendanceRecordsPaylo
   const teacherId = req.teacherId;
   const records = (Array.isArray(req.body) ? req.body : [req.body]) as AttendanceInput[];
 
+  const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
   for (const r of records) {
-    const access = await classService.isClassTeacher(r.classId, teacherId);
-    if (!access) {
-      return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
+    if (!isGlobalAdmin) {
+      const access = await classService.isClassTeacher(r.classId, teacherId);
+      if (!access) {
+        return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
+      }
     }
     const student = await studentService.getBelongsToClass(r.studentId, r.classId);
     if (!student) {

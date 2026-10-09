@@ -158,7 +158,7 @@ export default function PerformanceMonitor() {
   }
 
   if (!metricsData) {
-    return <div className="text-center p-10 text-slate-500">No data available</div>;
+    return <div className="text-center p-10 text-slate-600 dark:text-slate-400">No data available</div>;
   }
 
   const { summary, bufferInfo, metrics } = metricsData;
@@ -175,14 +175,14 @@ export default function PerformanceMonitor() {
             <Activity className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             Performance Monitor
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
             Real-time performance metrics and analytics
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => refetch()}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition-colors"
+            className="px-4 py-2 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition-colors focus-ring"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -190,7 +190,7 @@ export default function PerformanceMonitor() {
           <button
             onClick={() => clearMetricsMutation.mutate()}
             disabled={clearMetricsMutation.isPending}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50"
+            className="px-4 py-2 min-h-[44px] bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50 focus-ring"
           >
             <Trash2 className="w-4 h-4" />
             Clear
@@ -206,7 +206,7 @@ export default function PerformanceMonitor() {
             key={window.label}
             onClick={() => setTimeWindow(window.value ?? 60)}
             className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+              'px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium transition-colors focus-ring',
               timeWindow === window.value
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -234,7 +234,7 @@ export default function PerformanceMonitor() {
             <Database className="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
           <div className="text-3xl font-bold text-slate-900 dark:text-white">{summary.totalQueries}</div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             {metrics.queries.failed > 0 ? `${metrics.queries.failed} failed` : 'All successful'}
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function PerformanceMonitor() {
           <div className="text-3xl font-bold text-slate-900 dark:text-white">
             {formatDuration(metrics.requests.avgDuration)}
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             p95: {formatDuration(metrics.requests.p95)}
           </div>
         </div>
@@ -260,7 +260,7 @@ export default function PerformanceMonitor() {
           <div className="text-3xl font-bold text-slate-900 dark:text-white">
             {formatUptime(summary.uptimeMs)}
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             Buffer: {bufferInfo.requestUsage.toFixed(1)}% used
           </div>
         </div>
@@ -376,7 +376,7 @@ export default function PerformanceMonitor() {
               ))}
               {metrics.requests.slowest.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={5} className="py-6 text-center text-slate-600 dark:text-slate-400">
                     No slow requests recorded
                   </td>
                 </tr>
@@ -421,7 +421,7 @@ export default function PerformanceMonitor() {
               ))}
               {metrics.queries.slowest.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-slate-500 dark:text-slate-400">
+                  <td colSpan={4} className="py-6 text-center text-slate-600 dark:text-slate-400">
                     No slow queries recorded
                   </td>
                 </tr>
@@ -481,7 +481,7 @@ export default function PerformanceMonitor() {
                         style={{ width: `${(data.count / metrics.requests.total) * 100}%` }}
                       />
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                    <span className="text-xs text-slate-600 dark:text-slate-400">
                       {formatDuration(data.avgDuration)} avg
                     </span>
                   </div>

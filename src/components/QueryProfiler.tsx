@@ -239,7 +239,7 @@ export default function QueryProfiler() {
           <Database className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           Query Profiler
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
           Analyze SQL queries and optimize database performance
         </p>
       </div>
@@ -280,7 +280,7 @@ export default function QueryProfiler() {
         <button
           onClick={() => setActiveTab('statements')}
           className={cn(
-            'px-4 py-2 font-medium text-sm transition-colors',
+            'px-4 py-2 min-h-[44px] font-medium text-sm transition-colors rounded-t-lg focus-ring',
             activeTab === 'statements'
               ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -291,7 +291,7 @@ export default function QueryProfiler() {
         <button
           onClick={() => setActiveTab('indexes')}
           className={cn(
-            'px-4 py-2 font-medium text-sm transition-colors',
+            'px-4 py-2 min-h-[44px] font-medium text-sm transition-colors rounded-t-lg focus-ring',
             activeTab === 'indexes'
               ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -302,7 +302,7 @@ export default function QueryProfiler() {
         <button
           onClick={() => setActiveTab('custom')}
           className={cn(
-            'px-4 py-2 font-medium text-sm transition-colors',
+            'px-4 py-2 min-h-[44px] font-medium text-sm transition-colors rounded-t-lg focus-ring',
             activeTab === 'custom'
               ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -405,12 +405,12 @@ export default function QueryProfiler() {
                 value={customSQL}
                 onChange={(e) => setCustomSQL(e.target.value)}
                 placeholder="Enter SQL query to analyze... (e.g., SELECT * FROM students WHERE class_id = ?)"
-                className="w-full h-32 px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-mono text-sm resize-none focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full h-32 px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-mono text-sm resize-none focus-ring outline-none"
               />
               <button
                 onClick={handleAnalyzeCustom}
                 disabled={!customSQL.trim() || isAnalyzing}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-3 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 focus-ring"
               >
                 {isAnalyzing ? (
                   <>

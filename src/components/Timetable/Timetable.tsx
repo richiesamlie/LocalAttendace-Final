@@ -85,7 +85,7 @@ export default function Timetable() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Daily Class Schedule</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">
             Manage your weekly timetable, subjects, and lessons.
           </p>
         </div>
@@ -95,10 +95,10 @@ export default function Timetable() {
             <button
               onClick={() => setViewMode('card')}
               className={cn(
-                "p-2 rounded-lg transition-colors",
+                "p-2 rounded-lg transition-colors focus-ring",
                 viewMode === 'card'
                   ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               )}
               title="Card View"
             >
@@ -107,10 +107,10 @@ export default function Timetable() {
             <button
               onClick={() => setViewMode('list')}
               className={cn(
-                "p-2 rounded-lg transition-colors",
+                "p-2 rounded-lg transition-colors focus-ring",
                 viewMode === 'list'
                   ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               )}
               title="List View"
             >
@@ -120,10 +120,10 @@ export default function Timetable() {
             <button
               onClick={() => setViewMode('week')}
               className={cn(
-                "px-3 py-1.5 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5",
+                "px-3 py-1.5 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 focus-ring",
                 viewMode === 'week'
                   ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               )}
               title="Week View"
             >
@@ -136,7 +136,7 @@ export default function Timetable() {
 
           <button
             onClick={() => { setIsAdding(true); setEditingId(null); }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors focus-ring"
           >
             <Plus className="w-4 h-4" />
             Add Class
@@ -169,18 +169,18 @@ export default function Timetable() {
             onLessonChange={handleLessonChange}
           />
         ) : slotsForDay.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center shadow-sm">
             <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
               <Clock className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg text-slate-900 dark:text-white font-semibold">No classes scheduled</h3>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 mb-6">
+            <p className="text-slate-600 dark:text-slate-300 mt-1 mb-6">
               Click &quot;Add Class&quot; to build your timetable for {DAYS[selectedDay]}.
             </p>
             {selectedDay !== 1 && timetable.some(s => s.dayOfWeek === 1) && (
               <button
                 onClick={handleCopyFromMonday}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 min-h-[40px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus-ring"
               >
                 <Copy className="w-4 h-4" />
                 Copy Times from Monday

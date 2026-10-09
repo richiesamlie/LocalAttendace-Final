@@ -44,20 +44,14 @@ export default function RandomPicker() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Random Student Picker</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Fairly select students for participation or tasks.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Fairly select students for participation or tasks.</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-12 flex flex-col items-center justify-center min-h-[400px] relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-50 dark:opacity-20">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-100 dark:bg-indigo-900 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-100 dark:bg-emerald-900 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative z-10 flex flex-col items-center w-full">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 sm:p-12 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center w-full">
           <div className={cn(
-            "w-48 h-48 rounded-full flex items-center justify-center mb-8 shadow-xl border-4 transition-all duration-200",
+            "w-48 h-48 rounded-full flex items-center justify-center mb-8 shadow-md border-4 transition-all duration-200",
             isSpinning ? "border-indigo-400 dark:border-indigo-500 scale-95" : selected ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 scale-100" : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 scale-100"
           )}>
             {selected ? (
@@ -66,26 +60,27 @@ export default function RandomPicker() {
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white line-clamp-2 leading-tight">
                   {selected.name}
                 </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-mono">
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 font-mono">
                   Roll: {selected.rollNumber}
                 </p>
               </div>
             ) : (
-              <User className="w-20 h-20 text-slate-300 dark:text-slate-600" />
+              <User className="w-20 h-20 text-slate-400 dark:text-slate-500" />
             )}
           </div>
 
           <button
+            type="button"
             onClick={pickRandom}
             disabled={isSpinning || students.length === 0}
-            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+            className="flex items-center gap-3 px-8 py-4 min-h-[48px] bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-md hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 focus-ring"
           >
             <Shuffle className={cn("w-6 h-6", isSpinning && "animate-spin")} />
             {isSpinning ? 'Picking...' : 'Pick Random Student'}
           </button>
 
           {students.length === 0 && (
-            <p className="mt-6 text-rose-500 dark:text-rose-400 font-medium">
+            <p className="mt-6 text-rose-600 dark:text-rose-400 font-medium">
               Please add students to the roster first.
             </p>
           )}

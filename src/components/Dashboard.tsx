@@ -67,15 +67,16 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
         <div className="flex items-center gap-4">
           {currentClass && (
             <button
+              type="button"
               onClick={() => setShowInviteModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm focus-ring"
             >
               <UserPlus className="w-4 h-4" />
               Manage Teachers
             </button>
           )}
           <div className="text-right">
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{format(currentTime, 'EEEE, MMMM do')}</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wider">{format(currentTime, 'EEEE, MMMM do')}</p>
             <p className="text-2xl font-mono text-slate-900 dark:text-white">{format(currentTime, 'HH:mm:ss')}</p>
           </div>
         </div>
@@ -88,8 +89,9 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-300">No students found</h3>
             <p className="text-amber-700 dark:text-amber-400/80 mt-1">Please import your student roster to start taking attendance.</p>
             <button
+              type="button"
               onClick={() => navigate('roster')}
-              className="mt-4 bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 px-4 py-2 rounded-xl font-medium hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
+              className="mt-4 bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 px-4 py-2 rounded-xl font-medium hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors focus-ring"
             >
               Go to Roster
             </button>
@@ -98,12 +100,12 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className={cn(
-            "rounded-3xl p-8 shadow-sm border transition-colors",
+            "rounded-2xl p-6 sm:p-8 shadow-sm border transition-colors",
             isAttendanceDone 
-              ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/50" 
+              ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50" 
               : isBeforeTarget 
-                ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/50" 
-                : "bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800/50"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50" 
+                : "bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800/50"
           )}>
             <div className="flex items-center gap-4 mb-6">
               {isAttendanceDone ? (
@@ -132,14 +134,15 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             </div>
             
             <div className="flex items-center justify-between mt-8">
-              <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 <span className="text-2xl font-bold text-slate-900 dark:text-white mr-2">{records.length} / {activeStudents.length}</span>
                 Students recorded
               </div>
               <button
+                type="button"
                 onClick={() => navigate('attendance')}
                 className={cn(
-                  "px-6 py-3 rounded-xl font-medium text-white shadow-sm transition-transform hover:scale-105 active:scale-95",
+                  "px-6 py-3 rounded-xl font-medium text-white shadow-sm transition-transform hover:scale-105 active:scale-95 focus-ring",
                   isAttendanceDone ? "bg-emerald-600 hover:bg-emerald-700" : isBeforeTarget ? "bg-indigo-600 hover:bg-indigo-700" : "bg-rose-600 hover:bg-rose-700"
                 )}
               >
@@ -148,29 +151,29 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200 dark:border-slate-800">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Today&apos;s Summary</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Present</p>
-                <p className="text-3xl font-light text-emerald-600 dark:text-emerald-400">{presentCount}</p>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Present</p>
+                <p className="text-3xl font-semibold text-emerald-600 dark:text-emerald-400">{presentCount}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Absent</p>
-                <p className="text-3xl font-light text-rose-600 dark:text-rose-400">{absentCount}</p>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Absent</p>
+                <p className="text-3xl font-semibold text-rose-600 dark:text-rose-400">{absentCount}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Sick</p>
-                <p className="text-3xl font-light text-amber-600 dark:text-amber-400">{sickCount}</p>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Sick</p>
+                <p className="text-3xl font-semibold text-amber-600 dark:text-amber-400">{sickCount}</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4">
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Late</p>
-                <p className="text-3xl font-light text-orange-600 dark:text-orange-400">{lateCount}</p>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Late</p>
+                <p className="text-3xl font-semibold text-orange-600 dark:text-orange-400">{lateCount}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 md:col-span-2 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 md:col-span-2 overflow-hidden">
             <div className="flex border-b border-slate-100 dark:border-slate-800 overflow-x-auto hide-scrollbar bg-slate-50/50 dark:bg-slate-800/20">
               <button
                 onClick={() => setActiveTab('schedule')}

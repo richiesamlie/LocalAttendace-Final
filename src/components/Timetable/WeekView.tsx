@@ -21,7 +21,7 @@ export default function WeekView({ timetable, onEdit, onDelete, onLessonChange }
         <div className="min-w-[800px]">
           {/* Header Row */}
           <div className="grid grid-cols-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-            <div className="p-4 border-r border-slate-200 dark:border-slate-800 font-medium text-slate-500 dark:text-slate-400 text-sm text-center">
+            <div className="p-4 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center">
               Time
             </div>
             {WORK_DAYS.map(day => (
@@ -34,13 +34,13 @@ export default function WeekView({ timetable, onEdit, onDelete, onLessonChange }
           {/* Time Slots */}
           <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
             {timeSlots.length === 0 ? (
-              <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+              <div className="p-12 text-center text-slate-600 dark:text-slate-300">
                 No classes scheduled yet. Switch to a day view to add classes.
               </div>
             ) : (
               timeSlots.map(time => (
                 <div key={time} className="grid grid-cols-6">
-                  <div className="p-4 border-r border-slate-100 dark:border-slate-800/50 text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center justify-center bg-slate-50/50 dark:bg-slate-800/20">
+                  <div className="p-4 border-r border-slate-100 dark:border-slate-800/50 text-sm font-semibold text-slate-600 dark:text-slate-300 flex items-center justify-center bg-slate-50/50 dark:bg-slate-800/20">
                     {time}
                   </div>
                   {WORK_DAYS.map(day => {
@@ -91,16 +91,20 @@ export default function WeekView({ timetable, onEdit, onDelete, onLessonChange }
                           />
 
                           {/* Quick actions overlay */}
-                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-white/90 dark:bg-slate-800/90 rounded-lg shadow-sm p-1 backdrop-blur-sm">
+                          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex gap-1 bg-white/90 dark:bg-slate-800/90 rounded-lg shadow-sm p-1 backdrop-blur-sm">
                             <button
                               onClick={(e) => { e.stopPropagation(); onEdit(slot); }}
-                              className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
+                              className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors focus-ring"
+                              title="Edit Class"
+                              aria-label="Edit class"
                             >
                               <Edit2 className="w-3 h-3" />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); onDelete(slot.id); }}
-                              className="p-1 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors"
+                              className="p-1 hover:text-rose-600 dark:hover:text-rose-400 rounded transition-colors focus-ring"
+                              title="Delete Class"
+                              aria-label="Delete class"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>

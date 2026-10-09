@@ -68,7 +68,7 @@ export default function Gatekeeper() {
           <Clock className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
         </div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Gatekeeper</h1>
-        <p className="text-slate-500 dark:text-slate-400">Search for students to quickly tag them as late.</p>
+        <p className="text-slate-600 dark:text-slate-300">Search for students to quickly tag them as late.</p>
       </div>
 
       <div className="relative">
@@ -78,7 +78,7 @@ export default function Gatekeeper() {
           placeholder="Search by student name, roll number, or class..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-lg dark:text-white transition-all shadow-sm"
+          className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-lg dark:text-white transition-all shadow-sm focus-ring"
           autoFocus
         />
       </div>
@@ -100,7 +100,7 @@ export default function Gatekeeper() {
                       </div>
                       <div>
                         <h3 className="font-medium text-slate-900 dark:text-white">{student.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                           <span className="font-mono">{student.rollNumber}</span>
                           <span>&bull;</span>
                           <span>{student.className}</span>
@@ -122,7 +122,7 @@ export default function Gatekeeper() {
                       ) : (
                         <button
                           onClick={() => handleTagLate(student.classId, student.id)}
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors shadow-sm"
+                          className="flex items-center gap-2 px-4 py-2 min-h-[44px] bg-slate-900 dark:bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-slate-800 dark:hover:bg-indigo-700 transition-colors shadow-sm focus-ring"
                         >
                           <Clock className="w-4 h-4" />
                           Tag Late
@@ -134,7 +134,7 @@ export default function Gatekeeper() {
               })}
             </div>
           ) : (
-            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+            <div className="p-8 text-center text-slate-600 dark:text-slate-300">
               No students found matching &quot;{searchQuery}&quot;
             </div>
           )}

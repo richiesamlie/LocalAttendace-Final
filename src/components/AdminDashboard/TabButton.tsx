@@ -12,7 +12,7 @@ export default function TabButton({ active, onClick, icon, label, count }: TabBu
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors focus-ring ${
         active
           ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400'
           : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
@@ -22,10 +22,10 @@ export default function TabButton({ active, onClick, icon, label, count }: TabBu
         {React.cloneElement(icon, { className: 'w-4 h-4' })}
         {label}
       </div>
-      <span className={`px-2 py-0.5 rounded-full text-xs ${
+      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
         active
           ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300'
-          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
       }`}>
         {count}
       </span>

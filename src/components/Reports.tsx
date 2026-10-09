@@ -93,7 +93,7 @@ export default function Reports() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Monthly Reports</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">View attendance summary and export to Excel.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">View attendance summary and export to Excel.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
@@ -103,21 +103,22 @@ export default function Reports() {
               placeholder="Search students..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm dark:text-white"
+              className="pl-9 pr-4 py-2 w-full sm:w-64 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm dark:text-white focus-ring"
             />
           </div>
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none dark:text-white"
+            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm dark:text-white focus-ring"
             aria-label="Select month"
           />
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowExportOptions(!showExportOptions)}
               disabled={students.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 min-h-[44px] bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 focus-ring"
             >
               <FileSpreadsheet className="w-4 h-4" />
               Export Excel
@@ -129,7 +130,7 @@ export default function Reports() {
                   <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <Settings className="w-4 h-4" /> Export Options
                   </h3>
-                  <button onClick={() => setShowExportOptions(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" title="Close" aria-label="Close export options">
+                  <button type="button" onClick={() => setShowExportOptions(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1 rounded focus-ring" title="Close" aria-label="Close export options">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -160,8 +161,9 @@ export default function Reports() {
                     </label>
                   ))}
                   <button
+                    type="button"
                     onClick={handleExport}
-                    className="w-full mt-4 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+                    className="w-full mt-4 py-2.5 min-h-[44px] bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors focus-ring"
                   >
                     Download File
                   </button>
@@ -172,35 +174,35 @@ export default function Reports() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-24">Roll No</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Student Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider text-center">Present</th>
-                <th className="px-6 py-4 text-xs font-semibold text-rose-600 dark:text-rose-500 uppercase tracking-wider text-center">Absent</th>
-                <th className="px-6 py-4 text-xs font-semibold text-amber-600 dark:text-amber-500 uppercase tracking-wider text-center">Sick</th>
-                <th className="px-6 py-4 text-xs font-semibold text-orange-600 dark:text-orange-500 uppercase tracking-wider text-center">Late</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Total Days</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider w-24">Roll No</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Student Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider text-center">Present</th>
+                <th className="px-6 py-4 text-xs font-semibold text-rose-600 dark:text-rose-400 uppercase tracking-wider text-center">Absent</th>
+                <th className="px-6 py-4 text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-center">Sick</th>
+                <th className="px-6 py-4 text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wider text-center">Late</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-center">Total Days</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {summary.map((student) => (
                 <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="px-6 py-4 font-mono text-sm text-slate-500 dark:text-slate-400">{student.rollNumber}</td>
+                  <td className="px-6 py-4 font-mono text-sm text-slate-600 dark:text-slate-300">{student.rollNumber}</td>
                   <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
                     <div className="flex items-center gap-2">
                       <span className={student.isArchived ? "text-slate-500" : ""}>{student.name}</span>
-                      {student.isArchived && <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">Archived</span>}
+                      {student.isArchived && <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">Archived</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center font-medium text-emerald-600 dark:text-emerald-400">{student.present}</td>
                   <td className="px-6 py-4 text-center font-medium text-rose-600 dark:text-rose-400">{student.absent}</td>
                   <td className="px-6 py-4 text-center font-medium text-amber-600 dark:text-amber-400">{student.sick}</td>
                   <td className="px-6 py-4 text-center font-medium text-orange-600 dark:text-orange-400">{student.late}</td>
-                  <td className="px-6 py-4 text-center font-mono text-slate-500 dark:text-slate-400">{student.total}</td>
+                  <td className="px-6 py-4 text-center font-mono text-slate-600 dark:text-slate-300">{student.total}</td>
                 </tr>
               ))}
               {summary.length === 0 && (
@@ -211,7 +213,7 @@ export default function Reports() {
                         <FileSpreadsheet className="w-8 h-8 text-slate-400" />
                       </div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white">No data to report</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         Add students to the roster and take attendance to generate monthly reports.
                       </p>
                     </div>

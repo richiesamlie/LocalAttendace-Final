@@ -45,11 +45,11 @@ export default function Settings() {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings & Data Management</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage your database backups and cloud sync options.</p>
+        <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Manage your database backups and cloud sync options.</p>
       </div>
 
       {/* Cloud Sync Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 sm:p-8">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 sm:p-8">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center shrink-0">
             <Cloud className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -69,7 +69,7 @@ export default function Settings() {
                 <li>Move the entire <code>LocalAttendance</code> folder into your Google Drive folder on your computer.</li>
                 <li>Run the <code>start-app.bat</code> file from its new location inside Google Drive.</li>
               </ol>
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 italic">
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 italic">
               That&apos;s it! Every time you take attendance, the <code>database.sqlite</code> file will automatically sync to your Google Drive in the background.
               </p>
             </div>
@@ -78,7 +78,7 @@ export default function Settings() {
       </div>
 
       {/* Manual Backup Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 sm:p-8">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 sm:p-8">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center shrink-0">
             <HardDrive className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -92,7 +92,7 @@ export default function Settings() {
             <div className="mt-6 flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleExportBackup}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors"
+                className="flex items-center justify-center gap-2 px-6 py-3 min-h-[44px] bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 transition-colors focus-ring"
               >
                 <Download className="w-5 h-5" />
                 Download Backup (.sqlite)
@@ -109,7 +109,7 @@ export default function Settings() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 min-h-[44px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus-ring"
                 >
                   <Upload className="w-5 h-5" />
                   Restore Backup

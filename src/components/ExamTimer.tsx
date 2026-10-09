@@ -77,30 +77,32 @@ export default function ExamTimer() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Exam Timer</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Keep track of time during exams, quizzes, or activities.</p>
+          <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Keep track of time during exams, quizzes, or activities.</p>
         </div>
       </div>
 
       <div className="flex space-x-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-2xl w-fit mx-auto sm:mx-0">
         <button
+          type="button"
           onClick={() => setActiveTab('timer')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
+            "px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 focus-ring",
             activeTab === 'timer'
               ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
           <Timer className="w-4 h-4" />
           Countdown Timer
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('stopwatch')}
           className={cn(
-            "px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2",
+            "px-6 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 focus-ring",
             activeTab === 'stopwatch'
               ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-              : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
           )}
         >
           <Clock className="w-4 h-4" />
@@ -108,15 +110,8 @@ export default function ExamTimer() {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 p-8 sm:p-12 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden">
-        
-        {/* Background decoration */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-50 dark:opacity-20">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-100 dark:bg-indigo-900 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-100 dark:bg-emerald-900 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative z-10 flex flex-col items-center w-full max-w-md">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 sm:p-12 flex flex-col items-center justify-center min-h-[500px]">
+        <div className="flex flex-col items-center w-full max-w-md">
           
           {activeTab === 'timer' ? (
             <>

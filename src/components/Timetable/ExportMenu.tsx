@@ -27,7 +27,7 @@ export default function ExportMenu({ timetable, className }: ExportMenuProps) {
       <button
         onClick={() => setShowMenu(!showMenu)}
         disabled={timetable.length === 0}
-        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 min-h-[40px] bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 focus-ring"
       >
         <Download className="w-4 h-4" />
         Export Plan
@@ -40,36 +40,36 @@ export default function ExportMenu({ timetable, className }: ExportMenuProps) {
               <Settings className="w-4 h-4" />
               Export Lesson Plan
             </h3>
-            <button onClick={() => setShowMenu(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <button onClick={() => setShowMenu(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus-ring rounded" aria-label="Close export menu">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="p-4 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Start Month</label>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Start Month</label>
               <input
                 type="month"
                 value={exportMonth}
                 onChange={(e) => setExportMonth(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none focus-ring"
               />
             </div>
             <div className="space-y-2">
               <button
                 onClick={() => handleExport('weekly')}
-                className="w-full py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm"
+                className="w-full py-2 min-h-[40px] bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm focus-ring"
               >
                 Export Weekly Template (No Dates)
               </button>
               <button
                 onClick={() => handleExport('month')}
-                className="w-full py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm"
+                className="w-full py-2 min-h-[40px] bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 rounded-xl font-medium shadow-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm focus-ring"
               >
                 Export 1 Month Plan (With Dates)
               </button>
               <button
                 onClick={() => handleExport('semester')}
-                className="w-full py-2 bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm"
+                className="w-full py-2 min-h-[40px] bg-emerald-600 text-white rounded-xl font-medium shadow-sm hover:bg-emerald-700 transition-colors text-sm focus-ring"
               >
                 Export Semester Plan (With Dates)
               </button>

@@ -177,7 +177,7 @@ export default function ResourceMonitor() {
           <Activity className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           Resource Monitor
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
           Real-time system resource tracking and alerts
         </p>
       </div>
@@ -219,7 +219,7 @@ export default function ResourceMonitor() {
               key={window}
               onClick={() => setTimeWindow(window)}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                'px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium transition-colors focus-ring',
                 timeWindow === window
                   ? 'bg-indigo-600 text-white'
                   : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700'
@@ -232,7 +232,7 @@ export default function ResourceMonitor() {
 
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-2"
+          className="px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-2 focus-ring"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -259,7 +259,7 @@ export default function ResourceMonitor() {
                   <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                     {formatBytes(current.memory.heapUsed)}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
                     of {formatBytes(current.memory.heapTotal)}
                   </div>
                   <div className="mt-2 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -279,7 +279,7 @@ export default function ResourceMonitor() {
                   <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                     {formatPercent(current.cpu.percent)}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
                     User: {(current.cpu.user / 1000000).toFixed(2)}s
                   </div>
                   <div className="mt-2 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -299,14 +299,14 @@ export default function ResourceMonitor() {
                   <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                     {current.database.preparedStatements}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
                     Prepared statements
                   </div>
                   <div className="mt-2 flex items-center gap-2">
                     {current.database.walCheckpoint ? (
                       <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ WAL Enabled</span>
                     ) : (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">WAL Disabled</span>
+                      <span className="text-xs text-slate-600 dark:text-slate-400">WAL Disabled</span>
                     )}
                   </div>
                 </div>
@@ -320,7 +320,7 @@ export default function ResourceMonitor() {
                   <div className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
                     {formatBytes(current.system.totalMemory - current.system.freeMemory)}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
                     of {formatBytes(current.system.totalMemory)}
                   </div>
                   <div className="mt-2 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -353,25 +353,25 @@ export default function ResourceMonitor() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Average</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Average</div>
                       <div className="text-lg font-semibold text-slate-900 dark:text-white">
                         {formatBytes(stats.memory.avg)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Current</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Current</div>
                       <div className="text-lg font-semibold text-slate-900 dark:text-white">
                         {formatBytes(stats.memory.current)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Minimum</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Minimum</div>
                       <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                         {formatBytes(stats.memory.min)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Maximum</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Maximum</div>
                       <div className="text-sm font-medium text-red-600 dark:text-red-400">
                         {formatBytes(stats.memory.max)}
                       </div>
@@ -393,25 +393,25 @@ export default function ResourceMonitor() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Average</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Average</div>
                       <div className="text-lg font-semibold text-slate-900 dark:text-white">
                         {formatPercent(stats.cpu.avg)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Current</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Current</div>
                       <div className="text-lg font-semibold text-slate-900 dark:text-white">
                         {formatPercent(stats.cpu.current)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Minimum</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Minimum</div>
                       <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
                         {formatPercent(stats.cpu.min)}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Maximum</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">Maximum</div>
                       <div className="text-sm font-medium text-red-600 dark:text-red-400">
                         {formatPercent(stats.cpu.max)}
                       </div>
@@ -428,25 +428,25 @@ export default function ResourceMonitor() {
               <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Monitor Status</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                 <div>
-                  <div className="text-slate-500 dark:text-slate-400 mb-1">Status</div>
+                  <div className="text-slate-600 dark:text-slate-400 mb-1">Status</div>
                   <div className={cn('font-medium', resourceData.status.enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
                     {resourceData.status.enabled ? '✓ Enabled' : '✗ Disabled'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-slate-500 dark:text-slate-400 mb-1">Sample Interval</div>
+                  <div className="text-slate-600 dark:text-slate-400 mb-1">Sample Interval</div>
                   <div className="font-medium text-slate-900 dark:text-white">
                     {resourceData.status.sampleInterval / 1000}s
                   </div>
                 </div>
                 <div>
-                  <div className="text-slate-500 dark:text-slate-400 mb-1">Samples Collected</div>
+                  <div className="text-slate-600 dark:text-slate-400 mb-1">Samples Collected</div>
                   <div className="font-medium text-slate-900 dark:text-white">
                     {resourceData.status.sampleCount.toLocaleString()}
                   </div>
                 </div>
                 <div>
-                  <div className="text-slate-500 dark:text-slate-400 mb-1">Monitor Uptime</div>
+                  <div className="text-slate-600 dark:text-slate-400 mb-1">Monitor Uptime</div>
                   <div className="font-medium text-slate-900 dark:text-white">
                     {formatUptime(resourceData.status.uptime / 1000)}
                   </div>

@@ -76,13 +76,15 @@ function LoginScreen() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+            <label htmlFor="login-username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
             <input
+              id="login-username"
               type="text"
               value={username}
               onChange={(e) => { setUsername(e.target.value); setError(''); }}
+              autoComplete="username"
               className={cn(
-                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none",
+                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-all focus-ring",
                 error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
               )}
               placeholder="Enter username..."
@@ -90,23 +92,25 @@ function LoginScreen() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              autoComplete="current-password"
               className={cn(
-                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all outline-none",
+                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-all focus-ring",
                 error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
               )}
               placeholder="Enter password..."
             />
-            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+            {error && <p role="alert" className="text-red-500 text-sm mt-1">{error}</p>}
           </div>
           <button
             type="submit"
             disabled={loginMutation.isPending || !username || !password}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 min-h-[44px] rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 focus-ring"
           >
             {loginMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Log In'}
           </button>
@@ -196,8 +200,11 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-900 dark:text-slate-50 transition-colors">
       {/* Mobile Menu Button */}
       <button 
+        type="button"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 right-4 z-50 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+        aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={isMobileMenuOpen}
+        className="lg:hidden fixed top-4 right-4 z-50 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 focus-ring"
       >
         {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
