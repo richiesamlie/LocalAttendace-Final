@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 
-import { _db, initConnection, DB_FILE } from './connection';
+import { _db, DB_FILE, openDatabase } from './connection';
 import { initSchema } from './schema';
 import { preparedStatements, initStatements } from './statements';
 import { cacheGet, cacheSet, cacheInvalidate, cached } from './cache';
@@ -11,16 +11,23 @@ import { enqueueWrite } from './writeQueue';
 initSchema();
 initStatements();
 
-const checkpointInterval = setInterval(() => {
-  try {
-    _db.pragma('wal_checkpoint(TRUNCATE)');
-  } catch (_e) {
-    // Ignore checkpoint errors during active transactions
-  }
-}, 60000);
+let checkpointInterval: NodeJS.Timeout | null = null;
+
+function startCheckpointInterval(): void {
+  if (checkpointInterval) clearInterval(checkpointInterval);
+  checkpointInterval = setInterval(() => {
+    try {
+      _db.pragma('wal_checkpoint(TRUNCATE)');
+    } catch (_e) {
+      // Ignore checkpoint errors during active transactions
+    }
+  }, 60000);
+}
+
+startCheckpointInterval();
 
 process.on('beforeExit', () => {
-  clearInterval(checkpointInterval);
+  if (checkpointInterval) clearInterval(checkpointInterval);
   try {
     _db.pragma('wal_checkpoint(TRUNCATE)');
     _db.close();
@@ -30,7 +37,7 @@ process.on('beforeExit', () => {
 });
 
 function reinitConnection(): void {
-  initConnection();
+  openDatabase();
 }
 
 function recompileStatements(): void {
@@ -42,7 +49,7 @@ const dbProxy = new Proxy({}, {
   get(_target, prop) {
     if (prop === 'restore') {
       return (buffer: Buffer) => {
-        clearInterval(checkpointInterval);
+        if (checkpointInterval) clearInterval(checkpointInterval);
         try { _db.close(); } catch(_e) {
           // Ignore close errors while restoring DB file.
         }
@@ -52,6 +59,7 @@ const dbProxy = new Proxy({}, {
         reinitConnection();
         initSchema();
         recompileStatements();
+        startCheckpointInterval();
       };
     }
     if (prop === 'stmt') {

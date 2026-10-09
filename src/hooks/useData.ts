@@ -374,7 +374,8 @@ export function useClassSync(intervalMs: number = 30000) {
           queryClient.fetchQuery({ queryKey: queryKeys.seating(currentClassId), queryFn: () => api.getSeating(currentClassId) }),
         ]);
 
-        const fingerprint = `${students.length}:${records.length}:${events.length}:${timetable.length}:${Object.keys(seating).length}`;
+        const recordsKey = records.map(r => `${r.studentId}:${r.status}`).join(',');
+        const fingerprint = `${students.length}:${records.length}:${recordsKey}:${events.length}:${timetable.length}:${Object.keys(seating).length}`;
         if (fingerprint !== lastFingerprintRef.current && lastFingerprintRef.current !== '') {
           await reloadClassDataRef.current(currentClassId);
         }

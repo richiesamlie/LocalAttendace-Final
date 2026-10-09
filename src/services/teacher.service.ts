@@ -14,7 +14,7 @@ export const teacherService = {
         [username]
       );
     }
-    return db.stmt.getTeacherByUsername.get(username);
+    return db.stmt.getTeacherByUsername.get(username) as { id: string; username: string; password_hash: string; name: string; is_admin: number } | undefined;
   },
 
   getById(id: string) {

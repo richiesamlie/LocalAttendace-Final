@@ -169,7 +169,7 @@ authRouter.post('/refresh', async (req, res) => {
 
   // Atomically mark the old token as used and link to the successor.
   // Returns false if another concurrent refresh won the race.
-  const won = refreshTokenService.rotate(row.id, newRefresh.id);
+  const won = await refreshTokenService.rotate(row.id, newRefresh.id);
   if (!won) {
     // Another request rotated this token already. The newRefresh we just
     // issued is now orphaned — mark it as used so it can't be reused.

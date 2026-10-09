@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'crypto';
-import { db, isPostgres, pgQuery, pgQueryOne } from './utils';
+import { db, isPostgres, pgQuery, pgQueryOne, getPool } from './utils';
 
 /**
  * Refresh Token Service
@@ -113,14 +113,14 @@ export const refreshTokenService = {
    * returns false WITHOUT modifying anything — caller should treat this
    * as reuse-detected and call revokeFamily.
    */
-  rotate(oldTokenId: string, successorId: string): boolean {
+  async rotate(oldTokenId: string, successorId: string): Promise<boolean> {
     if (isPostgres()) {
-      const result = pgQuery(
+      const result = await getPool().query(
         `UPDATE refresh_tokens SET used_at = NOW(), rotated_to = $1
          WHERE id = $2 AND used_at IS NULL`,
         [successorId, oldTokenId],
-      ) as { rowCount?: number } | unknown;
-      const rowCount = (result as { rowCount?: number })?.rowCount ?? 0;
+      );
+      const rowCount = result.rowCount ?? 0;
       return rowCount === 1;
     }
     const info = db.stmt.markRefreshTokenUsed.run(successorId, oldTokenId) as { changes: number };

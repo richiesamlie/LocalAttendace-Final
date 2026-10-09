@@ -55,4 +55,10 @@ export function initConnection(): void {
   _db.pragma('mmap_size = 268435456');
 }
 
+export function openDatabase(): Database.Database {
+  _db = new Database(DB_FILE, { timeout: 5000 });
+  initConnection();
+  return _db;
+}
+
 initConnection();

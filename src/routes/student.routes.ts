@@ -100,7 +100,7 @@ studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), pos
 
   const { students } = req.body as { students: StudentSyncItem[] };
 
-  const existing = await studentService.getByClass(classId) as StudentDbRow[];
+  const existing = await studentService.getByClass(classId, true) as StudentDbRow[];
   const existingMap = new Map<string, StudentDbRow>();
   for (const s of existing as StudentDbRow[]) {
     existingMap.set(s.id, s);

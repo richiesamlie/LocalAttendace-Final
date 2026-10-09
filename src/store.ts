@@ -149,14 +149,20 @@ export const useStore = create<AppState>()((set, get) => ({
       set({ isLoading: true });
       const classesData = await api.getClasses();
 
-      let settings: Record<string, string> = { theme: 'light' };
+      let localTheme: Theme = 'light';
+      try {
+        const stored = localStorage.getItem('ta-theme');
+        if (stored === 'dark' || stored === 'light') localTheme = stored;
+      } catch {}
+
+      let settings: Record<string, string> = { theme: localTheme };
       try {
         const fetchedSettings = await api.getSettings();
         if (fetchedSettings) {
           settings = fetchedSettings;
         }
       } catch (err) {
-        console.warn('[store] Could not load settings (expected for non-admins):', err);
+        // Expected for non-admins
       }
 
       if (classesData.length > 0) {
@@ -657,14 +663,15 @@ export const useStore = create<AppState>()((set, get) => ({
 
   toggleTheme: async () => {
     const newTheme = get().theme === 'light' ? 'dark' : 'light';
-    await runSwallowedAction(
-      async () => {
-        await api.saveSetting('theme', newTheme);
-        set({ theme: newTheme });
-      },
-      undefined,
-      'Failed to update theme'
-    );
+    set({ theme: newTheme });
+    try {
+      localStorage.setItem('ta-theme', newTheme);
+    } catch {}
+    try {
+      await api.saveSetting('theme', newTheme);
+    } catch (e) {
+      console.warn('[store] Could not persist theme to admin settings:', e);
+    }
   },
 
   clearData: async () => {

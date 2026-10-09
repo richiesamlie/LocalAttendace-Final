@@ -4,8 +4,35 @@ const API_BASE = '/api';
 
 type JsonObject = Record<string, unknown>;
 
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const url = `${API_BASE}${endpoint}`;
+  let response = await fetch(url, {
     ...options,
     credentials: 'include',
     headers: {
@@ -13,6 +40,21 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
       ...options?.headers,
     },
   });
+
+  if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/refresh') {
+    const refreshed = await attemptTokenRefresh();
+    if (refreshed) {
+      response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+      });
+    }
+  }
+
   if (!response.ok) {
     let message = response.statusText;
     try {

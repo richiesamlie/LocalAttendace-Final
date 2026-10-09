@@ -122,9 +122,14 @@ adminRouter.post('/database/restore', async (req, res): Promise<void> => {
         res.status(400).json({ error: 'Invalid SQLite database file' });
         return;
       }
-      db.restore(fileBuffer);
-      res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
-      releaseRestoreLock();
+      try {
+        db.restore(fileBuffer);
+        res.json({ success: true, message: 'Database restored successfully. Refresh to apply changes.' });
+      } catch (_err) {
+        res.status(500).json({ error: 'Failed to restore database' });
+      } finally {
+        releaseRestoreLock();
+      }
     });
   } catch (_error) {
     releaseRestoreLock();

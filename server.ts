@@ -12,7 +12,7 @@ import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 import { performanceMonitor } from "./src/middleware/performance";
 import { verifySocketAuth } from "./src/routes/middleware";
-import { classService, teacherService } from "./services";
+import { classService, teacherService, sessionService, refreshTokenService } from "./services";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
@@ -263,6 +263,17 @@ async function startServer() {
       console.log(` (Run with 'npm run dev:network' to share on Wi-Fi)`);
     }
     console.log(`========================================\n`);
+
+    // Periodic session & refresh token cleanup (every 1 hour)
+    const cleanupInterval = setInterval(async () => {
+      try {
+        await sessionService.deleteExpired();
+        refreshTokenService.cleanup();
+      } catch (err) {
+        console.warn('[janitor] Expired session cleanup failed:', (err as Error).message);
+      }
+    }, 60 * 60 * 1000);
+    cleanupInterval.unref();
   });
 }
 

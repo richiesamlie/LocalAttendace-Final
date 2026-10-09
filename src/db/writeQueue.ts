@@ -14,6 +14,7 @@ export function acquireRestoreLock(): void {
 }
 export function releaseRestoreLock(): void {
   restoreLockActive = false;
+  processWriteQueue();
 }
 
 export async function processWriteQueue(): Promise<void> {

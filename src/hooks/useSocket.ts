@@ -87,31 +87,44 @@ export function useSocket() {
     socket.emit('join_class', currentClassId);
 
     // ----- Event listeners -----
-    // Each listener invalidates a specific React Query cache key, causing
-    // React Query to silently re-fetch that slice of data in the background.
+    // Invalidate React Query cache AND trigger Zustand store reload so
+    // components observing Zustand (Option A) immediately update their UI.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const triggerStoreReload = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        useStore.getState().reloadClassData(currentClassId);
+      }, 50);
+    };
 
     const onRecordsUpdated = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.records(currentClassId) });
+      triggerStoreReload();
     };
 
     const onStudentsUpdated = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.students(currentClassId) });
+      triggerStoreReload();
     };
 
     const onSeatingUpdated = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.seating(currentClassId) });
+      triggerStoreReload();
     };
 
     const onEventsUpdated = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.events(currentClassId) });
+      triggerStoreReload();
     };
 
     const onNotesUpdated = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyNotes(currentClassId) });
+      triggerStoreReload();
     };
 
     const onTimetableUpdated = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timetable(currentClassId) });
+      triggerStoreReload();
     };
 
     socket.on('records_updated',  onRecordsUpdated);
@@ -122,6 +135,7 @@ export function useSocket() {
     socket.on('timetable_updated', onTimetableUpdated);
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       // Remove listeners for this class — they will be re-attached for the
       // next class in the next effect run.
       socket.off('records_updated',  onRecordsUpdated);

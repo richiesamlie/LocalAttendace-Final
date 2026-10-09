@@ -169,27 +169,25 @@ export function initSchema(): void {
   }
 
   const triggerTables = [
-    { table: 'students', pk: 'id' },
-    { table: 'attendance_records', pk: 'student_id' },
-    { table: 'events', pk: 'id' },
-    { table: 'timetable_slots', pk: 'id' },
-    { table: 'daily_notes', pk: 'class_id' },
-    { table: 'seating_layout', pk: 'class_id' },
-    { table: 'classes', pk: 'id' },
+    { table: 'students', condition: 'id = NEW.id' },
+    { table: 'attendance_records', condition: 'student_id = NEW.student_id AND date = NEW.date' },
+    { table: 'events', condition: 'id = NEW.id' },
+    { table: 'timetable_slots', condition: 'id = NEW.id' },
+    { table: 'daily_notes', condition: 'class_id = NEW.class_id AND date = NEW.date' },
+    { table: 'seating_layout', condition: 'class_id = NEW.class_id AND seat_id = NEW.seat_id' },
+    { table: 'classes', condition: 'id = NEW.id' },
   ];
-  for (const { table, pk } of triggerTables) {
+  for (const { table, condition } of triggerTables) {
     const triggerName = `trg_${table}_updated_at`;
-    const existing = _db.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name=?").get(triggerName);
-    if (!existing) {
-      _db.exec(`
-        CREATE TRIGGER ${triggerName}
-        AFTER UPDATE ON ${table}
-        FOR EACH ROW
-        BEGIN
-          UPDATE ${table} SET updated_at = CURRENT_TIMESTAMP WHERE ${pk} = NEW.${pk};
-        END;
-      `);
-    }
+    _db.exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
+    _db.exec(`
+      CREATE TRIGGER IF NOT EXISTS ${triggerName}
+      AFTER UPDATE ON ${table}
+      FOR EACH ROW
+      BEGIN
+        UPDATE ${table} SET updated_at = CURRENT_TIMESTAMP WHERE ${condition};
+      END;
+    `);
   }
 
   const compoundIndexes = [

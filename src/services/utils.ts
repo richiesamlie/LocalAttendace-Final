@@ -1,5 +1,5 @@
 import db from '../../db';
-import { query as pgQuery, queryOne as pgQueryOne, pgTransaction } from '../lib/postgres';
+import { query as pgQuery, queryOne as pgQueryOne, pgTransaction, getPool } from '../lib/postgres';
 
 /**
  * Service Layer Utilities
@@ -25,4 +25,4 @@ export function isPostgres(): boolean {
 /**
  * Re-export database and PostgreSQL query functions for services
  */
-export { db, pgQuery, pgQueryOne, pgTransaction };
+export { db, pgQuery, pgQueryOne, pgTransaction, getPool };

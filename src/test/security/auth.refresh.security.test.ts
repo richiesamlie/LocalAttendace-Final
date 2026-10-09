@@ -76,31 +76,33 @@ describe('refresh-token rotation (F-004)', () => {
   });
 
   describe('rotation', () => {
-    it('rotates successfully on first call', () => {
+    it('rotates successfully on first call', async () => {
       const old = refreshTokenService.issue(teacherId, sessionId);
       const successor = refreshTokenService.issue(teacherId, sessionId, old.familyId);
-      const won = refreshTokenService.rotate(old.id, successor.id);
+      const won = await refreshTokenService.rotate(old.id, successor.id);
       expect(won).toBe(true);
     });
 
-    it('returns false when rotating an already-used token (race lost)', () => {
+    it('returns false when rotating an already-used token (race lost)', async () => {
       const old = refreshTokenService.issue(teacherId, sessionId);
       const successor1 = refreshTokenService.issue(teacherId, sessionId, old.familyId);
       const successor2 = refreshTokenService.issue(teacherId, sessionId, old.familyId);
 
-      const first = refreshTokenService.rotate(old.id, successor1.id);
+      const first = await refreshTokenService.rotate(old.id, successor1.id);
       expect(first).toBe(true);
 
-      const second = refreshTokenService.rotate(old.id, successor2.id);
+      const second = await refreshTokenService.rotate(old.id, successor2.id);
       expect(second).toBe(false);
     });
 
-    it('two concurrent rotations of same token — exactly one wins', () => {
+    it('two concurrent rotations of same token — exactly one wins', async () => {
       const old = refreshTokenService.issue(teacherId, sessionId);
       const a = refreshTokenService.issue(teacherId, sessionId, old.familyId);
 
-      const [r1, r2] = [refreshTokenService.rotate(old.id, a.id),
-                        refreshTokenService.rotate(old.id, a.id)];
+      const [r1, r2] = await Promise.all([
+        refreshTokenService.rotate(old.id, a.id),
+        refreshTokenService.rotate(old.id, a.id),
+      ]);
       const winners = [r1, r2].filter(x => x === true).length;
       const losers = [r1, r2].filter(x => x === false).length;
       expect(winners).toBe(1);
@@ -110,7 +112,7 @@ describe('refresh-token rotation (F-004)', () => {
     it('marks used_at after successful rotation', async () => {
       const old = refreshTokenService.issue(teacherId, sessionId);
       const successor = refreshTokenService.issue(teacherId, sessionId, old.familyId);
-      refreshTokenService.rotate(old.id, successor.id);
+      await refreshTokenService.rotate(old.id, successor.id);
 
       const row = await refreshTokenService.findByRawValue(old.rawValue);
       expect(row?.used_at).not.toBeNull();
@@ -208,7 +210,7 @@ describe('refresh-token rotation (F-004)', () => {
 
       const A = refreshTokenService.issue(teacherId, sessionId);
       const B = refreshTokenService.issue(teacherId, sessionId, A.familyId);
-      expect(refreshTokenService.rotate(A.id, B.id)).toBe(true);
+      expect(await refreshTokenService.rotate(A.id, B.id)).toBe(true);
 
       // Reuse: present A again
       const reusedRow = await refreshTokenService.findByRawValue(A.rawValue);
