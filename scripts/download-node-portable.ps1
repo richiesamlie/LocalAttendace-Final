@@ -18,6 +18,19 @@ $zipUrl = ""
 $zipFileName = ""
 
 if ($NodeVersion -eq "latest") {
+    $hostNode = Get-Command "node" -ErrorAction SilentlyContinue
+    if ($hostNode) {
+        try {
+            $hostVer = (& $hostNode.Source -v).Trim()
+            if ($hostVer -match "^v\d+\.\d+\.\d+$") {
+                Write-Host "Matching host Node.js runtime ($hostVer) for native addon ABI compatibility..." -ForegroundColor Cyan
+                $NodeVersion = $hostVer
+            }
+        } catch {}
+    }
+}
+
+if ($NodeVersion -eq "latest") {
     Write-Host "Resolving latest Node.js release from nodejs.org..." -ForegroundColor Cyan
     try {
         $distIndex = Invoke-RestMethod -Uri "https://nodejs.org/dist/index.json" -TimeoutSec 15
