@@ -6,8 +6,9 @@ import { validate, seatingSeatUpdatePayloadSchema, seatingLayoutPayloadSchema } 
 import type { SeatingLayoutRow } from '../../src/types/db';
 
 export const seatingRouter = express.Router();
+seatingRouter.use(postLimiter);
 
-seatingRouter.get('/classes/:classId/seating', requireClassAccess('classId'), async (req, res) => {
+seatingRouter.get('/classes/:classId/seating', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const layout = await seatingService.getByClass(classId) as SeatingLayoutRow[];
@@ -21,7 +22,7 @@ seatingRouter.get('/classes/:classId/seating', requireClassAccess('classId'), as
   }
 });
 
-seatingRouter.post('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, validate(seatingSeatUpdatePayloadSchema), withWriteQueue(async (req, res) => {
+seatingRouter.post('/classes/:classId/seating', postLimiter, requireClassAccess('classId'), validate(seatingSeatUpdatePayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { seatId, studentId } = req.body;
 
@@ -35,7 +36,7 @@ seatingRouter.post('/classes/:classId/seating', requireClassAccess('classId'), p
   io?.to(classId).emit('seating_updated');
 }));
 
-seatingRouter.put('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, validate(seatingLayoutPayloadSchema), withWriteQueue(async (req, res) => {
+seatingRouter.put('/classes/:classId/seating', postLimiter, requireClassAccess('classId'), validate(seatingLayoutPayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const layout = req.body as Record<string, string>;
 
@@ -44,7 +45,7 @@ seatingRouter.put('/classes/:classId/seating', requireClassAccess('classId'), po
   io?.to(classId).emit('seating_updated');
 }));
 
-seatingRouter.delete('/classes/:classId/seating', requireClassAccess('classId'), postLimiter, withWriteQueue(async (req, res) => {
+seatingRouter.delete('/classes/:classId/seating', postLimiter, requireClassAccess('classId'), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
 
   await seatingService.clear(classId);

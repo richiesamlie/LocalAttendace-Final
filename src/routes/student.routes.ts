@@ -26,8 +26,9 @@ interface StudentSyncItem {
 }
 
 export const studentRouter = express.Router();
+studentRouter.use(postLimiter);
 
-studentRouter.get('/:classId/students', requireClassAccess('classId'), async (req, res) => {
+studentRouter.get('/:classId/students', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const includeArchived = req.query.includeArchived === 'true';
@@ -47,7 +48,7 @@ studentRouter.get('/:classId/students', requireClassAccess('classId'), async (re
   }
 });
 
-studentRouter.post('/:classId/students', requireClassAccess('classId'), postLimiter, validate(studentSchema), withWriteQueue(async (req, res) => {
+studentRouter.post('/:classId/students', postLimiter, requireClassAccess('classId'), validate(studentSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { id, name, rollNumber, parentName, parentPhone, isFlagged } = req.body;
   await studentService.insert(id, classId, name, rollNumber, parentName || null, parentPhone || null, isFlagged ? 1 : 0);
@@ -55,7 +56,7 @@ studentRouter.post('/:classId/students', requireClassAccess('classId'), postLimi
   io?.to(classId).emit('students_updated');
 }));
 
-studentRouter.put('/:id', requireAuth, postLimiter, validate(studentUpdateSchema), withWriteQueue(async (req, res) => {
+studentRouter.put('/:id', postLimiter, requireAuth, validate(studentUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const studentId = req.params.id;
 
@@ -79,7 +80,7 @@ studentRouter.put('/:id', requireAuth, postLimiter, validate(studentUpdateSchema
   return;
 }));
 
-studentRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+studentRouter.delete('/:id', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const studentId = req.params.id;
 
@@ -94,7 +95,7 @@ studentRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req
   return;
 }));
 
-studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), postLimiter, validate(studentSyncPayloadSchema), withWriteQueue(async (req, res) => {
+studentRouter.post('/:classId/students/sync', postLimiter, requireClassAccess('classId'), validate(studentSyncPayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const teacherId = req.teacherId;
 

@@ -21,8 +21,9 @@ interface AttendanceDbRow {
 }
 
 export const recordRouter = express.Router();
+recordRouter.use(postLimiter);
 
-recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), async (req, res) => {
+recordRouter.get('/classes/:classId/records', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const { from, to } = req.query as { from?: string; to?: string };
@@ -43,7 +44,7 @@ recordRouter.get('/classes/:classId/records', requireClassAccess('classId'), asy
   }
 });
 
-recordRouter.post('/', requireAuth, postLimiter, validate(attendanceRecordsPayloadSchema), withWriteQueue(async (req, res) => {
+recordRouter.post('/', postLimiter, requireAuth, validate(attendanceRecordsPayloadSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const records = (Array.isArray(req.body) ? req.body : [req.body]) as AttendanceInput[];
 

@@ -9,8 +9,9 @@ interface ClassRole {
 }
 
 export const teacherRouter = express.Router();
+teacherRouter.use(postLimiter);
 
-teacherRouter.get('/', requireAuth, async (req, res) => {
+teacherRouter.get('/', postLimiter, requireAuth, async (req, res) => {
   try {
     const callerSchoolId = await resolveCallerSchoolId(req);
     const teachers = await teacherService.getAll(callerSchoolId);
@@ -20,7 +21,7 @@ teacherRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-teacherRouter.post('/register', requireAuth, postLimiter, validate(teacherSchema), withWriteQueue(async (req, res) => {
+teacherRouter.post('/register', postLimiter, requireAuth, validate(teacherSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { username, password, name } = req.body;
   if (!username || !password || !name) {

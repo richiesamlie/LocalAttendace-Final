@@ -20,7 +20,7 @@ export const adminRouter = express.Router();
 // without needing per-handler is_admin checks. The previous pattern
 // duplicated this check in 14 handlers and was error-prone if a new
 // admin endpoint forgot the check.
-adminRouter.use(requireAuth, requireAdmin);
+adminRouter.use(postLimiter, requireAuth, requireAdmin);
 
 adminRouter.get('/settings', async (_req, res) => {
   try {

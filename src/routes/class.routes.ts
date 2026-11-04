@@ -6,8 +6,9 @@ import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classT
 import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
 
 export const classRouter = express.Router();
+classRouter.use(postLimiter);
 
-classRouter.get('/', requireAuth, async (req, res) => {
+classRouter.get('/', postLimiter, requireAuth, async (req, res) => {
   try {
     const teacherId = req.teacherId;
 
@@ -32,7 +33,7 @@ classRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-classRouter.post('/', requireAuth, postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/', postLimiter, requireAuth, validate(classSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
@@ -49,7 +50,7 @@ classRouter.post('/', requireAuth, postLimiter, validate(classSchema), withWrite
   return res.json({ id, teacher_id: teacherId, name, school_id: callerSchoolId });
 }));
 
-classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
+classRouter.put('/:id', postLimiter, requireAuth, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { name } = req.body;
 
@@ -77,7 +78,7 @@ classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), w
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:id', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
@@ -97,7 +98,7 @@ classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, 
   return res.json({ success: true });
 }));
 
-classRouter.get('/:classId/dashboard-payload', requireClassAccess('classId'), async (req, res) => {
+classRouter.get('/:classId/dashboard-payload', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
@@ -192,7 +193,7 @@ classRouter.get('/:classId/dashboard-payload', requireClassAccess('classId'), as
   }
 });
 
-classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req, res) => {
+classRouter.get('/:classId/teachers', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const teachers = await classService.getTeachers(classId);
@@ -202,7 +203,7 @@ classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req,
   }
 });
 
-classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/teachers', postLimiter, requireAuth, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
 
@@ -231,7 +232,7 @@ classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classT
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:classId/teachers/:teacherId', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:classId/teachers/:teacherId', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
@@ -249,7 +250,7 @@ classRouter.delete('/:classId/teachers/:teacherId', requireAuth, postLimiter, wi
   return res.json({ success: true });
 }));
 
-classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId'), postLimiter, validate(classTeacherRoleUpdateSchema), withWriteQueue(async (req, res) => {
+classRouter.put('/:classId/teachers/:teacherId/role', postLimiter, requireClassOwner('classId'), validate(classTeacherRoleUpdateSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
   const { role } = req.body;
@@ -268,7 +269,7 @@ classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId
   return res.json({ success: true });
 }));
 
-classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLimiter, validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/invites', postLimiter, requireRole('classId', 'teacher'), validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
@@ -289,7 +290,7 @@ classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLim
   return res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
 }));
 
-classRouter.get('/:classId/invites', requireRole('classId', 'teacher'), async (req, res) => {
+classRouter.get('/:classId/invites', postLimiter, requireRole('classId', 'teacher'), async (req, res) => {
   try {
     await inviteService.deleteExpired();
     const codes = await inviteService.getByClass(req.params.classId);
@@ -299,7 +300,7 @@ classRouter.get('/:classId/invites', requireRole('classId', 'teacher'), async (r
   }
 });
 
-classRouter.delete('/:classId/invites/:code', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:classId/invites/:code', postLimiter, requireRole('classId', 'teacher'), withWriteQueue(async (req, res) => {
   await inviteService.delete(req.params.code);
   return res.json({ success: true });
 }));

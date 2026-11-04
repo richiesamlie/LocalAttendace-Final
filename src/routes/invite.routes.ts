@@ -13,7 +13,7 @@ export const inviteRouter = express.Router();
 // F-008: stricter per-IP rate limit on /redeem (10 / 15 min) to prevent
 // invite-code enumeration attacks. Sequential via withWriteQueue below
 // ensures consistency; the rate limit gates burst attempts first.
-inviteRouter.post('/redeem', requireAuth, inviteRedeemLimiter, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
+inviteRouter.post('/redeem', inviteRedeemLimiter, requireAuth, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { code } = req.body;
 

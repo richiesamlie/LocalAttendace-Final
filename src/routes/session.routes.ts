@@ -5,8 +5,9 @@ import { validate, sessionRevokeSchema } from '../../src/lib/validation';
 import type { Session } from '../../src/types/db';
 
 export const sessionRouter = express.Router();
+sessionRouter.use(postLimiter);
 
-sessionRouter.get('/', requireAuth, async (req, res) => {
+sessionRouter.get('/', postLimiter, requireAuth, async (req, res) => {
   try {
     const teacherId = req.teacherId;
     await sessionService.deleteExpired();
@@ -17,7 +18,7 @@ sessionRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-sessionRouter.post('/revoke', requireAuth, postLimiter, validate(sessionRevokeSchema), withWriteQueue(async (req, res) => {
+sessionRouter.post('/revoke', postLimiter, requireAuth, validate(sessionRevokeSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { sessionId } = req.body;
 

@@ -15,8 +15,9 @@ interface TimetableRow {
 }
 
 export const timetableRouter = express.Router();
+timetableRouter.use(postLimiter);
 
-timetableRouter.get('/classes/:classId/timetable', requireClassAccess('classId'), async (req, res) => {
+timetableRouter.get('/classes/:classId/timetable', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const slots = await timetableService.getByClass(classId) as TimetableRow[];
@@ -34,7 +35,7 @@ timetableRouter.get('/classes/:classId/timetable', requireClassAccess('classId')
   }
 });
 
-timetableRouter.post('/classes/:classId/timetable', requireClassAccess('classId'), postLimiter, validate(timetableSlotSchema), withWriteQueue(async (req, res) => {
+timetableRouter.post('/classes/:classId/timetable', postLimiter, requireClassAccess('classId'), validate(timetableSlotSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { id, dayOfWeek, startTime, endTime, subject, lesson } = req.body;
 
@@ -44,7 +45,7 @@ timetableRouter.post('/classes/:classId/timetable', requireClassAccess('classId'
   return;
 }));
 
-timetableRouter.put('/:id', requireAuth, postLimiter, validate(timetableSlotUpdateSchema), withWriteQueue(async (req, res) => {
+timetableRouter.put('/:id', postLimiter, requireAuth, validate(timetableSlotUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const timetableId = req.params.id;
   const { dayOfWeek, startTime, endTime, subject, lesson } = req.body;
@@ -60,7 +61,7 @@ timetableRouter.put('/:id', requireAuth, postLimiter, validate(timetableSlotUpda
   return;
 }));
 
-timetableRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+timetableRouter.delete('/:id', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const timetableId = req.params.id;
 

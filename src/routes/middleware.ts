@@ -7,8 +7,6 @@ import db from '../../db';
 import type { Session, ClassTeacher, Teacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
-const testBypassHandler: RequestHandler = (_req, _res, next) => next();
-
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
@@ -53,41 +51,38 @@ export const AUTH_COOKIE_NAME: string =
 // Login rate limiter - configured for ~40 teachers logging in during morning rush
 // Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins
 // while still protecting against brute force attacks
-export const authLimiter = skipRateLimitInTests
-  ? testBypassHandler
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 150, // Increased from 5 to support ~40 concurrent teacher logins
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
-      skipSuccessfulRequests: true, // Only count failed attempts for rate limiting
-    });
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 150, // Increased from 5 to support ~40 concurrent teacher logins
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  skipSuccessfulRequests: true, // Only count failed attempts for rate limiting
+  skip: () => skipRateLimitInTests,
+});
 
-// General POST request rate limiter
-export const postLimiter = skipRateLimitInTests
-  ? testBypassHandler
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 500, // Increased from 100 to support multiple concurrent users
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: 'Too many requests. Please try again later.' },
-    });
+// General POST/API request rate limiter
+export const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Increased from 100 to support multiple concurrent users
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+  skip: () => skipRateLimitInTests,
+});
 
 // Invite-code redemption rate limiter (F-008).
 // Stricter than postLimiter: invite codes are short (e.g. 12 chars from
 // randomUUID) but still guessable. With 10 attempts per 15 min, an attacker
 // can try at most ~960/day, which is too slow for practical enumeration.
-export const inviteRedeemLimiter = skipRateLimitInTests
-  ? testBypassHandler
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 10,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
-    });
+export const inviteRedeemLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
+  skip: () => skipRateLimitInTests,
+});
 
 export const JWT_SECRET: string = (() => {
   const fromEnv = process.env.JWT_SECRET;
