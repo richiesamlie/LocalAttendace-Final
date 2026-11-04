@@ -20,8 +20,8 @@ export const eventService = {
 
   getById(eventId: string, teacherId: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; class_id: string }>(
-        `SELECT e.id, e.class_id FROM events e 
+      return pgQueryOne<{ id: string; class_id: string; date: string; title: string; type: string; description: string | null }>(
+        `SELECT e.id, e.class_id, e.date, e.title, e.type, e.description FROM events e 
          JOIN class_teachers ct ON e.class_id = ct.class_id 
          WHERE e.id = $1 AND ct.teacher_id = $2`,
         [eventId, teacherId]

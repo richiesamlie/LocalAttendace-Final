@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore, EventType, CalendarEvent } from '../store';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, parseISO } from 'date-fns';
@@ -30,11 +30,32 @@ export default function Schedule() {
   const updateEvent = useStore((state) => state.updateEvent);
   const removeEvent = useStore((state) => state.removeEvent);
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const { monthStart, daysInMonth } = useMemo(() => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    return {
+      monthStart: start,
+      daysInMonth: eachDayOfInterval({ start, end }),
+    };
+  }, [currentDate]);
 
-  const selectedDateEvents = events.filter(e => e.date === selectedDate);
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const e of events) {
+      const list = map.get(e.date);
+      if (list) {
+        list.push(e);
+      } else {
+        map.set(e.date, [e]);
+      }
+    }
+    return map;
+  }, [events]);
+
+  const selectedDateEvents = useMemo(
+    () => eventsByDate.get(selectedDate) || [],
+    [eventsByDate, selectedDate]
+  );
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +230,7 @@ export default function Schedule() {
             
             {daysInMonth.map(day => {
               const dateStr = format(day, 'yyyy-MM-dd');
-              const dayEvents = events.filter(e => e.date === dateStr);
+              const dayEvents = eventsByDate.get(dateStr) || [];
               const isSelected = selectedDate === dateStr;
               const isTodayDate = isToday(day);
               

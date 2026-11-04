@@ -1,5 +1,12 @@
 export type ClassRole = 'administrator' | 'owner' | 'teacher' | 'assistant';
 
+export interface School {
+  id: string;
+  code: string;
+  name: string;
+  created_at?: string;
+}
+
 export interface Session {
   id: string;
   teacher_id: string;
@@ -17,6 +24,7 @@ export interface Teacher {
   password_hash: string;
   name: string;
   is_admin: number;
+  school_id?: string;
 }
 
 export interface ClassTeacher {
@@ -69,12 +77,14 @@ export interface Class {
   id: string;
   teacher_id: string;
   name: string;
+  school_id?: string;
 }
 
 export interface ClassInfo {
   id: string;
   name: string;
   teacher_id: string;
+  school_id?: string;
 }
 
 export interface DailyNote {

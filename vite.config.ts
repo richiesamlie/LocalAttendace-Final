@@ -97,9 +97,6 @@ export default defineConfig(({mode}) => {
               if (id.includes('jszip')) return 'vendor-jszip';
               if (id.includes('@fast-csv') || id.includes('fast-csv')) return 'vendor-csv';
               
-              if (normalizedId.includes('node_modules/lucide-react/')) return 'vendor-lucide';
-              if (normalizedId.includes('node_modules/recharts/') || normalizedId.includes('node_modules/d3')) return 'vendor-recharts';
-              if (normalizedId.includes('node_modules/motion/') || normalizedId.includes('node_modules/@motionone/')) return 'vendor-motion';
               if (
                 normalizedId.includes('node_modules/react/') ||
                 normalizedId.includes('node_modules/react-dom/') ||

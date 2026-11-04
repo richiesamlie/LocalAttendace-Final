@@ -1,19 +1,21 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { classService, teacherService, inviteService, studentService, recordService, eventService, timetableService, noteService, seatingService } from '../../services';
-import { requireAuth, requireClassAccess, requireClassOwner, requireRole, withWriteQueue, postLimiter } from './middleware';
+import { classService, teacherService, inviteService, studentService, recordService, eventService, timetableService, noteService, seatingService, DEFAULT_SCHOOL_ID } from '../../services';
+import { requireAuth, requireClassAccess, requireClassOwner, requireRole, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
 import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classTeacherRoleUpdateSchema, classInviteCreateSchema } from '../../src/lib/validation';
 import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
 
 export const classRouter = express.Router();
+classRouter.use(postLimiter);
 
-classRouter.get('/', requireAuth, async (req, res) => {
+classRouter.get('/', postLimiter, requireAuth, async (req, res) => {
   try {
     const teacherId = req.teacherId;
 
     const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
-      const allClasses = await classService.getAll() as ClassWithRole[];
+      const callerSchoolId = await resolveCallerSchoolId(req);
+      const allClasses = await classService.getAll(callerSchoolId) as ClassWithRole[];
       const mapped = allClasses.map((c) => ({
         id: c.id,
         teacher_id: c.teacher_id,
@@ -31,7 +33,7 @@ classRouter.get('/', requireAuth, async (req, res) => {
   }
 });
 
-classRouter.post('/', requireAuth, postLimiter, validate(classSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/', postLimiter, requireAuth, validate(classSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
@@ -42,12 +44,13 @@ classRouter.post('/', requireAuth, postLimiter, validate(classSchema), withWrite
     }
   }
 
+  const callerSchoolId = await resolveCallerSchoolId(req);
   const { id, name } = req.body;
-  await classService.insert(id, teacherId, name);
-  return res.json({ id, teacher_id: teacherId, name });
+  await classService.insert(id, teacherId, name, callerSchoolId);
+  return res.json({ id, teacher_id: teacherId, name, school_id: callerSchoolId });
 }));
 
-classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
+classRouter.put('/:id', postLimiter, requireAuth, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { name } = req.body;
 
@@ -59,7 +62,13 @@ classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), w
   }
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
-  if (!isGlobalAdmin) {
+  if (isGlobalAdmin) {
+    const callerSchoolId = await resolveCallerSchoolId(req);
+    const existingClass = await classService.getExistingById(req.params.id);
+    if (!existingClass || (existingClass.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+  } else {
     const access = await classService.isClassTeacher(req.params.id, teacherId) as ClassTeacher | null | undefined;
     if (!access || access.role !== 'owner') {
       return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
@@ -69,11 +78,17 @@ classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), w
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:id', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
-  if (!isGlobalAdmin) {
+  if (isGlobalAdmin) {
+    const callerSchoolId = await resolveCallerSchoolId(req);
+    const existingClass = await classService.getExistingById(req.params.id);
+    if (!existingClass || (existingClass.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+  } else {
     const access = await classService.isClassTeacher(req.params.id, teacherId) as ClassTeacher | null | undefined;
     if (!access || access.role !== 'owner') {
       return res.status(403).json({ error: 'Only the Homeroom Teacher can delete the class' });
@@ -83,7 +98,7 @@ classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, 
   return res.json({ success: true });
 }));
 
-classRouter.get('/:classId/dashboard-payload', requireClassAccess('classId'), async (req, res) => {
+classRouter.get('/:classId/dashboard-payload', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
@@ -178,7 +193,7 @@ classRouter.get('/:classId/dashboard-payload', requireClassAccess('classId'), as
   }
 });
 
-classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req, res) => {
+classRouter.get('/:classId/teachers', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const teachers = await classService.getTeachers(classId);
@@ -188,7 +203,7 @@ classRouter.get('/:classId/teachers', requireClassAccess('classId'), async (req,
   }
 });
 
-classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/teachers', postLimiter, requireAuth, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
 
@@ -202,8 +217,9 @@ classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classT
     return res.status(400).json({ error: 'teacherId is required' });
   }
 
+  const callerSchoolId = await resolveCallerSchoolId(req);
   const existing = await teacherService.getById(newTeacherId);
-  if (!existing) {
+  if (!existing || (existing.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
     return res.status(404).json({ error: 'Teacher not found' });
   }
 
@@ -216,7 +232,7 @@ classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classT
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:classId/teachers/:teacherId', requireAuth, postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:classId/teachers/:teacherId', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
@@ -234,7 +250,7 @@ classRouter.delete('/:classId/teachers/:teacherId', requireAuth, postLimiter, wi
   return res.json({ success: true });
 }));
 
-classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId'), postLimiter, validate(classTeacherRoleUpdateSchema), withWriteQueue(async (req, res) => {
+classRouter.put('/:classId/teachers/:teacherId/role', postLimiter, requireClassOwner('classId'), validate(classTeacherRoleUpdateSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
   const { role } = req.body;
@@ -253,7 +269,7 @@ classRouter.put('/:classId/teachers/:teacherId/role', requireClassOwner('classId
   return res.json({ success: true });
 }));
 
-classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLimiter, validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
+classRouter.post('/:classId/invites', postLimiter, requireRole('classId', 'teacher'), validate(classInviteCreateSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const { role, expiresInHours } = req.body;
@@ -274,7 +290,7 @@ classRouter.post('/:classId/invites', requireRole('classId', 'teacher'), postLim
   return res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
 }));
 
-classRouter.get('/:classId/invites', requireRole('classId', 'teacher'), async (req, res) => {
+classRouter.get('/:classId/invites', postLimiter, requireRole('classId', 'teacher'), async (req, res) => {
   try {
     await inviteService.deleteExpired();
     const codes = await inviteService.getByClass(req.params.classId);
@@ -284,7 +300,7 @@ classRouter.get('/:classId/invites', requireRole('classId', 'teacher'), async (r
   }
 });
 
-classRouter.delete('/:classId/invites/:code', requireRole('classId', 'teacher'), postLimiter, withWriteQueue(async (req, res) => {
+classRouter.delete('/:classId/invites/:code', postLimiter, requireRole('classId', 'teacher'), withWriteQueue(async (req, res) => {
   await inviteService.delete(req.params.code);
   return res.json({ success: true });
 }));

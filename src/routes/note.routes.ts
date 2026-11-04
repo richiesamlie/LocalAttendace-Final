@@ -6,8 +6,9 @@ import { validate, dailyNotePayloadSchema } from '../../src/lib/validation';
 import type { DailyNote } from '../../src/types/db';
 
 export const noteRouter = express.Router();
+noteRouter.use(postLimiter);
 
-noteRouter.get('/classes/:classId/daily-notes', requireClassAccess('classId'), async (req, res) => {
+noteRouter.get('/classes/:classId/daily-notes', postLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const notes = await noteService.getByClass(classId) as DailyNote[];
@@ -21,7 +22,7 @@ noteRouter.get('/classes/:classId/daily-notes', requireClassAccess('classId'), a
   }
 });
 
-noteRouter.post('/classes/:classId/daily-notes', requireClassAccess('classId'), postLimiter, validate(dailyNotePayloadSchema), withWriteQueue(async (req, res) => {
+noteRouter.post('/classes/:classId/daily-notes', postLimiter, requireClassAccess('classId'), validate(dailyNotePayloadSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
   const { date, note } = req.body;
 

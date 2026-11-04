@@ -1,3 +1,5 @@
+import { isPostgresMode } from './connection';
+
 interface WriteTask {
   fn: () => void | Promise<void>;
   resolve: () => void;
@@ -38,7 +40,12 @@ export async function processWriteQueue(): Promise<void> {
   }
 }
 
-export function enqueueWrite(fn: () => void): Promise<void> {
+export function enqueueWrite(fn: () => void | Promise<void>): Promise<void> {
+  // In PostgreSQL mode (Path B multi-school cloud), MVCC handles concurrent
+  // writes natively without SQLite's single-writer lock.
+  if (isPostgresMode() && !restoreLockActive) {
+    return Promise.resolve().then(() => fn());
+  }
   return new Promise((resolve, reject) => {
     writeQueue.push({ fn, resolve, reject });
     processWriteQueue();

@@ -41,7 +41,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     },
   });
 
-  if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/refresh') {
+  if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/register-school' && endpoint !== '/auth/refresh') {
     const refreshed = await attemptTokenRefresh();
     if (refreshed) {
       response = await fetch(url, {
@@ -68,10 +68,12 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 export const api = {
   // --- AUTH ---
-  login: (username: string, password: string) => fetchApi<{success: boolean, teacherId: string, username: string, name: string, isAdmin: boolean}>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  login: (username: string, password: string, schoolCode?: string) => fetchApi<{success: boolean, teacherId: string, username: string, name: string, isAdmin: boolean, schoolId?: string, schoolCode?: string, schoolName?: string}>('/auth/login', { method: 'POST', body: JSON.stringify(schoolCode ? { username, password, schoolCode } : { username, password }) }),
+  registerSchool: (payload: { schoolName: string; schoolCode: string; username: string; password: string; adminName: string }) => fetchApi<{success: boolean, teacherId: string, username: string, name: string, isAdmin: boolean, schoolId: string, schoolCode: string, schoolName: string}>('/auth/register-school', { method: 'POST', body: JSON.stringify(payload) }),
   logout: () => fetchApi<{success: boolean}>('/auth/logout', { method: 'POST' }),
-  verifyAuth: () => fetchApi<{authenticated: boolean, teacherId?: string}>('/auth/verify'),
-  getMe: () => fetchApi<{id: string, username: string, name: string, isAdmin: boolean}>('/auth/me'),
+  verifyAuth: () => fetchApi<{authenticated: boolean, teacherId?: string, name?: string, isAdmin?: boolean, schoolId?: string, schoolCode?: string, schoolName?: string}>('/auth/verify'),
+  verifyAdminPassword: (password: string) => fetchApi<{success: boolean}>('/auth/verify-password', { method: 'POST', body: JSON.stringify({ password }) }),
+  getMe: () => fetchApi<{id: string, username: string, name: string, isAdmin: boolean, schoolId?: string, schoolCode?: string, schoolName?: string}>('/auth/me'),
   registerTeacher: (username: string, password: string, name: string) => fetchApi<{success: boolean, id: string, username: string, name: string}>('/teachers/register', { method: 'POST', body: JSON.stringify({ username, password, name }) }),
 
   // --- CLASSES ---

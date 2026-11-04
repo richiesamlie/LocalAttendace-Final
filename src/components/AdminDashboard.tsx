@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, Activity, Server } from 'lucide-react';
 import { useStore } from '../store';
 import toast from 'react-hot-toast';
@@ -33,22 +33,26 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
 
-  const classes = useStore((state) => state.classes) || [];
+  const classes = useStore((state) => state.classes);
   const clearAllData = useStore((state) => state.clearAllData);
   const updateAdminPassword = useStore((state) => state.updateAdminPassword);
+  const loadAllClassesData = useStore((state) => state.loadAllClassesData);
+  const importClassesBackup = useStore((state) => state.importClassesBackup);
 
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/verify-password', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'admin', password: passwordInput }),
+        body: JSON.stringify({ password: passwordInput }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setIsUnlocked(true);
         setError('');
+        loadAllClassesData();
       } else {
         setError('Incorrect admin password');
       }
@@ -57,9 +61,10 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
     }
   };
 
-  const handleMassiveBackup = useCallback(() => {
+  const handleMassiveBackup = useCallback(async () => {
     setIsMassiveBackingUp(true);
     try {
+      await useStore.getState().loadAllClassesData();
       const state = useStore.getState();
       const backup = buildMassiveBackup(state.classes || []);
       downloadJson(backup, `Massive_Semester_Backup_${new Date().toISOString().split('T')[0]}.json`);
@@ -107,17 +112,8 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
         }
 
         // Use toast confirmation instead of window.confirm to avoid blocking the main thread
-        const importData = () => {
-          useStore.setState({
-            classes: finalClasses,
-            currentClassId: finalClasses[0].id,
-            students: finalClasses[0].students || [],
-            records: finalClasses[0].records || [],
-            events: finalClasses[0].events || [],
-            dailyNotes: finalClasses[0].dailyNotes || {},
-            timetable: finalClasses[0].timetable || [],
-            seatingLayout: finalClasses[0].seatingLayout || {}
-          });
+        const importData = async () => {
+          await importClassesBackup(finalClasses);
           toast.success('Backup imported successfully!');
         };
 
@@ -204,6 +200,23 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
     ), { duration: 10000 });
   };
 
+  const allStudents = useMemo(
+    () => classes.flatMap(c => (c.students || []).map(s => ({ ...s, classId: c.id, className: c.name }))),
+    [classes]
+  );
+  const allAttendance = useMemo(
+    () => classes.flatMap(c => (c.records || []).map(r => ({ ...r, classId: c.id, className: c.name }))),
+    [classes]
+  );
+  const allEvents = useMemo(
+    () => classes.flatMap(c => (c.events || []).map(e => ({ ...e, classId: c.id, className: c.name }))),
+    [classes]
+  );
+
+  const totalStudents = allStudents.length;
+  const totalEvents = allEvents.length;
+  const totalAttendance = allAttendance.length;
+
   if (!isUnlocked) {
     return (
       <div className="max-w-md mx-auto mt-20 p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 text-center">
@@ -236,14 +249,6 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
       </div>
   );
 }
-
-  const allStudents = classes.flatMap(c => (c.students || []).map(s => ({ ...s, classId: c.id, className: c.name })));
-  const allAttendance = classes.flatMap(c => (c.records || []).map(r => ({ ...r, classId: c.id, className: c.name })));
-  const allEvents = classes.flatMap(c => (c.events || []).map(e => ({ ...e, classId: c.id, className: c.name })));
-
-  const totalStudents = allStudents.length;
-  const totalEvents = allEvents.length;
-  const totalAttendance = allAttendance.length;
 
   const renderTabContent = () => {
     switch (activeTab) {

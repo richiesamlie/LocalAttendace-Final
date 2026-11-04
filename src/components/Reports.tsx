@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { useStore } from '../store';
 import type { ExportOptions } from '../utils/excel';
@@ -36,37 +36,41 @@ export default function Reports() {
   };
 
   // Calculate summary for the selected month
-  const monthStart = startOfMonth(parseISO(`${month}-01`));
-  const monthEnd = endOfMonth(monthStart);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const dayDateStrings = useMemo(() => {
+    const monthStart = startOfMonth(parseISO(`${month}-01`));
+    const monthEnd = endOfMonth(monthStart);
+    return eachDayOfInterval({ start: monthStart, end: monthEnd }).map(day => format(day, 'yyyy-MM-dd'));
+  }, [month]);
 
-  const filteredStudents = students
+  const filteredStudents = useMemo(() => students
     .filter(student =>
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) =>
       a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })
-    );
+    ),
+  [students, searchQuery]);
 
   // Pre-index records by studentId for O(1) lookup
-  const recordsByStudent = new Map<string, Map<string, { status: string }>>();
-  for (const r of records) {
-    if (!recordsByStudent.has(r.studentId)) {
-      recordsByStudent.set(r.studentId, new Map());
-    }
-    const studentRecordMap = recordsByStudent.get(r.studentId);
-    if (studentRecordMap) {
+  const recordsByStudent = useMemo(() => {
+    const map = new Map<string, Map<string, { status: string }>>();
+    for (const r of records) {
+      let studentRecordMap = map.get(r.studentId);
+      if (!studentRecordMap) {
+        studentRecordMap = new Map();
+        map.set(r.studentId, studentRecordMap);
+      }
       studentRecordMap.set(r.date, { status: r.status });
     }
-  };
+    return map;
+  }, [records]);
 
-  const summary = filteredStudents.map(student => {
+  const summary = useMemo(() => filteredStudents.map(student => {
     let present = 0, absent = 0, sick = 0, late = 0;
     const studentRecords = recordsByStudent.get(student.id);
     
-    daysInMonth.forEach(day => {
-      const dateStr = format(day, 'yyyy-MM-dd');
+    dayDateStrings.forEach(dateStr => {
       const record = studentRecords?.get(dateStr);
       if (record) {
         switch (record.status) {
@@ -86,7 +90,7 @@ export default function Reports() {
       late,
       total: present + absent + sick + late
     };
-  });
+  }), [filteredStudents, recordsByStudent, dayDateStrings]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

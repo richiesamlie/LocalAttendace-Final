@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Home, Users, CheckSquare, FileSpreadsheet, Moon, Sun, CalendarDays, LayoutGrid, Shuffle, Settings as SettingsIcon, Clock, Wrench, BookOpen, UserCircle, Timer, Shield, WifiOff } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useStore } from '../store';
-import { api } from '../lib/api';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { ClassSwitcher, NavGroup, NavItem } from './Sidebar/index';
 
@@ -27,24 +26,8 @@ export default function Sidebar({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const classes = useStore((state) => state.classes);
   const teacherName = useStore((state) => state.teacherName);
-  const teacherId = useStore((state) => state.teacherId);
   const isAdmin = useStore((state) => state.isAdmin);
-  const setAuth = useStore((state) => state.setAuth);
   const isHomeroomTeacher = classes.some((c) => c.role === 'owner');
-
-  useEffect(() => {
-    if (!teacherId || isAdmin) return;
-
-    api.getMe()
-      .then((me) => {
-        if (me.isAdmin) {
-          setAuth(teacherId, me.name, true);
-        }
-      })
-      .catch(() => {
-        // noop: keep current state if profile refresh fails
-      });
-  }, [teacherId, isAdmin, setAuth]);
 
   return (
     <aside className={cn(

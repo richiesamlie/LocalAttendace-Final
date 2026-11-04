@@ -7,8 +7,6 @@ import db from '../../db';
 import type { Session, ClassTeacher, Teacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
-const testBypassHandler: RequestHandler = (_req, _res, next) => next();
-
 // Disable rate limiting in test environment to avoid issues with integration tests
 const skipRateLimitInTests = process.env.NODE_ENV === 'test';
 
@@ -53,41 +51,38 @@ export const AUTH_COOKIE_NAME: string =
 // Login rate limiter - configured for ~40 teachers logging in during morning rush
 // Allows 150 login attempts per 15 minutes (per IP) to handle simultaneous logins
 // while still protecting against brute force attacks
-export const authLimiter = skipRateLimitInTests
-  ? testBypassHandler
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 150, // Increased from 5 to support ~40 concurrent teacher logins
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
-      skipSuccessfulRequests: true, // Only count failed attempts for rate limiting
-    });
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 150, // Increased from 5 to support ~40 concurrent teacher logins
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  skipSuccessfulRequests: true, // Only count failed attempts for rate limiting
+  skip: () => skipRateLimitInTests,
+});
 
-// General POST request rate limiter
-export const postLimiter = skipRateLimitInTests
-  ? testBypassHandler
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 500, // Increased from 100 to support multiple concurrent users
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: 'Too many requests. Please try again later.' },
-    });
+// General POST/API request rate limiter
+export const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Increased from 100 to support multiple concurrent users
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+  skip: () => skipRateLimitInTests,
+});
 
 // Invite-code redemption rate limiter (F-008).
 // Stricter than postLimiter: invite codes are short (e.g. 12 chars from
 // randomUUID) but still guessable. With 10 attempts per 15 min, an attacker
 // can try at most ~960/day, which is too slow for practical enumeration.
-export const inviteRedeemLimiter = skipRateLimitInTests
-  ? testBypassHandler
-  : rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 10,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
-    });
+export const inviteRedeemLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
+  skip: () => skipRateLimitInTests,
+});
 
 export const JWT_SECRET: string = (() => {
   const fromEnv = process.env.JWT_SECRET;
@@ -120,6 +115,7 @@ export interface JwtPayload {
   teacherId: string;
   username: string;
   sessionId?: string;
+  schoolId?: string;
 }
 
 export type ClassRole = 'administrator' | 'owner' | 'teacher' | 'assistant';
@@ -127,21 +123,26 @@ export type ClassRole = 'administrator' | 'owner' | 'teacher' | 'assistant';
 declare module 'express-serve-static-core' {
   interface Request {
     teacherId: string;
+    schoolId?: string;
     classRole?: ClassRole;
   }
 }
 
-export const getTeacherId = (req: express.Request): string | null => {
+const verifyRequestToken = (req: express.Request): JwtPayload | null => {
   // F-004: prefer the new access_token cookie; fall back to the legacy
   // auth_token cookie for sessions created before the F-004 migration.
   const token = req.cookies?.[ACCESS_COOKIE_NAME] || req.cookies?.[AUTH_COOKIE_NAME];
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
-    return decoded.teacherId;
+    return jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
   } catch {
     return null;
   }
+};
+
+export const getTeacherId = (req: express.Request): string | null => {
+  const decoded = verifyRequestToken(req);
+  return decoded ? decoded.teacherId : null;
 };
 
 // F-011: requireAdmin middleware — defense-in-depth for admin endpoints.
@@ -178,51 +179,84 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const requireAuth: RequestHandler = async (req, res, next) => {
-  const teacherId = getTeacherId(req);
-  if (!teacherId) {
-    return res.status(401).json({ error: 'Authentication required' });
+const SESSION_ACTIVITY_THROTTLE_MS = 60_000;
+const sessionActivityLastUpdated = new Map<string, number>();
+
+async function verifyAndPopulateTeacher(req: express.Request, res: express.Response): Promise<string | null> {
+  const decoded = verifyRequestToken(req);
+  if (!decoded || !decoded.teacherId) {
+    res.status(401).json({ error: 'Authentication required' });
+    return null;
   }
 
-  const token = req.cookies?.[ACCESS_COOKIE_NAME] || req.cookies?.[AUTH_COOKIE_NAME];
-  if (token) {
+  if (decoded.sessionId) {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as JwtPayload;
-      if (decoded.sessionId) {
-        const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
-        if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
-          res.clearCookie(ACCESS_COOKIE_NAME);
-          res.clearCookie(REFRESH_COOKIE_NAME);
-          res.clearCookie(AUTH_COOKIE_NAME);
-          return res.status(401).json({ error: 'Session expired or revoked' });
-        }
+      const session = await svc.sessionService.get(decoded.sessionId) as (Session & { is_revoked: number; expires_at: string }) | null | undefined;
+      if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
+        sessionActivityLastUpdated.delete(decoded.sessionId);
+        res.clearCookie(ACCESS_COOKIE_NAME);
+        res.clearCookie(REFRESH_COOKIE_NAME);
+        res.clearCookie(AUTH_COOKIE_NAME);
+        res.status(401).json({ error: 'Session expired or revoked' });
+        return null;
+      }
+      const now = Date.now();
+      const lastUpdated = sessionActivityLastUpdated.get(decoded.sessionId) ?? 0;
+      if (now - lastUpdated >= SESSION_ACTIVITY_THROTTLE_MS) {
+        sessionActivityLastUpdated.set(decoded.sessionId, now);
         try { await svc.sessionService.updateActivity(decoded.sessionId); } catch (e) {
           console.warn('[auth] Failed to update session activity:', (e as Error).message);
         }
       }
     } catch (error) {
       if (error instanceof Error && !error.message.includes('jwt')) {
-        return res.status(503).json({ error: 'Authentication service unavailable' });
+        res.status(503).json({ error: 'Authentication service unavailable' });
+        return null;
       }
       res.clearCookie(ACCESS_COOKIE_NAME);
       res.clearCookie(REFRESH_COOKIE_NAME);
       res.clearCookie(AUTH_COOKIE_NAME);
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      res.status(401).json({ error: 'Invalid or expired token' });
+      return null;
     }
   }
 
-  req.teacherId = teacherId;
+  req.teacherId = decoded.teacherId;
+  if (decoded.schoolId) {
+    req.schoolId = decoded.schoolId;
+  }
+  return decoded.teacherId;
+}
+
+export async function resolveCallerSchoolId(req: express.Request): Promise<string> {
+  if (req.schoolId) return req.schoolId;
+  if (!req.teacherId) return svc.DEFAULT_SCHOOL_ID;
+  const caller = await svc.teacherService.getById(req.teacherId);
+  const schoolId = caller?.school_id || svc.DEFAULT_SCHOOL_ID;
+  req.schoolId = schoolId;
+  return schoolId;
+}
+
+async function isAdminAllowedForClass(req: express.Request, classId: string): Promise<boolean> {
+  const callerSchoolId = await resolveCallerSchoolId(req);
+  const cls = await svc.classService.getExistingById(classId);
+  if (!cls) {
+    return callerSchoolId === svc.DEFAULT_SCHOOL_ID;
+  }
+  return (cls.school_id || svc.DEFAULT_SCHOOL_ID) === callerSchoolId;
+}
+
+export const requireAuth: RequestHandler = async (req, res, next) => {
+  const teacherId = await verifyAndPopulateTeacher(req, res);
+  if (!teacherId) return;
   return next();
 };
 
 export const requireClassAccess = (paramName: string = 'classId'): RequestHandler => {
   return async (req, res, next) => {
     if (!req.teacherId) {
-      const teacherId = getTeacherId(req);
-      if (!teacherId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-      req.teacherId = teacherId;
+      const teacherId = await verifyAndPopulateTeacher(req, res);
+      if (!teacherId) return;
     }
     const teacherId = req.teacherId;
     const classId = req.params[paramName];
@@ -233,6 +267,9 @@ export const requireClassAccess = (paramName: string = 'classId'): RequestHandle
 
     const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
+      if (!(await isAdminAllowedForClass(req, classId))) {
+        return res.status(404).json({ error: 'Class not found or access denied' });
+      }
       req.classRole = 'administrator';
       return next();
     }
@@ -250,11 +287,8 @@ export const requireClassAccess = (paramName: string = 'classId'): RequestHandle
 export const requireClassOwner = (paramName: string = 'classId'): RequestHandler => {
   return async (req, res, next) => {
     if (!req.teacherId) {
-      const teacherId = getTeacherId(req);
-      if (!teacherId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-      req.teacherId = teacherId;
+      const teacherId = await verifyAndPopulateTeacher(req, res);
+      if (!teacherId) return;
     }
     const teacherId = req.teacherId;
     const classId = req.params[paramName];
@@ -265,6 +299,9 @@ export const requireClassOwner = (paramName: string = 'classId'): RequestHandler
 
     const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
+      if (!(await isAdminAllowedForClass(req, classId))) {
+        return res.status(404).json({ error: 'Class not found or access denied' });
+      }
       return next();
     }
 
@@ -282,11 +319,8 @@ export const ROLE_HIERARCHY: Record<string, number> = { administrator: 5, owner:
 export const requireRole = (paramName: string = 'classId', minRole: string = 'teacher'): RequestHandler => {
   return async (req, res, next) => {
     if (!req.teacherId) {
-      const teacherId = getTeacherId(req);
-      if (!teacherId) {
-        return res.status(401).json({ error: 'Authentication required' });
-      }
-      req.teacherId = teacherId;
+      const teacherId = await verifyAndPopulateTeacher(req, res);
+      if (!teacherId) return;
     }
     const teacherId = req.teacherId;
     const classId = req.params[paramName];
@@ -297,6 +331,9 @@ export const requireRole = (paramName: string = 'classId', minRole: string = 'te
 
     const isGlobalAdmin = await svc.teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
+      if (!(await isAdminAllowedForClass(req, classId))) {
+        return res.status(404).json({ error: 'Class not found or access denied' });
+      }
       req.classRole = 'administrator';
       return next();
     }

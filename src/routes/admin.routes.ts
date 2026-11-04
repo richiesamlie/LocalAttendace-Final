@@ -20,6 +20,7 @@ export const adminRouter = express.Router();
 // without needing per-handler is_admin checks. The previous pattern
 // duplicated this check in 14 handlers and was error-prone if a new
 // admin endpoint forgot the check.
+adminRouter.use(postLimiter);
 adminRouter.use(requireAuth, requireAdmin);
 
 adminRouter.get('/settings', async (_req, res) => {
@@ -44,7 +45,8 @@ adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQue
     }
 
     const hash = await hashPassword(value);
-    const adminTeacher = await teacherService.getByUsername('admin') as Teacher | null;
+    const adminTeacher = (req as express.Request & { adminTeacher?: Teacher }).adminTeacher
+      || await teacherService.getByUsername('admin') as Teacher | null;
     if (adminTeacher) {
       await teacherService.updatePassword(adminTeacher.id, hash);
       await sessionService.revokeAll(adminTeacher.id);

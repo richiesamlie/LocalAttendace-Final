@@ -50,10 +50,10 @@ export default function TakeAttendance() {
         toast.error('No valid attendance records found in file.');
         return;
       }
-      await api.saveRecords(importedRecords);
+      await api.saveRecords(importedRecords.map(r => ({ ...r, classId: currentClassId })) as AttendanceRecord[]);
       toast.success(`Imported ${importedRecords.length} attendance record(s)`);
       const state = useStore.getState();
-      await state.initializeStore();
+      await state.reloadClassData(currentClassId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error importing attendance');
     } finally {

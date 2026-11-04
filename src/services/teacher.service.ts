@@ -7,24 +7,33 @@ import { db, isPostgres, pgQuery, pgQueryOne } from './utils';
  */
 
 export const teacherService = {
-  getByUsername(username: string) {
+  getByUsername(username: string, schoolId?: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; username: string; password_hash: string; name: string; is_admin: number }>(
-        'SELECT id, username, password_hash, name, is_admin FROM teachers WHERE username = $1',
+      if (schoolId) {
+        return pgQueryOne<{ id: string; username: string; password_hash: string; name: string; is_admin: number; school_id: string }>(
+          'SELECT id, username, password_hash, name, is_admin, school_id FROM teachers WHERE username = $1 AND school_id = $2',
+          [username, schoolId]
+        );
+      }
+      return pgQueryOne<{ id: string; username: string; password_hash: string; name: string; is_admin: number; school_id: string }>(
+        'SELECT id, username, password_hash, name, is_admin, school_id FROM teachers WHERE username = $1',
         [username]
       );
     }
-    return db.stmt.getTeacherByUsername.get(username) as { id: string; username: string; password_hash: string; name: string; is_admin: number } | undefined;
+    if (schoolId) {
+      return db.stmt.getTeacherByUsernameAndSchool.get(username, schoolId) as { id: string; username: string; password_hash: string; name: string; is_admin: number; school_id: string } | undefined;
+    }
+    return db.stmt.getTeacherByUsername.get(username) as { id: string; username: string; password_hash: string; name: string; is_admin: number; school_id?: string } | undefined;
   },
 
   getById(id: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; username: string; name: string; is_admin: number }>(
-        'SELECT id, username, name, is_admin FROM teachers WHERE id = $1',
+      return pgQueryOne<{ id: string; username: string; name: string; is_admin: number; school_id: string }>(
+        'SELECT id, username, name, is_admin, school_id FROM teachers WHERE id = $1',
         [id]
       );
     }
-    return db.stmt.getTeacherById.get(id) as { id: string; username: string; name: string; is_admin: number } | undefined;
+    return db.stmt.getTeacherById.get(id) as { id: string; username: string; name: string; is_admin: number; school_id?: string } | undefined;
   },
 
   async getIsAdmin(id: string): Promise<boolean> {
@@ -43,23 +52,32 @@ export const teacherService = {
     return db.stmt.updateTeacherLastLogin.run(id);
   },
 
-  getAll() {
+  getAll(schoolId?: string) {
     if (isPostgres()) {
-      return pgQuery<{ id: string; username: string; name: string }>(
-        'SELECT id, username, name FROM teachers ORDER BY name'
+      if (schoolId) {
+        return pgQuery<{ id: string; username: string; name: string; school_id: string }>(
+          'SELECT id, username, name, school_id FROM teachers WHERE school_id = $1 ORDER BY name',
+          [schoolId]
+        );
+      }
+      return pgQuery<{ id: string; username: string; name: string; school_id: string }>(
+        'SELECT id, username, name, school_id FROM teachers ORDER BY name'
       );
+    }
+    if (schoolId) {
+      return db.stmt.getTeachersBySchool.all(schoolId);
     }
     return db.stmt.getAllTeachers.all();
   },
 
-  insert(id: string, username: string, hash: string, name: string) {
+  insert(id: string, username: string, hash: string, name: string, schoolId: string = 'school_default', isAdmin: number = 0) {
     if (isPostgres()) {
       return pgQuery(
-        'INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES ($1, $2, $3, $4, 0)',
-        [id, username, hash, name]
+        'INSERT INTO teachers (id, username, password_hash, name, is_admin, school_id) VALUES ($1, $2, $3, $4, $5, $6)',
+        [id, username, hash, name, isAdmin, schoolId]
       );
     }
-    return db.stmt.insertTeacher.run(id, username, hash, name);
+    return db.stmt.insertTeacherWithSchool.run(id, username, hash, name, isAdmin, schoolId);
   },
 
   // N12: Updates the actual password_hash in the teachers table.

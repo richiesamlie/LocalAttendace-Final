@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { TimetableSlot } from '../../store';
 import { cn } from '../../utils/cn';
 import { Edit2, Trash2 } from 'lucide-react';
@@ -13,7 +14,14 @@ interface WeekViewProps {
 }
 
 export default function WeekView({ timetable, onEdit, onDelete, onLessonChange }: WeekViewProps) {
-  const timeSlots = Array.from(new Set(timetable.map(s => s.startTime))).sort((a, b) => parseTime(a) - parseTime(b));
+  const { timeSlots, slotByDayAndTime } = useMemo(() => {
+    const times = Array.from(new Set(timetable.map(s => s.startTime))).sort((a, b) => parseTime(a) - parseTime(b));
+    const map = new Map<string, TimetableSlot>();
+    for (const s of timetable) {
+      map.set(`${s.dayOfWeek}:${s.startTime}`, s);
+    }
+    return { timeSlots: times, slotByDayAndTime: map };
+  }, [timetable]);
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -44,7 +52,7 @@ export default function WeekView({ timetable, onEdit, onDelete, onLessonChange }
                     {time}
                   </div>
                   {WORK_DAYS.map(day => {
-                    const slot = timetable.find(s => s.dayOfWeek === day && s.startTime === time);
+                    const slot = slotByDayAndTime.get(`${day}:${time}`);
 
                     if (!slot) {
                       return (

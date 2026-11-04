@@ -18,6 +18,7 @@ const DB_FILE = process.env.DB_FILE || path.join(process.cwd(), 'database.sqlite
 
 // Tables in FK-respecting order
 const TABLES = [
+  'schools',
   'teachers',
   'classes',
   'class_teachers',
@@ -70,12 +71,24 @@ function readSQLiteData(sqlitePath: string): Record<string, unknown[]> {
 async function createPostgresSchema(): Promise<void> {
   const pool = getPool();
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS schools (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      created_at TEXT DEFAULT NOW()::TEXT
+    );
+
+    INSERT INTO schools (id, code, name)
+    VALUES ('school_default', 'default', 'Default School')
+    ON CONFLICT (id) DO NOTHING;
+
     CREATE TABLE IF NOT EXISTS teachers (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
       is_admin INTEGER DEFAULT 0,
+      school_id TEXT NOT NULL DEFAULT 'school_default' REFERENCES schools(id) ON DELETE CASCADE,
       created_at TEXT DEFAULT NOW()::TEXT,
       last_login TEXT
     );
@@ -84,6 +97,7 @@ async function createPostgresSchema(): Promise<void> {
       id TEXT PRIMARY KEY,
       teacher_id TEXT NOT NULL REFERENCES teachers(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
+      school_id TEXT NOT NULL DEFAULT 'school_default' REFERENCES schools(id) ON DELETE CASCADE,
       updated_at TEXT
     );
 
@@ -194,7 +208,9 @@ async function createPostgresSchema(): Promise<void> {
 
     -- Indexes
     CREATE INDEX IF NOT EXISTS idx_teachers_username ON teachers(username);
+    CREATE INDEX IF NOT EXISTS idx_teachers_school_id ON teachers(school_id);
     CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id);
+    CREATE INDEX IF NOT EXISTS idx_classes_school_id ON classes(school_id);
     CREATE INDEX IF NOT EXISTS idx_class_teachers_class ON class_teachers(class_id);
     CREATE INDEX IF NOT EXISTS idx_class_teachers_teacher ON class_teachers(teacher_id);
     CREATE INDEX IF NOT EXISTS idx_students_class ON students(class_id);
@@ -233,7 +249,8 @@ async function insertBatch(
   if (rows.length === 0) return 0;
 
   const SAFE_COLUMN_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
-  const columns = Object.keys(rows[0]).map(col => {
+  const rawColumns = Object.keys(rows[0]);
+  const quotedColumns = rawColumns.map(col => {
     if (!SAFE_COLUMN_RE.test(col)) {
       throw new Error(`Unsafe column name in migration: ${col}`);
     }
@@ -248,14 +265,14 @@ async function insertBatch(
 
     for (let j = 0; j < batch.length; j++) {
       const row = batch[j];
-      const rowPlaceholders = columns.map((_, colIdx) => `$${j * columns.length + colIdx + 1}`);
+      const rowPlaceholders = rawColumns.map((_, colIdx) => `$${j * rawColumns.length + colIdx + 1}`);
       placeholders.push(`(${rowPlaceholders.join(', ')})`);
-      for (const col of columns) {
+      for (const col of rawColumns) {
         values.push(row[col] ?? null);
       }
     }
 
-    const sql = `INSERT INTO ${table} (${columns.join(', ')}) VALUES ${placeholders.join(', ')} ON CONFLICT DO NOTHING`;
+    const sql = `INSERT INTO ${table} (${quotedColumns.join(', ')}) VALUES ${placeholders.join(', ')} ON CONFLICT DO NOTHING`;
     const result = await client.query(sql, values);
     inserted += result.rowCount || 0;
   }

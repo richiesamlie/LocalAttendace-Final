@@ -4,6 +4,10 @@ import fs from 'fs';
 
 export const DB_FILE = process.env.DB_FILE || path.join(process.cwd(), 'database.sqlite');
 
+export function isPostgresMode(): boolean {
+  return process.env.DB_TYPE === 'postgres' || Boolean(process.env.DATABASE_URL);
+}
+
 export const DEFAULTS = {
   TEACHER_ID: 'teacher_default',
   TEACHER_USERNAME: 'admin',
@@ -17,6 +21,7 @@ export function getDefaultPassword(): string {
 }
 
 export function createBackup(): void {
+  if (isPostgresMode()) return;
   try {
     if (!fs.existsSync(DB_FILE)) return;
 
@@ -43,9 +48,10 @@ export function createBackup(): void {
   }
 }
 
-export let _db = new Database(DB_FILE, { timeout: 5000 });
+export let _db = new Database(isPostgresMode() ? ':memory:' : DB_FILE, { timeout: 5000 });
 
 export function initConnection(): void {
+  if (isPostgresMode()) return;
   _db.pragma('foreign_keys = ON');
   _db.pragma('journal_mode = WAL');
   _db.pragma('wal_autocheckpoint = 1000');
@@ -56,6 +62,7 @@ export function initConnection(): void {
 }
 
 export function checkpointWal(): void {
+  if (isPostgresMode()) return;
   try {
     if (_db && _db.open) {
       _db.pragma('wal_checkpoint(TRUNCATE)');
@@ -66,7 +73,7 @@ export function checkpointWal(): void {
 }
 
 export function openDatabase(): Database.Database {
-  _db = new Database(DB_FILE, { timeout: 5000 });
+  _db = new Database(isPostgresMode() ? ':memory:' : DB_FILE, { timeout: 5000 });
   initConnection();
   return _db;
 }

@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useQueryClient } from '@tanstack/react-query';
 import { useStore } from '../store';
-import { queryKeys } from './useData';
 
 /**
  * Singleton socket.io client instance.
@@ -41,7 +39,6 @@ const socket: Socket = io({
 export function useSocket() {
   const currentClassId = useStore((state) => state.currentClassId);
   const isAuthenticated = useStore((state) => state.isAuthenticated);
-  const queryClient = useQueryClient();
 
   // Keep a ref to the previous classId so we can send "leave_class" before
   // joining the new room. Using a ref avoids triggering extra renders.
@@ -87,44 +84,51 @@ export function useSocket() {
     socket.emit('join_class', currentClassId);
 
     // ----- Event listeners -----
-    // Invalidate React Query cache AND trigger Zustand store reload so
-    // components observing Zustand (Option A) immediately update their UI.
+    // Invalidate React Query cache AND trigger granular Zustand slice reload so
+    // components observing Zustand immediately update only the changed resource.
+    type SyncResource = 'records' | 'students' | 'seating' | 'events' | 'notes' | 'timetable';
+    const pendingResources = new Set<SyncResource>();
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const triggerStoreReload = () => {
+
+    const triggerStoreReload = (resource: SyncResource) => {
+      pendingResources.add(resource);
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        useStore.getState().reloadClassData(currentClassId);
+        const resources = Array.from(pendingResources);
+        pendingResources.clear();
+        const store = useStore.getState();
+        if (resources.length >= 3) {
+          store.reloadClassData(currentClassId);
+        } else {
+          for (const res of resources) {
+            store.reloadClassResource(currentClassId, res);
+          }
+        }
       }, 50);
     };
 
     const onRecordsUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.records(currentClassId) });
-      triggerStoreReload();
+      triggerStoreReload('records');
     };
 
     const onStudentsUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.students(currentClassId) });
-      triggerStoreReload();
+      triggerStoreReload('students');
     };
 
     const onSeatingUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.seating(currentClassId) });
-      triggerStoreReload();
+      triggerStoreReload('seating');
     };
 
     const onEventsUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.events(currentClassId) });
-      triggerStoreReload();
+      triggerStoreReload('events');
     };
 
     const onNotesUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.dailyNotes(currentClassId) });
-      triggerStoreReload();
+      triggerStoreReload('notes');
     };
 
     const onTimetableUpdated = () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.timetable(currentClassId) });
-      triggerStoreReload();
+      triggerStoreReload('timetable');
     };
 
     socket.on('records_updated',  onRecordsUpdated);
@@ -145,5 +149,5 @@ export function useSocket() {
       socket.off('notes_updated',    onNotesUpdated);
       socket.off('timetable_updated', onTimetableUpdated);
     };
-  }, [isAuthenticated, currentClassId, queryClient]);
+  }, [isAuthenticated, currentClassId]);
 }

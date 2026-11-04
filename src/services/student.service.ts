@@ -12,8 +12,8 @@ export const studentService = {
     if (isPostgres()) {
       const fields = 'id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived';
       const sql = includeArchived
-        ? `SELECT ${fields} FROM students WHERE class_id = $1 ORDER BY roll_number, name`
-        : `SELECT ${fields} FROM students WHERE class_id = $1 AND is_archived = false ORDER BY roll_number, name`;
+        ? `SELECT ${fields} FROM students WHERE class_id = $1 ORDER BY name`
+        : `SELECT ${fields} FROM students WHERE class_id = $1 AND is_archived = 0 ORDER BY name`;
       return pgQuery<{ id: string; name: string; roll_number: string; parent_name: string; parent_phone: string; is_flagged: number; is_archived: number }>(sql, [classId]);
     }
     const stmt = includeArchived ? db.stmt.getStudentsByClassWithArchived : db.stmt.getStudentsByClass;

@@ -1,7 +1,7 @@
 import express from 'express';
-import { inviteService, classService } from '../../services';
+import { inviteService, classService, DEFAULT_SCHOOL_ID } from '../../services';
 import type { Invite } from '../types/db';
-import { requireAuth, withWriteQueue, inviteRedeemLimiter } from './middleware';
+import { requireAuth, resolveCallerSchoolId, withWriteQueue, inviteRedeemLimiter } from './middleware';
 import { validate, inviteRedeemSchema } from '../../src/lib/validation';
 
 interface ClassNameCarrier {
@@ -13,7 +13,7 @@ export const inviteRouter = express.Router();
 // F-008: stricter per-IP rate limit on /redeem (10 / 15 min) to prevent
 // invite-code enumeration attacks. Sequential via withWriteQueue below
 // ensures consistency; the rate limit gates burst attempts first.
-inviteRouter.post('/redeem', requireAuth, inviteRedeemLimiter, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
+inviteRouter.post('/redeem', inviteRedeemLimiter, requireAuth, validate(inviteRedeemSchema), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const { code } = req.body;
 
@@ -39,8 +39,9 @@ inviteRouter.post('/redeem', requireAuth, inviteRedeemLimiter, validate(inviteRe
     return res.status(400).json(GENERIC_INVITE_ERROR);
   }
 
+  const callerSchoolId = await resolveCallerSchoolId(req);
   const classExists = await classService.getExistingById(invite.class_id);
-  if (!classExists) {
+  if (!classExists || (classExists.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
     return res.status(404).json(GENERIC_INVITE_ERROR);
   }
 

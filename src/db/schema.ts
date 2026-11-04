@@ -251,6 +251,30 @@ export function initSchema(): void {
     _db.exec('ALTER TABLE teachers ADD COLUMN is_admin INTEGER DEFAULT 0');
   }
 
+  // Multi-School (Path B) Tenancy Schema
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS schools (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT OR IGNORE INTO schools (id, code, name) VALUES ('school_default', 'default', 'Default School');
+  `);
+
+  const hasTeacherSchoolId = teachersInfo.some(col => col.name === 'school_id');
+  if (!hasTeacherSchoolId) {
+    _db.exec("ALTER TABLE teachers ADD COLUMN school_id TEXT NOT NULL DEFAULT 'school_default'");
+  }
+  _db.exec('CREATE INDEX IF NOT EXISTS idx_teachers_school_id ON teachers(school_id)');
+
+  const classesInfoForSchool = _db.pragma('table_info(classes)') as Array<{ name: string }>;
+  const hasClassSchoolId = classesInfoForSchool.some(col => col.name === 'school_id');
+  if (!hasClassSchoolId) {
+    _db.exec("ALTER TABLE classes ADD COLUMN school_id TEXT NOT NULL DEFAULT 'school_default'");
+  }
+  _db.exec('CREATE INDEX IF NOT EXISTS idx_classes_school_id ON classes(school_id)');
+
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_invite_codes_class_active ON invite_codes (class_id, expires_at, used_by)`);
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher_active ON user_sessions (teacher_id, is_revoked, expires_at)`);
 
