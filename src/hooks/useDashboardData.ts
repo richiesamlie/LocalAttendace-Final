@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store';
+import { api } from '../lib/api';
 import { format, isBefore, setHours, setMinutes, isAfter, parseISO } from 'date-fns';
 import { parseTime } from '../components/Timetable/timetableUtils';
 
@@ -14,37 +15,37 @@ export function useDashboardData(currentTime: Date) {
   const roleLookupKey = currentClassId && teacherId ? `${currentClassId}:${teacherId}` : '';
 
   useEffect(() => {
-    if (!roleLookupKey || isAdmin) return;
+    if (!roleLookupKey || isAdmin || currentClass?.role) return;
 
     const classId = currentClassId;
     if (!classId) return;
 
     let cancelled = false;
-    import('../lib/api').then(({ api }) => {
-      api.getClassTeachers(classId).then(teachers => {
-        if (cancelled) return;
-        const me = teachers.find(t => t.teacher_id === teacherId);
-        setResolvedRole({ key: roleLookupKey, role: me?.role || 'teacher' });
-      }).catch(() => {
-        if (cancelled) return;
-        setResolvedRole({ key: roleLookupKey, role: 'teacher' });
-      });
+    api.getClassTeachers(classId).then(teachers => {
+      if (cancelled) return;
+      const me = teachers.find(t => t.teacher_id === teacherId);
+      setResolvedRole({ key: roleLookupKey, role: me?.role || 'teacher' });
+    }).catch(() => {
+      if (cancelled) return;
+      setResolvedRole({ key: roleLookupKey, role: 'teacher' });
     });
 
     return () => {
       cancelled = true;
     };
-  }, [roleLookupKey, currentClassId, teacherId, isAdmin]);
+  }, [roleLookupKey, currentClassId, teacherId, isAdmin, currentClass?.role]);
 
   const userRole = useMemo(() => {
     if (isAdmin) return 'administrator';
+    if (currentClass?.role) return currentClass.role;
     if (!roleLookupKey) return 'teacher';
     if (resolvedRole?.key === roleLookupKey) return resolvedRole.role;
     return 'teacher';
-  }, [isAdmin, roleLookupKey, resolvedRole]);
+  }, [isAdmin, currentClass?.role, roleLookupKey, resolvedRole]);
 
   const todayStr = format(currentTime, 'yyyy-MM-dd');
   const currentDayOfWeek = currentTime.getDay();
+  const currentHour = currentTime.getHours();
   const allRecords = useStore((state) => state.records);
   const students = useStore((state) => state.students);
   const dailyNotes = useStore((state) => state.dailyNotes);
@@ -59,13 +60,13 @@ export function useDashboardData(currentTime: Date) {
     [timetable, currentDayOfWeek]
   );
 
-  const upcomingEvents = useMemo(() =>
-    events
-      .filter(e => e.date === todayStr || isAfter(parseISO(e.date), new Date()))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 3),
-    [events, todayStr]
-  );
+  const upcomingEvents = useMemo(() => {
+    const todayStart = parseISO(todayStr);
+    return events
+      .filter(e => e.date === todayStr || isAfter(parseISO(e.date), todayStart))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 3);
+  }, [events, todayStr]);
 
   const activeStudents = useMemo(() =>
     students.filter(s => !s.isArchived),
@@ -78,15 +79,16 @@ export function useDashboardData(currentTime: Date) {
   );
 
   const targetTime = useMemo(() => {
-    if (todaysClasses.length === 0) return setMinutes(setHours(new Date(), 8), 15);
+    const baseDate = parseISO(todayStr);
+    if (todaysClasses.length === 0) return setMinutes(setHours(baseDate, 8), 15);
     const earliest = todaysClasses.reduce((min, slot) => {
       const t = parseTime(slot.startTime);
       return t < min ? t : min;
     }, parseTime(todaysClasses[0].startTime));
     const h = Math.floor(earliest / 60);
     const m = earliest % 60;
-    return setMinutes(setHours(new Date(), h), m);
-  }, [todaysClasses]);
+    return setMinutes(setHours(baseDate, h), m);
+  }, [todaysClasses, todayStr]);
 
   const presentCount = useMemo(() => records.filter(r => r.status === 'Present').length, [records]);
   const absentCount  = useMemo(() => records.filter(r => r.status === 'Absent').length,  [records]);
@@ -94,11 +96,10 @@ export function useDashboardData(currentTime: Date) {
   const lateCount    = useMemo(() => records.filter(r => r.status === 'Late').length,    [records]);
 
   const greeting = useMemo(() => {
-    const h = currentTime.getHours();
-    if (h < 12) return 'Good Morning';
-    if (h < 17) return 'Good Afternoon';
+    if (currentHour < 12) return 'Good Morning';
+    if (currentHour < 17) return 'Good Afternoon';
     return 'Good Evening';
-  }, [currentTime]);
+  }, [currentHour]);
 
   const firstClassTime = useMemo(() => {
     if (todaysClasses.length === 0) return '8:15 AM';

@@ -20,8 +20,8 @@ export const sessionService = {
 
   get(sessionId: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ is_revoked: number; expires_at: string }>(
-        'SELECT is_revoked, expires_at FROM user_sessions WHERE id = $1',
+      return pgQueryOne<{ id: string; teacher_id: string; is_revoked: number; expires_at: string }>(
+        'SELECT id, teacher_id, is_revoked, expires_at FROM user_sessions WHERE id = $1',
         [sessionId]
       );
     }
@@ -55,14 +55,14 @@ export const sessionService = {
 
   revokeAll(teacherId: string) {
     if (isPostgres()) {
-      return pgQuery('UPDATE user_sessions SET is_revoked = true WHERE teacher_id = $1', [teacherId]);
+      return pgQuery('UPDATE user_sessions SET is_revoked = 1 WHERE teacher_id = $1', [teacherId]);
     }
     return db.stmt.revokeAllSessions.run(teacherId);
   },
 
   revoke(sessionId: string) {
     if (isPostgres()) {
-      return pgQuery('UPDATE user_sessions SET is_revoked = true WHERE id = $1', [sessionId]);
+      return pgQuery('UPDATE user_sessions SET is_revoked = 1 WHERE id = $1', [sessionId]);
     }
     return db.stmt.revokeSession.run(sessionId);
   },

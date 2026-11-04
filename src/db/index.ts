@@ -1,19 +1,22 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 
-import { _db, DB_FILE, openDatabase, checkpointWal } from './connection';
+import { _db, DB_FILE, openDatabase, checkpointWal, isPostgresMode } from './connection';
 import { initSchema } from './schema';
 import { preparedStatements, initStatements } from './statements';
 import { cacheGet, cacheSet, cacheInvalidate, cached } from './cache';
 import { enqueueWrite } from './writeQueue';
 
-// Initialize schema first, then prepare SQL statements
-initSchema();
-initStatements();
+// Initialize SQLite schema & statements only when not running in PostgreSQL mode
+if (!isPostgresMode()) {
+  initSchema();
+  initStatements();
+}
 
 let checkpointInterval: NodeJS.Timeout | null = null;
 
 function startCheckpointInterval(): void {
+  if (isPostgresMode()) return;
   if (checkpointInterval) clearInterval(checkpointInterval);
   checkpointInterval = setInterval(() => {
     try {
@@ -61,6 +64,7 @@ const dbProxy = new Proxy({}, {
         reinitConnection();
         initSchema();
         recompileStatements();
+        cacheInvalidate();
         startCheckpointInterval();
       };
     }

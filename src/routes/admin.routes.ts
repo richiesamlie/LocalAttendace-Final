@@ -44,7 +44,8 @@ adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQue
     }
 
     const hash = await hashPassword(value);
-    const adminTeacher = await teacherService.getByUsername('admin') as Teacher | null;
+    const adminTeacher = (req as express.Request & { adminTeacher?: Teacher }).adminTeacher
+      || await teacherService.getByUsername('admin') as Teacher | null;
     if (adminTeacher) {
       await teacherService.updatePassword(adminTeacher.id, hash);
       await sessionService.revokeAll(adminTeacher.id);

@@ -1,7 +1,7 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
-import { classService, teacherService, inviteService, studentService, recordService, eventService, timetableService, noteService, seatingService } from '../../services';
-import { requireAuth, requireClassAccess, requireClassOwner, requireRole, withWriteQueue, postLimiter } from './middleware';
+import { classService, teacherService, inviteService, studentService, recordService, eventService, timetableService, noteService, seatingService, DEFAULT_SCHOOL_ID } from '../../services';
+import { requireAuth, requireClassAccess, requireClassOwner, requireRole, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
 import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classTeacherRoleUpdateSchema, classInviteCreateSchema } from '../../src/lib/validation';
 import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
 
@@ -13,7 +13,8 @@ classRouter.get('/', requireAuth, async (req, res) => {
 
     const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
     if (isGlobalAdmin) {
-      const allClasses = await classService.getAll() as ClassWithRole[];
+      const callerSchoolId = await resolveCallerSchoolId(req);
+      const allClasses = await classService.getAll(callerSchoolId) as ClassWithRole[];
       const mapped = allClasses.map((c) => ({
         id: c.id,
         teacher_id: c.teacher_id,
@@ -42,9 +43,10 @@ classRouter.post('/', requireAuth, postLimiter, validate(classSchema), withWrite
     }
   }
 
+  const callerSchoolId = await resolveCallerSchoolId(req);
   const { id, name } = req.body;
-  await classService.insert(id, teacherId, name);
-  return res.json({ id, teacher_id: teacherId, name });
+  await classService.insert(id, teacherId, name, callerSchoolId);
+  return res.json({ id, teacher_id: teacherId, name, school_id: callerSchoolId });
 }));
 
 classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), withWriteQueue(async (req, res) => {
@@ -59,7 +61,13 @@ classRouter.put('/:id', requireAuth, postLimiter, validate(classUpdateSchema), w
   }
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
-  if (!isGlobalAdmin) {
+  if (isGlobalAdmin) {
+    const callerSchoolId = await resolveCallerSchoolId(req);
+    const existingClass = await classService.getExistingById(req.params.id);
+    if (!existingClass || (existingClass.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+  } else {
     const access = await classService.isClassTeacher(req.params.id, teacherId) as ClassTeacher | null | undefined;
     if (!access || access.role !== 'owner') {
       return res.status(403).json({ error: 'Only the Homeroom Teacher can update the class' });
@@ -73,7 +81,13 @@ classRouter.delete('/:id', requireAuth, postLimiter, withWriteQueue(async (req, 
   const teacherId = req.teacherId;
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
-  if (!isGlobalAdmin) {
+  if (isGlobalAdmin) {
+    const callerSchoolId = await resolveCallerSchoolId(req);
+    const existingClass = await classService.getExistingById(req.params.id);
+    if (!existingClass || (existingClass.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
+      return res.status(404).json({ error: 'Class not found or access denied' });
+    }
+  } else {
     const access = await classService.isClassTeacher(req.params.id, teacherId) as ClassTeacher | null | undefined;
     if (!access || access.role !== 'owner') {
       return res.status(403).json({ error: 'Only the Homeroom Teacher can delete the class' });
@@ -202,8 +216,9 @@ classRouter.post('/:classId/teachers', requireAuth, postLimiter, validate(classT
     return res.status(400).json({ error: 'teacherId is required' });
   }
 
+  const callerSchoolId = await resolveCallerSchoolId(req);
   const existing = await teacherService.getById(newTeacherId);
-  if (!existing) {
+  if (!existing || (existing.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
     return res.status(404).json({ error: 'Teacher not found' });
   }
 

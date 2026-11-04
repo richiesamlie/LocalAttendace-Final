@@ -72,11 +72,16 @@ export function useTimer(initialDuration = 60 * 60) {
 
   const timerIntervalRef = useRef<number | null>(null);
   const timerEndAtRef = useRef<number | null>(initialState.endAtMs);
+  const timerRemainingRef = useRef<number>(initialState.timerRemaining);
 
   useEffect(() => {
-    if (isTimerRunning && timerRemaining > 0) {
+    timerRemainingRef.current = timerRemaining;
+  }, [timerRemaining]);
+
+  useEffect(() => {
+    if (isTimerRunning && timerRemainingRef.current > 0) {
       if (timerEndAtRef.current === null) {
-        timerEndAtRef.current = Date.now() + timerRemaining * 1000;
+        timerEndAtRef.current = Date.now() + timerRemainingRef.current * 1000;
       }
 
       const tick = () => {
@@ -104,7 +109,7 @@ export function useTimer(initialDuration = 60 * 60) {
         timerIntervalRef.current = null;
       }
     };
-  }, [isTimerRunning, timerRemaining]);
+  }, [isTimerRunning]);
 
   useEffect(() => {
     const payload: PersistedTimerState = {

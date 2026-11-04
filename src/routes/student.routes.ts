@@ -1,5 +1,6 @@
 import express from 'express';
-import { studentService } from '../../services';
+import { studentService, isPostgres } from '../../services';
+import db from '../../db';
 import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, studentSchema, studentUpdateSchema, studentSyncPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
@@ -58,7 +59,7 @@ studentRouter.put('/:id', requireAuth, postLimiter, validate(studentUpdateSchema
   const teacherId = req.teacherId;
   const studentId = req.params.id;
 
-  const student = await studentService.getById(studentId, teacherId);
+  const student = await studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   if (!student) {
     return res.status(404).json({ error: 'Student not found or access denied' });
   }
@@ -73,9 +74,8 @@ studentRouter.put('/:id', requireAuth, postLimiter, validate(studentUpdateSchema
   if (isArchived !== undefined) updateData.is_archived = isArchived ? 1 : 0;
 
   await studentService.update(updateData, studentId, teacherId);
-  const updatedStudent = await studentService.getById(studentId, teacherId) as { id: string; class_id: string } | null;
   res.json({ success: true });
-  if (updatedStudent?.class_id) io?.to(updatedStudent.class_id).emit('students_updated');
+  if (student.class_id) io?.to(student.class_id).emit('students_updated');
   return;
 }));
 
@@ -109,20 +109,39 @@ studentRouter.post('/:classId/students/sync', requireClassAccess('classId'), pos
   const toInsert = students.filter((s) => !existingMap.has(s.id));
   const toUpdate = students.filter((s) => existingMap.has(s.id));
 
-  for (const s of toInsert) {
-    await studentService.insert(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);
-  }
-
-  for (const s of toUpdate) {
-    const updateData: Record<string, unknown> = {
-      name: s.name,
-      roll_number: s.rollNumber,
-      parent_name: s.parentName || null,
-      parent_phone: s.parentPhone || null,
-      is_flagged: s.isFlagged ? 1 : 0,
-      is_archived: s.isArchived ? 1 : 0
-    };
-    await studentService.update(updateData, s.id, teacherId);
+  if (!isPostgres() && (toInsert.length + toUpdate.length > 1)) {
+    const syncTx = db.transaction(() => {
+      for (const s of toInsert) {
+        studentService.insert(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);
+      }
+      for (const s of toUpdate) {
+        const updateData: Record<string, unknown> = {
+          name: s.name,
+          roll_number: s.rollNumber,
+          parent_name: s.parentName || null,
+          parent_phone: s.parentPhone || null,
+          is_flagged: s.isFlagged ? 1 : 0,
+          is_archived: s.isArchived ? 1 : 0
+        };
+        studentService.update(updateData, s.id, teacherId);
+      }
+    });
+    syncTx();
+  } else {
+    for (const s of toInsert) {
+      await studentService.insert(s.id, classId, s.name, s.rollNumber, s.parentName || null, s.parentPhone || null, s.isFlagged ? 1 : 0);
+    }
+    for (const s of toUpdate) {
+      const updateData: Record<string, unknown> = {
+        name: s.name,
+        roll_number: s.rollNumber,
+        parent_name: s.parentName || null,
+        parent_phone: s.parentPhone || null,
+        is_flagged: s.isFlagged ? 1 : 0,
+        is_archived: s.isArchived ? 1 : 0
+      };
+      await studentService.update(updateData, s.id, teacherId);
+    }
   }
 
   res.json({ success: true, inserted: toInsert.length, updated: toUpdate.length });

@@ -22,6 +22,9 @@ interface AppState {
   teacherId: string | null;
   teacherName: string | null;
   isAdmin: boolean;
+  schoolId: string | null;
+  schoolCode: string | null;
+  schoolName: string | null;
   classes: ClassData[];
   currentClassId: string | null;
 
@@ -34,12 +37,15 @@ interface AppState {
   seatingLayout: Record<string, string>;
   theme: Theme;
 
-  setAuth: (teacherId: string, teacherName: string, isAdmin?: boolean) => void;
+  setAuth: (teacherId: string, teacherName: string, isAdmin?: boolean, schoolInfo?: { schoolId?: string; schoolCode?: string; schoolName?: string }) => void;
   clearAuth: () => void;
 
   initializeStore: () => Promise<void>;
   loadClassData: (classId: string) => Promise<void>;
+  loadAllClassesData: () => Promise<void>;
   reloadClassData: (classId: string) => Promise<void>;
+  reloadClassResource: (classId: string, resource: 'records' | 'students' | 'seating' | 'events' | 'notes' | 'timetable') => Promise<void>;
+  importClassesBackup: (backupClasses: ClassData[]) => Promise<void>;
 
   addClass: (name: string) => Promise<void>;
   removeClass: (id: string) => Promise<void>;
@@ -128,6 +134,9 @@ export const useStore = create<AppState>()((set, get) => ({
   teacherId: null,
   teacherName: null,
   isAdmin: false,
+  schoolId: null,
+  schoolCode: null,
+  schoolName: null,
   classes: [],
   currentClassId: null,
 
@@ -141,8 +150,33 @@ export const useStore = create<AppState>()((set, get) => ({
   theme: 'light',
   lastAttendanceChange: null,
 
-  setAuth: (teacherId, teacherName, isAdmin = false) => set({ isAuthenticated: true, teacherId, teacherName, isAdmin }),
-  clearAuth: () => set({ isAuthenticated: false, teacherId: null, teacherName: null, isAdmin: false, isInitialized: false, classes: [], currentClassId: null, students: [], records: [], dailyNotes: {}, events: [], timetable: [], seatingLayout: {} }),
+  setAuth: (teacherId, teacherName, isAdmin = false, schoolInfo) => set({
+    isAuthenticated: true,
+    teacherId,
+    teacherName,
+    isAdmin,
+    schoolId: schoolInfo?.schoolId ?? null,
+    schoolCode: schoolInfo?.schoolCode ?? null,
+    schoolName: schoolInfo?.schoolName ?? null,
+  }),
+  clearAuth: () => set({
+    isAuthenticated: false,
+    teacherId: null,
+    teacherName: null,
+    isAdmin: false,
+    schoolId: null,
+    schoolCode: null,
+    schoolName: null,
+    isInitialized: false,
+    classes: [],
+    currentClassId: null,
+    students: [],
+    records: [],
+    dailyNotes: {},
+    events: [],
+    timetable: [],
+    seatingLayout: {},
+  }),
 
   initializeStore: async () => {
     try {
@@ -158,14 +192,16 @@ export const useStore = create<AppState>()((set, get) => ({
       }
 
       let settings: Record<string, string> = { theme: localTheme };
-      try {
-        const fetchedSettings = await api.getSettings();
-        if (fetchedSettings) {
-          settings = fetchedSettings;
+      if (get().isAdmin) {
+        try {
+          const fetchedSettings = await api.getSettings();
+          if (fetchedSettings) {
+            settings = fetchedSettings;
+          }
+        } catch (_err) {
+          // Expected if settings endpoint is unavailable
+          void 0;
         }
-      } catch (_err) {
-        // Expected for non-admins
-        void 0;
       }
 
       if (classesData.length > 0) {
@@ -213,6 +249,34 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
+  loadAllClassesData: async () => {
+    const unloaded = get().classes.filter(c => !c.loaded);
+    if (unloaded.length === 0) return;
+
+    const results = await Promise.allSettled(
+      unloaded.map(async (cls) => ({
+        id: cls.id,
+        payload: await fetchClassPayload(cls.id),
+      }))
+    );
+
+    const payloadById = new Map<string, Awaited<ReturnType<typeof fetchClassPayload>>>();
+    for (const res of results) {
+      if (res.status === 'fulfilled') {
+        payloadById.set(res.value.id, res.value.payload);
+      }
+    }
+
+    if (payloadById.size === 0) return;
+
+    set((state) => ({
+      classes: state.classes.map((c) => {
+        const payload = payloadById.get(c.id);
+        return payload ? { ...c, ...payload, loaded: true } : c;
+      }),
+    }));
+  },
+
   reloadClassData: async (classId: string) => {
     try {
       const payload = await fetchClassPayload(classId);
@@ -231,6 +295,114 @@ export const useStore = create<AppState>()((set, get) => ({
       });
     } catch (error) {
       console.error(`Failed to reload class data for ${classId}`, error);
+    }
+  },
+
+  reloadClassResource: async (classId, resource) => {
+    try {
+      let partialUpdate: Partial<ClassDataUpdatableFields> = {};
+      switch (resource) {
+        case 'records': {
+          const records = await api.getRecords(classId);
+          partialUpdate = { records };
+          break;
+        }
+        case 'students': {
+          const students = await api.getStudents(classId, false);
+          partialUpdate = { students };
+          break;
+        }
+        case 'seating': {
+          const seatingLayout = await api.getSeating(classId);
+          partialUpdate = { seatingLayout };
+          break;
+        }
+        case 'events': {
+          const events = await api.getEvents(classId);
+          partialUpdate = { events };
+          break;
+        }
+        case 'notes': {
+          const dailyNotes = await api.getDailyNotes(classId);
+          partialUpdate = { dailyNotes };
+          break;
+        }
+        case 'timetable': {
+          const timetable = await api.getTimetable(classId);
+          partialUpdate = { timetable };
+          break;
+        }
+      }
+
+      set((state) => {
+        const updatedClasses = state.classes.map(c =>
+          c.id === classId ? { ...c, ...partialUpdate } : c
+        );
+        const isCurrentClass = state.currentClassId === classId;
+        return {
+          classes: updatedClasses,
+          ...(isCurrentClass ? partialUpdate : {}),
+        };
+      });
+    } catch (error) {
+      console.error(`Failed to reload ${resource} for ${classId}`, error);
+    }
+  },
+
+  importClassesBackup: async (backupClasses) => {
+    if (backupClasses.length === 0) return;
+    const normalized = backupClasses.map((c) => ({ ...c, loaded: true }));
+    const first = normalized[0];
+    const existingIds = new Set(get().classes.map((c) => c.id));
+
+    set({
+      classes: normalized,
+      currentClassId: first.id,
+      students: first.students || [],
+      records: first.records || [],
+      events: first.events || [],
+      dailyNotes: first.dailyNotes || {},
+      timetable: first.timetable || [],
+      seatingLayout: first.seatingLayout || {},
+    });
+
+    for (const cls of normalized) {
+      try {
+        if (existingIds.has(cls.id)) {
+          await api.updateClass(cls.id, cls.name);
+        } else {
+          await api.createClass({ id: cls.id, name: cls.name });
+        }
+
+        if (cls.students?.length) {
+          await api.syncStudents(cls.id, cls.students);
+        }
+        if (cls.records?.length) {
+          await api.saveRecords(
+            cls.records.map((r) => ({ ...r, classId: cls.id })) as AttendanceRecordWithClassId[]
+          );
+        }
+        if (cls.events?.length) {
+          await api.createEvents(cls.id, cls.events);
+        }
+        if (cls.dailyNotes) {
+          await Promise.allSettled(
+            Object.entries(cls.dailyNotes).map(([date, note]) =>
+              api.saveDailyNote(cls.id, date, note)
+            )
+          );
+        }
+        if (cls.timetable?.length) {
+          await Promise.allSettled(
+            cls.timetable.map((slot) => api.createTimetableSlot(cls.id, slot))
+          );
+        }
+        if (cls.seatingLayout && Object.keys(cls.seatingLayout).length > 0) {
+          await api.saveSeatingLayout(cls.id, cls.seatingLayout);
+        }
+      } catch (error) {
+        console.warn(`[store] Failed to persist imported backup for class ${cls.id}:`, error);
+      }
     }
   },
 

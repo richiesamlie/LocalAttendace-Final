@@ -13,6 +13,9 @@ export function useOnlineStatus(): boolean {
     window.addEventListener('offline', handleOffline);
 
     const pingInterval = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
       if (!navigator.onLine) {
         setIsOnline(false);
         return;

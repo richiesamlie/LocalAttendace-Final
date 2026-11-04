@@ -1,5 +1,6 @@
 import express from 'express';
-import { recordService, classService, studentService, teacherService } from '../../services';
+import { recordService, classService, studentService, teacherService, isPostgres } from '../../services';
+import db from '../../db';
 import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, attendanceRecordsPayloadSchema } from '../../src/lib/validation';
@@ -47,12 +48,14 @@ recordRouter.post('/', requireAuth, postLimiter, validate(attendanceRecordsPaylo
   const records = (Array.isArray(req.body) ? req.body : [req.body]) as AttendanceInput[];
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
+  const verifiedClasses = new Set<string>();
   for (const r of records) {
-    if (!isGlobalAdmin) {
+    if (!isGlobalAdmin && !verifiedClasses.has(r.classId)) {
       const access = await classService.isClassTeacher(r.classId, teacherId);
       if (!access) {
         return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
       }
+      verifiedClasses.add(r.classId);
     }
     const student = await studentService.getBelongsToClass(r.studentId, r.classId);
     if (!student) {
@@ -60,8 +63,17 @@ recordRouter.post('/', requireAuth, postLimiter, validate(attendanceRecordsPaylo
     }
   }
 
-  for (const r of records) {
-    await recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
+  if (!isPostgres() && records.length > 1) {
+    const insertMany = db.transaction((items: AttendanceInput[]) => {
+      for (const r of items) {
+        recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
+      }
+    });
+    insertMany(records);
+  } else {
+    for (const r of records) {
+      await recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
+    }
   }
   res.json({ success: true });
   const classIds = [...new Set(records.map((r) => r.classId))];

@@ -10,6 +10,7 @@
  * individual modules for better maintainability.
  */
 
+export { schoolService, DEFAULT_SCHOOL_ID, DEFAULT_SCHOOL_CODE } from './src/services/school.service';
 export { teacherService } from './src/services/teacher.service';
 export { sessionService } from './src/services/session.service';
 export { classService } from './src/services/class.service';

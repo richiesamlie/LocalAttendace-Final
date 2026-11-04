@@ -176,9 +176,15 @@ class MetricsStore {
       .sort((a, b) => b.duration - a.duration)
       .slice(0, 10);
 
-    const timeRangeStart = filteredRequests.length > 0 
-      ? Math.min(...filteredRequests.map(m => m.timestamp))
-      : now;
+    let timeRangeStart = now;
+    if (filteredRequests.length > 0) {
+      timeRangeStart = filteredRequests[0].timestamp;
+      for (let i = 1; i < filteredRequests.length; i++) {
+        if (filteredRequests[i].timestamp < timeRangeStart) {
+          timeRangeStart = filteredRequests[i].timestamp;
+        }
+      }
+    }
 
     return {
       requests: {
@@ -227,16 +233,27 @@ class MetricsStore {
     uptimeMs: number;
   } {
     const now = Date.now();
-    const allTimestamps = [
-      ...this.requestMetrics.map(m => m.timestamp),
-      ...this.queryMetrics.map(m => m.timestamp),
-    ];
+    let oldestMetric = Infinity;
+    let newestMetric = -Infinity;
+
+    for (let i = 0; i < this.requestMetrics.length; i++) {
+      const ts = this.requestMetrics[i].timestamp;
+      if (ts < oldestMetric) oldestMetric = ts;
+      if (ts > newestMetric) newestMetric = ts;
+    }
+    for (let i = 0; i < this.queryMetrics.length; i++) {
+      const ts = this.queryMetrics[i].timestamp;
+      if (ts < oldestMetric) oldestMetric = ts;
+      if (ts > newestMetric) newestMetric = ts;
+    }
+
+    const hasMetrics = this.requestMetrics.length > 0 || this.queryMetrics.length > 0;
 
     return {
       totalRequests: this.requestMetrics.length,
       totalQueries: this.queryMetrics.length,
-      oldestMetric: allTimestamps.length > 0 ? Math.min(...allTimestamps) : now,
-      newestMetric: allTimestamps.length > 0 ? Math.max(...allTimestamps) : now,
+      oldestMetric: hasMetrics ? oldestMetric : now,
+      newestMetric: hasMetrics ? newestMetric : now,
       uptimeMs: now - this.startTime,
     };
   }

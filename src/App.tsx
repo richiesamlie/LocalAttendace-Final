@@ -3,7 +3,7 @@ import { CheckSquare, Menu, X, Loader2 } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import { cn } from './utils/cn';
 import { useStore } from './store';
-import { useAuth, useLogin, useLogout, useClassSync } from './hooks/useData';
+import { useAuth, useLogin, useRegisterSchool, useLogout, useClassSync } from './hooks/useData';
 import { useSocket } from './hooks/useSocket';
 import Sidebar from './components/Sidebar';
 
@@ -45,10 +45,15 @@ const VALID_PAGES = new Set([
 ]);
 
 function LoginScreen() {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [schoolCode, setSchoolCode] = useState('');
+  const [schoolName, setSchoolName] = useState('');
+  const [adminName, setAdminName] = useState('');
   const [error, setError] = useState('');
   const loginMutation = useLogin();
+  const registerSchoolMutation = useRegisterSchool();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,65 +61,186 @@ function LoginScreen() {
       setError('Please enter username and password');
       return;
     }
-    loginMutation.mutate({ username, password }, {
-      onError: () => { 
-        setError('Invalid username or password'); 
+    const trimmedCode = schoolCode.trim();
+    loginMutation.mutate(
+      trimmedCode ? { username, password, schoolCode: trimmedCode } : { username, password },
+      {
+        onError: () => { 
+          setError('Invalid username or password'); 
+        },
       },
-    });
+    );
+  };
+
+  const handleRegisterSchool = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schoolName.trim() || !schoolCode.trim() || !adminName.trim() || !username.trim() || !password) {
+      setError('Please complete all school registration fields');
+      return;
+    }
+    registerSchoolMutation.mutate(
+      {
+        schoolName: schoolName.trim(),
+        schoolCode: schoolCode.trim().toLowerCase(),
+        adminName: adminName.trim(),
+        username: username.trim(),
+        password,
+      },
+      {
+        onError: (err) => {
+          setError(err instanceof Error ? err.message : 'Failed to register school');
+        },
+      },
+    );
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-sans p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8">
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-6">
           <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">
             <CheckSquare className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Teacher Assistant</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">Sign in to manage your classes</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
+            {mode === 'login' ? 'Sign in to manage your classes' : 'Register a new school workspace'}
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label htmlFor="login-username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
-            <input
-              id="login-username"
-              type="text"
-              value={username}
-              onChange={(e) => { setUsername(e.target.value); setError(''); }}
-              autoComplete="username"
-              className={cn(
-                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-all focus-ring",
-                error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
-              )}
-              placeholder="Enter username..."
-              autoFocus
-            />
-          </div>
-          <div>
-            <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-            <input
-              id="login-password"
-              type="password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              autoComplete="current-password"
-              className={cn(
-                "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-all focus-ring",
-                error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
-              )}
-              placeholder="Enter password..."
-            />
-            {error && <p role="alert" className="text-red-500 text-sm mt-1">{error}</p>}
-          </div>
+        {mode === 'login' ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label htmlFor="login-username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+              <input
+                id="login-username"
+                type="text"
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                autoComplete="username"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-all focus-ring",
+                  error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
+                )}
+                placeholder="Enter username (or user@school)..."
+                autoFocus
+              />
+            </div>
+            <div>
+              <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
+              <input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                autoComplete="current-password"
+                className={cn(
+                  "w-full px-4 py-3 rounded-xl border bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-all focus-ring",
+                  error ? "border-red-500" : "border-slate-200 dark:border-slate-800"
+                )}
+                placeholder="Enter password..."
+              />
+            </div>
+            <div>
+              <label htmlFor="login-school-code" className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">School Code (optional)</label>
+              <input
+                id="login-school-code"
+                type="text"
+                value={schoolCode}
+                onChange={(e) => { setSchoolCode(e.target.value); setError(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm transition-all focus-ring"
+                placeholder="default"
+              />
+              {error && <p role="alert" className="text-red-500 text-sm mt-1">{error}</p>}
+            </div>
+            <button
+              type="submit"
+              disabled={loginMutation.isPending || !username || !password}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 min-h-[44px] rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 focus-ring"
+            >
+              {loginMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Log In'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleRegisterSchool} className="space-y-3.5">
+            <div>
+              <label htmlFor="reg-school-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">School Name</label>
+              <input
+                id="reg-school-name"
+                type="text"
+                value={schoolName}
+                onChange={(e) => { setSchoolName(e.target.value); setError(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm transition-all focus-ring"
+                placeholder="e.g. St. Mary's Academy"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-school-code" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">School Code</label>
+              <input
+                id="reg-school-code"
+                type="text"
+                value={schoolCode}
+                onChange={(e) => { setSchoolCode(e.target.value.toLowerCase()); setError(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm transition-all focus-ring"
+                placeholder="e.g. stmarys"
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-admin-name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Administrator Name</label>
+              <input
+                id="reg-admin-name"
+                type="text"
+                value={adminName}
+                onChange={(e) => { setAdminName(e.target.value); setError(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm transition-all focus-ring"
+                placeholder="e.g. Principal Smith"
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-username" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Admin Username</label>
+              <input
+                id="reg-username"
+                type="text"
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm transition-all focus-ring"
+                placeholder="e.g. admin"
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-password" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Admin Password</label>
+              <input
+                id="reg-password"
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-sm transition-all focus-ring"
+                placeholder="At least 4 characters..."
+              />
+              {error && <p role="alert" className="text-red-500 text-sm mt-1">{error}</p>}
+            </div>
+            <button
+              type="submit"
+              disabled={registerSchoolMutation.isPending || !schoolName.trim() || !schoolCode.trim() || !adminName.trim() || !username.trim() || !password}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 min-h-[44px] rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 focus-ring"
+            >
+              {registerSchoolMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Register School'}
+            </button>
+          </form>
+        )}
+
+        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
           <button
-            type="submit"
-            disabled={loginMutation.isPending || !username || !password}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 min-h-[44px] rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 focus-ring"
+            type="button"
+            onClick={() => {
+              setMode(mode === 'login' ? 'register' : 'login');
+              setError('');
+            }}
+            className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline focus-ring rounded px-2 py-1"
           >
-            {loginMutation.isPending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Log In'}
+            {mode === 'login' ? 'New school? Register a school workspace' : 'Already have an account? Back to Log In'}
           </button>
-        </form>
+        </div>
 
       </div>
     </div>
@@ -123,6 +249,8 @@ function LoginScreen() {
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
+    const hashPage = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : '';
+    if (hashPage && VALID_PAGES.has(hashPage)) return hashPage;
     const saved = sessionStorage.getItem(CURRENT_PAGE_STORAGE_KEY);
     return saved && VALID_PAGES.has(saved) ? saved : 'dashboard';
   });
@@ -154,7 +282,24 @@ export default function App() {
 
   useEffect(() => {
     sessionStorage.setItem(CURRENT_PAGE_STORAGE_KEY, currentPage);
+    if (typeof window !== 'undefined') {
+      const targetHash = `#${currentPage}`;
+      if (window.location.hash !== targetHash) {
+        window.history.pushState({ page: currentPage }, '', targetHash);
+      }
+    }
   }, [currentPage]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const hashPage = window.location.hash.replace(/^#\/?/, '');
+      if (hashPage && VALID_PAGES.has(hashPage)) {
+        setCurrentPage(hashPage);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   if (authQuery.isLoading || (authQuery.data?.authenticated && !isInitialized)) {
     return (

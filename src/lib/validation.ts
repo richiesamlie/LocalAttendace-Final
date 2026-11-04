@@ -11,6 +11,18 @@ const safeString = (opts?: { min?: number; max?: number }) =>
 export const loginSchema = z.object({
   username: safeString({ min: 1, max: 100 }),
   password: safeString({ min: 1, max: 200 }),
+  schoolCode: safeString({ max: 64 }).optional(),
+});
+
+export const registerSchoolSchema = z.object({
+  schoolName: safeString({ min: 1, max: 200 }),
+  schoolCode: safeString({ min: 2, max: 64 }).refine(
+    (v) => /^[a-zA-Z0-9_-]+$/.test(v),
+    { message: 'School code may only contain letters, numbers, hyphens, and underscores' },
+  ),
+  username: safeString({ min: 1, max: 100 }),
+  password: safeString({ min: 4, max: 200 }),
+  adminName: safeString({ min: 1, max: 200 }),
 });
 
 export const classSchema = z.object({

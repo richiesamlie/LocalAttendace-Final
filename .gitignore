@@ -19,6 +19,7 @@ spikes/
 
 # Audit artifacts (external repo workdir, not project files)
 audit/
+.freebuff/
 
 # Release distribution builds
 release/

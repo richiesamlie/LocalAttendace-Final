@@ -1,5 +1,6 @@
 import express from 'express';
-import { eventService } from '../../services';
+import { eventService, isPostgres } from '../../services';
+import db from '../../db';
 import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
 import { validate, eventPayloadSchema, eventUpdateSchema } from '../../src/lib/validation';
 import { io } from '../../server';
@@ -29,8 +30,17 @@ eventRouter.post('/classes/:classId/events', requireClassAccess('classId'), post
   const classId = req.params.classId;
 
   const events = (Array.isArray(req.body) ? req.body : [req.body]) as EventPayload[];
-  for (const e of events) {
-    await eventService.insert(e.id, classId, e.date, e.title, e.type, e.description || null);
+  if (!isPostgres() && events.length > 1) {
+    const insertMany = db.transaction((items: EventPayload[]) => {
+      for (const e of items) {
+        eventService.insert(e.id, classId, e.date, e.title, e.type, e.description || null);
+      }
+    });
+    insertMany(events);
+  } else {
+    for (const e of events) {
+      await eventService.insert(e.id, classId, e.date, e.title, e.type, e.description || null);
+    }
   }
   res.json({ success: true });
   io?.to(classId).emit('events_updated');
@@ -42,14 +52,19 @@ eventRouter.put('/:id', requireAuth, postLimiter, validate(eventUpdateSchema), w
   const eventId = req.params.id;
   const { date, title, type, description } = req.body;
 
-  const event = await eventService.getById(eventId, teacherId);
+  const event = await eventService.getById(eventId, teacherId) as CalendarEvent | undefined;
   if (!event) {
     return res.status(404).json({ error: 'Event not found or access denied' });
   }
 
-  await eventService.update({ date, title, type, description }, eventId, teacherId);
+  await eventService.update({
+    date: date !== undefined ? date : event.date,
+    title: title !== undefined ? title : event.title,
+    type: type !== undefined ? type : event.type,
+    description: description !== undefined ? description : event.description,
+  }, eventId, teacherId);
   res.json({ success: true });
-  io?.to((event as CalendarEvent).class_id).emit('events_updated');
+  io?.to(event.class_id).emit('events_updated');
   return;
 }));
 

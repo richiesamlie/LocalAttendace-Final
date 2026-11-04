@@ -1,7 +1,7 @@
 import express from 'express';
-import { inviteService, classService } from '../../services';
+import { inviteService, classService, DEFAULT_SCHOOL_ID } from '../../services';
 import type { Invite } from '../types/db';
-import { requireAuth, withWriteQueue, inviteRedeemLimiter } from './middleware';
+import { requireAuth, resolveCallerSchoolId, withWriteQueue, inviteRedeemLimiter } from './middleware';
 import { validate, inviteRedeemSchema } from '../../src/lib/validation';
 
 interface ClassNameCarrier {
@@ -39,8 +39,9 @@ inviteRouter.post('/redeem', requireAuth, inviteRedeemLimiter, validate(inviteRe
     return res.status(400).json(GENERIC_INVITE_ERROR);
   }
 
+  const callerSchoolId = await resolveCallerSchoolId(req);
   const classExists = await classService.getExistingById(invite.class_id);
-  if (!classExists) {
+  if (!classExists || (classExists.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
     return res.status(404).json(GENERIC_INVITE_ERROR);
   }
 

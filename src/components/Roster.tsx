@@ -381,14 +381,14 @@ export default function Roster() {
               ))}
               {filteredStudents.length === 0 && !isAdding && students.length > 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-600 dark:text-slate-300">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-600 dark:text-slate-300">
                     No students found matching &quot;{searchVal}&quot;.
                   </td>
                 </tr>
               )}
               {students.length === 0 && !isAdding && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center text-slate-600 dark:text-slate-300">
+                  <td colSpan={6} className="px-6 py-16 text-center text-slate-600 dark:text-slate-300">
                     <div className="flex flex-col items-center justify-center space-y-4 max-w-sm mx-auto">
                       <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
                         <Upload className="w-8 h-8 text-slate-400" />

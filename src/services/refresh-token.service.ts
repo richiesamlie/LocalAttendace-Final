@@ -77,7 +77,9 @@ export const refreshTokenService = {
         `INSERT INTO refresh_tokens (id, family_id, token_hash, teacher_id, session_id, expires_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [id, familyId, tokenHash, teacherId, sessionId, expiresAt],
-      );
+      ).catch((err) => {
+        console.error('[refresh-token] Failed to insert refresh token in Postgres:', err);
+      });
     } else {
       db.stmt.insertRefreshToken.run(id, familyId, tokenHash, teacherId, sessionId, expiresAt);
     }
@@ -137,7 +139,9 @@ export const refreshTokenService = {
       pgQuery(
         `UPDATE refresh_tokens SET used_at = NOW() WHERE family_id = $1`,
         [familyId],
-      );
+      ).catch((err) => {
+        console.error('[refresh-token] Failed to revoke family in Postgres:', err);
+      });
     } else {
       db.stmt.revokeRefreshFamily.run(familyId);
     }
@@ -148,7 +152,9 @@ export const refreshTokenService = {
    */
   cleanup(): void {
     if (isPostgres()) {
-      pgQuery(`DELETE FROM refresh_tokens WHERE expires_at < NOW()`);
+      pgQuery(`DELETE FROM refresh_tokens WHERE expires_at < NOW()`).catch((err) => {
+        console.error('[refresh-token] Failed to cleanup expired tokens in Postgres:', err);
+      });
     } else {
       try {
         db.stmt.deleteExpiredRefreshTokens.run();

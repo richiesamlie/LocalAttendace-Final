@@ -74,4 +74,15 @@ describe('Auth/session abuse scenarios', () => {
     expect(replay.status).toBe(401);
     expect(String(replay.body.error)).toMatch(/Session expired or revoked/i);
   });
+
+  it('blocks revoked session token on class-scoped endpoints (requireClassAccess)', async () => {
+    const cookie = await mintCookie({ revoked: true });
+
+    const res = await request(app)
+      .get('/api/classes/class_default/dashboard-payload')
+      .set('Cookie', cookie);
+
+    expect(res.status).toBe(401);
+    expect(String(res.body.error)).toMatch(/Session expired or revoked/i);
+  });
 });

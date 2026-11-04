@@ -6,14 +6,30 @@ import { cn } from '../utils/cn';
 import InviteTeacherModal from './InviteTeacherModal';
 import { useDashboardData } from '../hooks/useDashboardData';
 
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="text-right">
+      <p className="text-sm font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wider">{format(now, 'EEEE, MMMM do')}</p>
+      <p className="text-2xl font-mono text-slate-900 dark:text-white">{format(now, 'HH:mm:ss')}</p>
+    </div>
+  );
+}
+
 export default function Dashboard({ navigate }: { navigate: (page: string) => void }) {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [showInviteModal, setShowInviteModal] = useState(false);
   const updateTimetableSlot = useStore((state) => state.updateTimetableSlot);
   const currentClassId = useStore((state) => state.currentClassId);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -75,10 +91,7 @@ export default function Dashboard({ navigate }: { navigate: (page: string) => vo
               Manage Teachers
             </button>
           )}
-          <div className="text-right">
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wider">{format(currentTime, 'EEEE, MMMM do')}</p>
-            <p className="text-2xl font-mono text-slate-900 dark:text-white">{format(currentTime, 'HH:mm:ss')}</p>
-          </div>
+          <LiveClock />
         </div>
       </div>
 

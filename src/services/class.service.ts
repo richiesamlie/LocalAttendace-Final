@@ -21,17 +21,13 @@ export const classService = {
         [teacherId]
       );
     }
-    const classes = db.stmt.getClassesByTeacher.all(teacherId) as (ClassSummary & { teacher_id?: string })[];
-    const teacherRoles = db.prepare(`
-      SELECT class_id, role FROM class_teachers WHERE teacher_id = ?
-    `).all(teacherId) as { class_id: string; role: string }[];
-    const roleMap = new Map(teacherRoles.map(r => [r.class_id, r.role]));
+    const classes = db.stmt.getClassesByTeacher.all(teacherId) as (ClassSummary & { teacher_id?: string; role?: string })[];
     return classes.map(c => ({
       id: c.id,
       teacher_id: c.teacher_id,
       name: c.name,
       owner_name: c.owner_name,
-      role: roleMap.get(c.id) || 'teacher'
+      role: c.role || 'teacher'
     }));
   },
 
@@ -49,28 +45,37 @@ export const classService = {
 
   async getExistingById(id: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; name: string; teacher_id: string }>(
-        'SELECT id, name, teacher_id FROM classes WHERE id = $1',
+      return pgQueryOne<{ id: string; name: string; teacher_id: string; school_id: string }>(
+        'SELECT id, name, teacher_id, school_id FROM classes WHERE id = $1',
         [id]
       );
     }
-    return db.prepare('SELECT id, name, teacher_id FROM classes WHERE id = ?').get(id);
+    return db.prepare('SELECT id, name, teacher_id, school_id FROM classes WHERE id = ?').get(id) as { id: string; name: string; teacher_id: string; school_id?: string } | undefined;
   },
 
-  async getAll() {
+  async getAll(schoolId?: string) {
     if (isPostgres()) {
-      return pgQuery<{ id: string; teacher_id: string; name: string; teacher_name: string }>(
-        'SELECT c.id, c.teacher_id, c.name, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id'
+      if (schoolId) {
+        return pgQuery<{ id: string; teacher_id: string; name: string; school_id: string; teacher_name: string }>(
+          'SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.school_id = $1 ORDER BY c.name',
+          [schoolId]
+        );
+      }
+      return pgQuery<{ id: string; teacher_id: string; name: string; school_id: string; teacher_name: string }>(
+        'SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id'
       );
+    }
+    if (schoolId) {
+      return db.stmt.getClassesBySchool.all(schoolId);
     }
     return db.stmt.getAllClasses.all();
   },
 
-  async insert(id: string, teacherId: string, name: string) {
+  async insert(id: string, teacherId: string, name: string, schoolId: string = 'school_default') {
     if (isPostgres()) {
       await pgQuery(
-        'INSERT INTO classes (id, teacher_id, name, owner_name) VALUES ($1, $2, $3, (SELECT name FROM teachers WHERE id = $2))',
-        [id, teacherId, name]
+        'INSERT INTO classes (id, teacher_id, name, school_id) VALUES ($1, $2, $3, $4)',
+        [id, teacherId, name, schoolId]
       );
       // Also add creator as 'owner' in class_teachers so requireClassAccess works
       await pgQuery(
@@ -80,7 +85,7 @@ export const classService = {
       return;
     }
     // In SQLite: insert class then immediately add creator as owner in class_teachers
-    db.stmt.insertClass.run(id, teacherId, name);
+    db.stmt.insertClassWithSchool.run(id, teacherId, name, schoolId);
     db.stmt.insertClassTeacher.run(id, teacherId, 'owner');
   },
 

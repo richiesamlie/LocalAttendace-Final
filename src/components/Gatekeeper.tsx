@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store';
 import { Search, Clock, CheckCircle2, UserCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -20,32 +20,39 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function Gatekeeper() {
   const classes = useStore((state) => state.classes);
+  const loadAllClassesData = useStore((state) => state.loadAllClassesData);
   const setRecordForClass = useStore((state) => state.setRecordForClass);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 300);
 
+  useEffect(() => {
+    if (classes.some((c) => !c.loaded)) {
+      loadAllClassesData();
+    }
+  }, [classes, loadAllClassesData]);
+
   const today = format(new Date(), 'yyyy-MM-dd');
 
   // Flatten all students from all classes
-  const allStudents = classes.flatMap(c => 
+  const allStudents = useMemo(() => classes.flatMap(c => 
     (c.students || []).map(s => ({
       ...s,
       classId: c.id,
       className: c.name,
       records: c.records || []
     }))
-  );
+  ), [classes]);
 
-  const safeString = (val: unknown) => (val ? String(val).toLowerCase() : '');
-
-  const filteredStudents = debouncedQuery.trim() === '' 
-    ? [] 
-    : allStudents.filter(student => {
-        const query = debouncedQuery.toLowerCase().trim();
-        return safeString(student.name).includes(query) ||
-               safeString(student.rollNumber).includes(query) ||
-               safeString(student.className).includes(query);
-      }).slice(0, 20); // Limit to 20 results for performance
+  const filteredStudents = useMemo(() => {
+    const query = debouncedQuery.toLowerCase().trim();
+    if (query === '') return [];
+    const safeString = (val: unknown) => (val ? String(val).toLowerCase() : '');
+    return allStudents.filter(student =>
+      safeString(student.name).includes(query) ||
+      safeString(student.rollNumber).includes(query) ||
+      safeString(student.className).includes(query)
+    ).slice(0, 20); // Limit to 20 results for performance
+  }, [allStudents, debouncedQuery]);
 
   const handleTagLate = (classId: string, studentId: string) => {
     setRecordForClass(classId, {

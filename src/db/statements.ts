@@ -6,12 +6,14 @@ export const preparedStatements: Record<string, Database.Statement> = {};
 
 // Initialize all prepared statements (call AFTER initSchema)
 export function initStatements(): void {
-  preparedStatements.getTeacherByUsername = _db.prepare('SELECT id, username, password_hash, name, is_admin FROM teachers WHERE username = ?');
-  preparedStatements.getTeacherById = _db.prepare('SELECT id, username, name, is_admin FROM teachers WHERE id = ?');
-  preparedStatements.getClassesByTeacher = _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
+  preparedStatements.getTeacherByUsername = _db.prepare('SELECT id, username, password_hash, name, is_admin, school_id FROM teachers WHERE username = ?');
+  preparedStatements.getTeacherByUsernameAndSchool = _db.prepare('SELECT id, username, password_hash, name, is_admin, school_id FROM teachers WHERE username = ? AND school_id = ?');
+  preparedStatements.getTeacherById = _db.prepare('SELECT id, username, name, is_admin, school_id FROM teachers WHERE id = ?');
+  preparedStatements.getClassesByTeacher = _db.prepare('SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as owner_name, ct.role FROM classes c JOIN class_teachers ct ON c.id = ct.class_id JOIN teachers t ON c.teacher_id = t.id WHERE ct.teacher_id = ? ORDER BY c.name');
   preparedStatements.getStudentsByClass = _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? AND is_archived = 0 ORDER BY name');
   preparedStatements.getStudentsByClassWithArchived = _db.prepare('SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = ? ORDER BY name');
   preparedStatements.getRecordsByClass = _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = ?');
+  preparedStatements.getRecordsByClassAndDateRange = _db.prepare('SELECT ar.student_id, ar.date, ar.status, ar.reason FROM attendance_records ar JOIN students s ON ar.student_id = s.id WHERE s.class_id = ? AND ar.date >= ? AND ar.date <= ? ORDER BY ar.date DESC, s.roll_number');
   preparedStatements.getRecordsByDate = _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE date = ?');
   preparedStatements.getRecordsByClassAndDate = _db.prepare('SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = ? AND date = ?');
   preparedStatements.getEventsByClass = _db.prepare('SELECT id, class_id, date, title, type, description FROM events WHERE class_id = ? ORDER BY date DESC');
@@ -19,7 +21,9 @@ export function initStatements(): void {
   preparedStatements.getTimetableByClass = _db.prepare('SELECT id, class_id, day_of_week, start_time, end_time, subject, lesson FROM timetable_slots WHERE class_id = ? ORDER BY day_of_week, start_time');
   preparedStatements.getSeatingByClass = _db.prepare('SELECT seat_id, student_id FROM seating_layout WHERE class_id = ?');
   preparedStatements.insertTeacher = _db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, 0)');
+  preparedStatements.insertTeacherWithSchool = _db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin, school_id) VALUES (?, ?, ?, ?, ?, ?)');
   preparedStatements.insertClass = _db.prepare('INSERT INTO classes (id, teacher_id, name) VALUES (?, ?, ?)');
+  preparedStatements.insertClassWithSchool = _db.prepare('INSERT INTO classes (id, teacher_id, name, school_id) VALUES (?, ?, ?, ?)');
   preparedStatements.insertStudent = _db.prepare('INSERT INTO students (id, class_id, name, roll_number, parent_name, parent_phone, is_flagged) VALUES (?, ?, ?, ?, ?, ?, ?)');
   preparedStatements.insertAttendance = _db.prepare('INSERT OR REPLACE INTO attendance_records (student_id, class_id, date, status, reason) VALUES (?, ?, ?, ?, ?)');
   preparedStatements.insertEvent = _db.prepare('INSERT INTO events (id, class_id, date, title, type, description) VALUES (?, ?, ?, ?, ?, ?)');
@@ -35,8 +39,8 @@ export function initStatements(): void {
   preparedStatements.deleteTimetableSlot = _db.prepare('DELETE FROM timetable_slots WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
   preparedStatements.archiveStudent = _db.prepare('UPDATE students SET is_archived = 1 WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
   preparedStatements.getStudentById = _db.prepare('SELECT s.id, s.class_id, s.name, s.roll_number, s.parent_name, s.parent_phone, s.is_flagged, s.is_archived FROM students s JOIN class_teachers ct ON s.class_id = ct.class_id WHERE s.id = ? AND ct.teacher_id = ?');
-  preparedStatements.getEventById = _db.prepare('SELECT e.id, e.date, e.title, e.type, e.description FROM events e JOIN class_teachers ct ON e.class_id = ct.class_id WHERE e.id = ? AND ct.teacher_id = ?');
-  preparedStatements.getTimetableSlotById = _db.prepare('SELECT t.id, t.day_of_week, t.start_time, t.end_time, t.subject, t.lesson FROM timetable_slots t JOIN class_teachers ct ON t.class_id = ct.class_id WHERE t.id = ? AND ct.teacher_id = ?');
+  preparedStatements.getEventById = _db.prepare('SELECT e.id, e.class_id, e.date, e.title, e.type, e.description FROM events e JOIN class_teachers ct ON e.class_id = ct.class_id WHERE e.id = ? AND ct.teacher_id = ?');
+  preparedStatements.getTimetableSlotById = _db.prepare('SELECT t.id, t.class_id, t.day_of_week, t.start_time, t.end_time, t.subject, t.lesson FROM timetable_slots t JOIN class_teachers ct ON t.class_id = ct.class_id WHERE t.id = ? AND ct.teacher_id = ?');
   preparedStatements.getClassById = _db.prepare('SELECT c.id, c.teacher_id, c.name, t.name as owner_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.id = ? AND c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)');
   preparedStatements.clearSeatingByClass = _db.prepare('DELETE FROM seating_layout WHERE class_id = ?');
   preparedStatements.getStudentByClassAndId = _db.prepare('SELECT id FROM students WHERE class_id = ? AND id = ?');
@@ -51,14 +55,20 @@ export function initStatements(): void {
   preparedStatements.getFirstTeacher = _db.prepare('SELECT id FROM teachers LIMIT 1');
   preparedStatements.getStudentsCount = _db.prepare('SELECT COUNT(*) as count FROM students WHERE class_id = ?');
   preparedStatements.getTeacherCount = _db.prepare('SELECT COUNT(*) as count FROM teachers');
-  preparedStatements.getAllTeachers = _db.prepare('SELECT id, username, name, created_at FROM teachers');
+  preparedStatements.getAllTeachers = _db.prepare('SELECT id, username, name, school_id, created_at FROM teachers');
+  preparedStatements.getTeachersBySchool = _db.prepare('SELECT id, username, name, school_id, created_at FROM teachers WHERE school_id = ? ORDER BY name');
   preparedStatements.getSettings = _db.prepare('SELECT key, value FROM admin_settings');
   preparedStatements.upsertSetting = _db.prepare('INSERT OR REPLACE INTO admin_settings (key, value) VALUES (?, ?)');
   preparedStatements.getAdminPassword = _db.prepare('SELECT value FROM admin_settings WHERE key = ?');
   preparedStatements.getStudentsCountByTeacher = _db.prepare("SELECT COUNT(*) as count FROM students s JOIN classes c ON s.class_id = c.id WHERE c.teacher_id = ?");
   preparedStatements.getRecordsCountByTeacher = _db.prepare("SELECT COUNT(*) as count FROM attendance_records ar JOIN classes c ON ar.class_id = c.id WHERE c.teacher_id = ?");
   preparedStatements.getEventsCountByTeacher = _db.prepare("SELECT COUNT(*) as count FROM events e JOIN classes c ON e.class_id = c.id WHERE c.teacher_id = ?");
-  preparedStatements.getAllClasses = _db.prepare("SELECT c.id, c.teacher_id, c.name, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id");
+  preparedStatements.getAllClasses = _db.prepare("SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id");
+  preparedStatements.getClassesBySchool = _db.prepare("SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.school_id = ? ORDER BY c.name");
+  preparedStatements.getSchoolByCode = _db.prepare('SELECT id, code, name, created_at FROM schools WHERE code = ?');
+  preparedStatements.getSchoolById = _db.prepare('SELECT id, code, name, created_at FROM schools WHERE id = ?');
+  preparedStatements.getAllSchools = _db.prepare('SELECT id, code, name, created_at FROM schools ORDER BY name');
+  preparedStatements.insertSchool = _db.prepare('INSERT INTO schools (id, code, name) VALUES (?, ?, ?)');
   preparedStatements.insertInviteCode = _db.prepare('INSERT INTO invite_codes (code, class_id, role, created_by, expires_at) VALUES (?, ?, ?, ?, ?)');
   preparedStatements.getInviteCode = _db.prepare('SELECT code, class_id, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE code = ?');
   preparedStatements.useInviteCode = _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ?');
