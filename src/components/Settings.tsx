@@ -6,9 +6,31 @@ export default function Settings() {
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Export the SQLite database via our new backup API
-  const handleExportBackup = () => {
-    window.location.href = '/api/database/backup';
+  // Export the SQLite database via our backup API
+  const handleExportBackup = async () => {
+    try {
+      setImportStatus('idle');
+      const response = await fetch('/api/admin/database/backup', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to download database backup.');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `database-${new Date().toISOString().slice(0, 10)}.sqlite`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      setImportStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to download backup.');
+    }
   };
 
   const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -16,8 +38,9 @@ export default function Settings() {
     if (!file) return;
 
     try {
-      const response = await fetch('/api/database/restore', {
+      const response = await fetch('/api/admin/database/restore', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/octet-stream' },
         body: file,
       });

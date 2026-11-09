@@ -155,17 +155,95 @@ describe('Multi-School Tenancy & Isolation (Path B)', () => {
       .send({ teacherId: schoolBTeacherId });
     expect(crossAddTeacher.status).toBe(404);
 
-    // Create an invite in School B and ensure School A cannot redeem it
+    // Create an invite in School B and ensure School A cannot redeem it or delete it
     const inviteB = await request(app)
       .post(`/api/classes/${schoolBClassId}/invites`)
       .set('Cookie', schoolBCookies)
       .send({ role: 'teacher', expiresInHours: 24 });
     expect(inviteB.status).toBe(200);
 
+    const crossDeleteInvite = await request(app)
+      .delete(`/api/classes/${schoolAClassId}/invites/${inviteB.body.code}`)
+      .set('Cookie', schoolACookies);
+    expect(crossDeleteInvite.status).toBe(404);
+
     const crossRedeem = await request(app)
       .post('/api/invites/redeem')
       .set('Cookie', schoolACookies)
       .send({ code: inviteB.body.code });
     expect(crossRedeem.status).toBe(404);
+
+    // Create a student in School A and ensure School B admin cannot write attendance records for School A's class
+    const studentAId = `stu_${suffix}`;
+    const studentARes = await request(app)
+      .post(`/api/classes/${schoolAClassId}/students`)
+      .set('Cookie', schoolACookies)
+      .send({
+        id: studentAId,
+        name: 'Alice StMarys',
+        rollNumber: '101',
+      });
+    expect(studentARes.status).toBe(200);
+
+    const crossPostRecords = await request(app)
+      .post('/api/records')
+      .set('Cookie', schoolBCookies)
+      .send([
+        {
+          studentId: studentAId,
+          classId: schoolAClassId,
+          date: '2026-04-19',
+          status: 'Present',
+          reason: '',
+        },
+      ]);
+    expect(crossPostRecords.status).toBe(404);
+
+    // School-scoped admin settings: School A's schoolName change must not mutate School B's schoolName
+    const updateSettingsA = await request(app)
+      .post('/api/admin/settings')
+      .set('Cookie', schoolACookies)
+      .send({
+        key: 'schoolName',
+        value: 'St. Marys Updated Name',
+      });
+    expect(updateSettingsA.status).toBe(200);
+
+    const getSettingsA = await request(app)
+      .get('/api/admin/settings')
+      .set('Cookie', schoolACookies);
+    expect(getSettingsA.status).toBe(200);
+    expect(getSettingsA.body.schoolName).toBe('St. Marys Updated Name');
+
+    const getSettingsB = await request(app)
+      .get('/api/admin/settings')
+      .set('Cookie', schoolBCookies);
+    expect(getSettingsB.status).toBe(200);
+    expect(getSettingsB.body.schoolName).not.toBe('St. Marys Updated Name');
+
+    // Non-default school admins must NOT access global database backup/restore or raw SQL profiling
+    const crossDbBackup = await request(app)
+      .post('/api/admin/database/backup')
+      .set('Cookie', schoolBCookies);
+    expect(crossDbBackup.status).toBe(403);
+
+    const crossProfilingQuery = await request(app)
+      .post('/api/admin/profiling/query')
+      .set('Cookie', schoolBCookies)
+      .send({ sql: 'SELECT 1' });
+    expect(crossProfilingQuery.status).toBe(403);
+
+    // Default school username squatting prevention: registering "bob@schoolBCode" from School A must not collide with School B
+    const squatAttempt = await request(app)
+      .post('/api/teachers/register')
+      .set('Cookie', schoolACookies)
+      .send({
+        username: `science_teacher@${schoolBCode}`,
+        password: 'squatPassword123',
+        name: 'Squatter',
+      });
+    // Strips @suffix and registers as science_teacher@schoolACode in School A
+    expect(squatAttempt.status).toBe(200);
+    expect(squatAttempt.body.username).toBe(`science_teacher@${schoolACode}`);
   });
 });

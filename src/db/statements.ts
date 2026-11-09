@@ -65,7 +65,7 @@ export function initStatements(): void {
   preparedStatements.getEventsCountByTeacher = _db.prepare("SELECT COUNT(*) as count FROM events e JOIN classes c ON e.class_id = c.id WHERE c.teacher_id = ?");
   preparedStatements.getAllClasses = _db.prepare("SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id");
   preparedStatements.getClassesBySchool = _db.prepare("SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as teacher_name FROM classes c JOIN teachers t ON c.teacher_id = t.id WHERE c.school_id = ? ORDER BY c.name");
-  preparedStatements.getSchoolByCode = _db.prepare('SELECT id, code, name, created_at FROM schools WHERE code = ?');
+  preparedStatements.getSchoolByCode = _db.prepare('SELECT id, code, name, created_at FROM schools WHERE LOWER(code) = LOWER(?)');
   preparedStatements.getSchoolById = _db.prepare('SELECT id, code, name, created_at FROM schools WHERE id = ?');
   preparedStatements.getAllSchools = _db.prepare('SELECT id, code, name, created_at FROM schools ORDER BY name');
   preparedStatements.insertSchool = _db.prepare('INSERT INTO schools (id, code, name) VALUES (?, ?, ?)');
@@ -74,7 +74,8 @@ export function initStatements(): void {
   preparedStatements.useInviteCode = _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ?');
   preparedStatements.useInviteCodeAtomic = _db.prepare('UPDATE invite_codes SET used_by = ?, used_at = CURRENT_TIMESTAMP WHERE code = ? AND used_by IS NULL');
   preparedStatements.deleteInviteCode = _db.prepare('DELETE FROM invite_codes WHERE code = ?');
-  preparedStatements.getClassInviteCodes = _db.prepare('SELECT code, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE class_id = ? ORDER BY created_at DESC');
+  preparedStatements.deleteInviteCodeByClass = _db.prepare('DELETE FROM invite_codes WHERE code = ? AND class_id = ?');
+  preparedStatements.getClassInviteCodes = _db.prepare('SELECT code, role, created_by, created_at, expires_at, used_by, used_at FROM invite_codes WHERE class_id = ? AND used_by IS NULL ORDER BY created_at DESC');
   preparedStatements.deleteExpiredInviteCodes = _db.prepare("DELETE FROM invite_codes WHERE datetime(expires_at) < datetime('now')");
   preparedStatements.insertSession = _db.prepare('INSERT INTO user_sessions (id, teacher_id, device_name, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)');
   preparedStatements.getSession = _db.prepare('SELECT id, teacher_id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE id = ?');

@@ -140,7 +140,7 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
     { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_TTL_SECONDS },
   );
   // F-004: long-lived refresh token (7d, opaque random, hashed in DB)
-  const refresh = refreshTokenService.issue(teacher.id, sessionId);
+  const refresh = await refreshTokenService.issue(teacher.id, sessionId);
 
   const isSecureCookie = COOKIE_SECURE;
 
@@ -213,7 +213,7 @@ authRouter.post('/register-school', authLimiter, validate(registerSchoolSchema),
     JWT_SECRET,
     { algorithm: 'HS256', expiresIn: ACCESS_TOKEN_TTL_SECONDS },
   );
-  const refresh = refreshTokenService.issue(teacherId, sessionId);
+  const refresh = await refreshTokenService.issue(teacherId, sessionId);
   const isSecureCookie = COOKIE_SECURE;
 
   res.cookie(ACCESS_COOKIE_NAME, accessToken, {
@@ -252,7 +252,7 @@ authRouter.post('/logout', async (req, res) => {
     try {
       const row = await refreshTokenService.findByRawValue(refreshCookie);
       if (row) {
-        refreshTokenService.revokeFamily(row.family_id);
+        await refreshTokenService.revokeFamily(row.family_id);
       }
     } catch {
       /* best-effort */
@@ -303,7 +303,7 @@ authRouter.post('/refresh', async (req, res) => {
   // Reuse detection: if used_at is already set, this token was already
   // rotated. Treat as compromise — revoke the entire family.
   if (row.used_at) {
-    refreshTokenService.revokeFamily(row.family_id);
+    await refreshTokenService.revokeFamily(row.family_id);
     await sessionService.revoke(row.session_id);
     // Also clear the user's cookies so they're forced to re-login
     res.clearCookie(ACCESS_COOKIE_NAME);
@@ -315,7 +315,7 @@ authRouter.post('/refresh', async (req, res) => {
   // Confirm the session is still valid (not revoked/expired)
   const session = await sessionService.get(row.session_id) as { is_revoked: number; expires_at: string } | null | undefined;
   if (!session || session.is_revoked === 1 || new Date(session.expires_at) < new Date()) {
-    refreshTokenService.revokeFamily(row.family_id);
+    await refreshTokenService.revokeFamily(row.family_id);
     res.clearCookie(ACCESS_COOKIE_NAME);
     res.clearCookie(REFRESH_COOKIE_NAME);
     res.clearCookie(AUTH_COOKIE_NAME);
@@ -325,13 +325,13 @@ authRouter.post('/refresh', async (req, res) => {
   // Look up teacher for the access token payload
   const teacher = await teacherService.getById(row.teacher_id) as Teacher | null;
   if (!teacher) {
-    refreshTokenService.revokeFamily(row.family_id);
+    await refreshTokenService.revokeFamily(row.family_id);
     return res.status(401).json({ error: 'Teacher not found' });
   }
 
   // Issue the new refresh token first so we have its id (the old token's
   // rotated_to field needs the successor's id).
-  const newRefresh = refreshTokenService.issue(teacher.id, row.session_id, row.family_id);
+  const newRefresh = await refreshTokenService.issue(teacher.id, row.session_id, row.family_id);
 
   // Atomically mark the old token as used and link to the successor.
   // Returns false if another concurrent refresh won the race.
@@ -339,7 +339,7 @@ authRouter.post('/refresh', async (req, res) => {
   if (!won) {
     // Another request rotated this token already. The newRefresh we just
     // issued is now orphaned — mark it as used so it can't be reused.
-    refreshTokenService.revokeFamily(row.family_id);
+    await refreshTokenService.revokeFamily(row.family_id);
     res.clearCookie(ACCESS_COOKIE_NAME);
     res.clearCookie(REFRESH_COOKIE_NAME);
     res.clearCookie(AUTH_COOKIE_NAME);

@@ -17,10 +17,10 @@ const readPersistedTimerState = (initialDuration: number): PersistedTimerState =
     endAtMs: null,
   };
 
-  const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
-  if (!raw) return fallback;
-
   try {
+    const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+    if (!raw) return fallback;
+
     const parsed = JSON.parse(raw) as Partial<PersistedTimerState>;
     const timerDuration =
       typeof parsed.timerDuration === 'number' && parsed.timerDuration > 0
@@ -118,7 +118,11 @@ export function useTimer(initialDuration = 60 * 60) {
       isTimerRunning,
       endAtMs: isTimerRunning ? timerEndAtRef.current : null,
     };
-    window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(payload));
+    try {
+      window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // Ignore storage quota or private-mode errors
+    }
   }, [timerDuration, timerRemaining, isTimerRunning]);
 
   const handleSetTimer = () => {

@@ -9,7 +9,7 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 # Read version from package.json
 $pkgJson = Get-Content (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
-$version = $pkgJson.version
+$version = if ($env:VERSION) { $env:VERSION -replace '^v', '' } else { $pkgJson.version }
 $releaseName = "TeacherAssistant-v$version"
 $releaseDir = Join-Path $repoRoot "release\$releaseName"
 $zipPath = Join-Path $repoRoot "release\$releaseName-Windows-Portable.zip"

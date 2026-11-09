@@ -1,5 +1,9 @@
 node_modules
 dist
+dist-server
+release
+node-portable
+tray
 .git
 *.log
 .env

@@ -151,12 +151,14 @@ export default function Sidebar({
           onClick={() => navigate('settings')} 
         />
 
-        <NavItem 
-          icon={<Shield className="w-5 h-5" />} 
-          label="Admin Dashboard" 
-          active={currentPage === 'admin'} 
-          onClick={() => navigate('admin')} 
-        />
+        {isAdmin && (
+          <NavItem 
+            icon={<Shield className="w-5 h-5" />} 
+            label="Admin Dashboard" 
+            active={currentPage === 'admin'} 
+            onClick={() => navigate('admin')} 
+          />
+        )}
 
         <NavItem 
           icon={<Clock className="w-5 h-5" />} 

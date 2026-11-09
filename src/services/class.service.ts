@@ -11,8 +11,8 @@ import { teacherService } from './teacher.service';
 export const classService = {
   async getByTeacher(teacherId: string): Promise<ClassSummary[]> {
     if (isPostgres()) {
-      return pgQuery<{ id: string; teacher_id: string; name: string; owner_name: string; role: string }>(
-        `SELECT c.id, c.teacher_id, c.name, t.name as owner_name, ct.role
+      return pgQuery<{ id: string; teacher_id: string; name: string; school_id: string; owner_name: string; role: string }>(
+        `SELECT c.id, c.teacher_id, c.name, c.school_id, t.name as owner_name, ct.role
          FROM classes c 
          JOIN class_teachers ct ON c.id = ct.class_id 
          JOIN teachers t ON c.teacher_id = t.id 
@@ -26,6 +26,7 @@ export const classService = {
       id: c.id,
       teacher_id: c.teacher_id,
       name: c.name,
+      school_id: c.school_id,
       owner_name: c.owner_name,
       role: c.role || 'teacher'
     }));
@@ -122,8 +123,8 @@ export const classService = {
 
   async getTeachers(classId: string) {
     if (isPostgres()) {
-      return pgQuery<{ teacher_id: string; name: string; role: string }>(
-        `SELECT ct.teacher_id, t.name, ct.role FROM class_teachers ct 
+      return pgQuery<{ teacher_id: string; username: string; name: string; role: string }>(
+        `SELECT ct.teacher_id, ct.role, t.username, t.name FROM class_teachers ct 
          JOIN teachers t ON ct.teacher_id = t.id 
          WHERE ct.class_id = $1`,
         [classId]
@@ -145,7 +146,7 @@ export const classService = {
   async addTeacher(classId: string, teacherId: string, role: string) {
     if (isPostgres()) {
       return pgQuery(
-        'INSERT INTO class_teachers (class_id, teacher_id, role) VALUES ($1, $2, $3)',
+        'INSERT INTO class_teachers (class_id, teacher_id, role) VALUES ($1, $2, $3) ON CONFLICT (class_id, teacher_id) DO NOTHING',
         [classId, teacherId, role]
       );
     }

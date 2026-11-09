@@ -1,6 +1,7 @@
+import 'dotenv/config';
 import fs from 'fs';
 
-const DB_PATH = './database.sqlite';
+const DB_PATH = process.env.DB_FILE || './database.sqlite';
 const DATA_DIR = './data';
 
 interface FreshStartOptions {

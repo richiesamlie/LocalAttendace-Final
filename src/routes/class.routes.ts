@@ -20,6 +20,7 @@ classRouter.get('/', postLimiter, requireAuth, async (req, res) => {
         id: c.id,
         teacher_id: c.teacher_id,
         name: c.name,
+        school_id: c.school_id,
         owner_name: c.owner_name || c.teacher_name,
         role: 'administrator' as const,
       }));
@@ -203,14 +204,8 @@ classRouter.get('/:classId/teachers', postLimiter, requireClassAccess('classId')
   }
 });
 
-classRouter.post('/:classId/teachers', postLimiter, requireAuth, validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
-  const teacherId = req.teacherId;
+classRouter.post('/:classId/teachers', postLimiter, requireClassOwner('classId'), validate(classTeacherAddSchema), withWriteQueue(async (req, res) => {
   const classId = req.params.classId;
-
-  const access = await classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
-  if (!access || access.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the Homeroom Teacher can add other teachers' });
-  }
 
   const { teacherId: newTeacherId } = req.body;
   if (!newTeacherId) {
@@ -232,15 +227,10 @@ classRouter.post('/:classId/teachers', postLimiter, requireAuth, validate(classT
   return res.json({ success: true });
 }));
 
-classRouter.delete('/:classId/teachers/:teacherId', postLimiter, requireAuth, withWriteQueue(async (req, res) => {
+classRouter.delete('/:classId/teachers/:teacherId', postLimiter, requireClassOwner('classId'), withWriteQueue(async (req, res) => {
   const teacherId = req.teacherId;
   const classId = req.params.classId;
   const targetTeacherId = req.params.teacherId;
-
-  const access = await classService.isClassTeacher(classId, teacherId) as ClassTeacher | null | undefined;
-  if (!access || access.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the Homeroom Teacher can remove other teachers' });
-  }
 
   if (targetTeacherId === teacherId) {
     return res.status(400).json({ error: 'Cannot remove yourself' });
@@ -301,6 +291,10 @@ classRouter.get('/:classId/invites', postLimiter, requireRole('classId', 'teache
 });
 
 classRouter.delete('/:classId/invites/:code', postLimiter, requireRole('classId', 'teacher'), withWriteQueue(async (req, res) => {
-  await inviteService.delete(req.params.code);
+  const invite = await inviteService.getByCode(req.params.code) as { class_id?: string } | undefined | null;
+  if (!invite || invite.class_id !== req.params.classId) {
+    return res.status(404).json({ error: 'Invite code not found' });
+  }
+  await inviteService.delete(req.params.code, req.params.classId);
   return res.json({ success: true });
 }));

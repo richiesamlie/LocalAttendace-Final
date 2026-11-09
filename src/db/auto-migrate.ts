@@ -13,6 +13,8 @@ import fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 import { getPool } from '../lib/postgres';
+import { hashPassword } from '../lib/bcrypt';
+import { DEFAULTS, getDefaultPassword } from './connection';
 
 const DB_FILE = process.env.DB_FILE || path.join(process.cwd(), 'database.sqlite');
 
@@ -280,6 +282,32 @@ async function insertBatch(
   return inserted;
 }
 
+async function ensureDefaultAdminInPostgres(): Promise<void> {
+  const pool = getPool();
+  const countRes = await pool.query('SELECT COUNT(*) as count FROM teachers');
+  if (parseInt(countRes.rows[0].count, 10) > 0) return;
+
+  const defaultHash = await hashPassword(getDefaultPassword());
+  await pool.query(
+    `INSERT INTO teachers (id, username, password_hash, name, is_admin, school_id)
+     VALUES ($1, $2, $3, $4, 1, 'school_default')
+     ON CONFLICT (id) DO NOTHING`,
+    [DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, defaultHash, DEFAULTS.TEACHER_NAME]
+  );
+  await pool.query(
+    `INSERT INTO classes (id, teacher_id, name, school_id)
+     VALUES ($1, $2, $3, 'school_default')
+     ON CONFLICT (id) DO NOTHING`,
+    [DEFAULTS.CLASS_ID, DEFAULTS.TEACHER_ID, DEFAULTS.CLASS_NAME]
+  );
+  await pool.query(
+    `INSERT INTO class_teachers (class_id, teacher_id, role)
+     VALUES ($1, $2, 'owner')
+     ON CONFLICT (class_id, teacher_id) DO NOTHING`,
+    [DEFAULTS.CLASS_ID, DEFAULTS.TEACHER_ID]
+  );
+}
+
 /**
  * Migrate all data from SQLite to PostgreSQL
  */
@@ -291,20 +319,12 @@ async function migrateData(data: Record<string, unknown[]>): Promise<Record<stri
   try {
     await client.query('BEGIN');
 
-    // Disable triggers for faster insert (re-enable after)
-    for (const table of TABLES) {
-      await client.query(`ALTER TABLE ${table} DISABLE TRIGGER ALL`);
-    }
-
+    // TABLES is already ordered in parent-first FK order, so we do not need
+    // `ALTER TABLE ... DISABLE TRIGGER ALL` (which requires PostgreSQL SUPERUSER).
     for (const table of TABLES) {
       const rows = data[table] || [];
       counts[table] = await insertBatch(client, table, rows as Record<string, unknown>[]);
       console.warn(`  ✓ ${table}: ${counts[table]}/${rows.length} rows`);
-    }
-
-    // Re-enable triggers
-    for (const table of TABLES) {
-      await client.query(`ALTER TABLE ${table} ENABLE TRIGGER ALL`);
     }
 
     await client.query('COMMIT');
@@ -334,7 +354,7 @@ async function validateMigration(sqlitePath: string): Promise<boolean> {
       const pgResult = await pool.query(`SELECT COUNT(*) as count FROM ${table}`);
       const pgCount = parseInt(pgResult.rows[0].count);
 
-      const match = sqliteCount === pgCount;
+      const match = sqliteCount === pgCount || (table === 'schools' && sqliteCount === 0 && pgCount === 1);
       console.warn(`  ${match ? '✅' : '❌'} ${table}: SQLite=${sqliteCount}, PostgreSQL=${pgCount}`);
 
       if (!match) allMatch = false;
@@ -352,16 +372,20 @@ async function validateMigration(sqlitePath: string): Promise<boolean> {
  * Called on startup when PostgreSQL is detected
  */
 export async function autoMigrateIfNeeded(): Promise<boolean> {
-  // 1. Check if SQLite file exists
-  if (!fs.existsSync(DB_FILE)) {
-    console.warn('[migrate] No existing SQLite database found, starting fresh on PostgreSQL');
-    return false;
-  }
-
-  // 2. Check if PostgreSQL is empty
+  // 1. Check if PostgreSQL is empty
   const empty = await isPostgresEmpty();
   if (!empty) {
     console.warn('[migrate] PostgreSQL already has tables, skipping auto-migration');
+    return false;
+  }
+
+  // Always ensure PostgreSQL schema exists when starting with an empty PG database
+  await createPostgresSchema();
+
+  // 2. Check if SQLite file exists
+  if (!fs.existsSync(DB_FILE)) {
+    console.warn('[migrate] No existing SQLite database found, starting fresh on PostgreSQL');
+    await ensureDefaultAdminInPostgres();
     return false;
   }
 
@@ -380,6 +404,7 @@ export async function autoMigrateIfNeeded(): Promise<boolean> {
 
   if (totalRows === 0) {
     console.warn('[migrate] SQLite database is empty, starting fresh on PostgreSQL');
+    await ensureDefaultAdminInPostgres();
     return false;
   }
 
@@ -391,14 +416,12 @@ export async function autoMigrateIfNeeded(): Promise<boolean> {
   console.warn('╚══════════════════════════════════════════════════════════╝');
   console.warn('');
 
-  console.warn('Creating PostgreSQL schema...');
-  await createPostgresSchema();
-
   console.warn('Reading SQLite data...');
   const data = readSQLiteData(DB_FILE);
 
   console.warn('Migrating data...');
   await migrateData(data);
+  await ensureDefaultAdminInPostgres();
 
   console.warn('\nValidating...');
   const valid = await validateMigration(DB_FILE);

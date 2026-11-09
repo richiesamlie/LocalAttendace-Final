@@ -36,17 +36,21 @@ teacherRouter.post('/register', postLimiter, requireAuth, validate(teacherSchema
   }
 
   const callerSchoolId = await resolveCallerSchoolId(req);
-  let storedUsername = username.trim();
+  const rawUser = username.trim();
+  const baseUser = rawUser.includes('@') ? rawUser.split('@')[0].trim() : rawUser;
+  if (!baseUser) {
+    return res.status(400).json({ error: 'Valid username is required' });
+  }
+  let storedUsername = baseUser;
   if (callerSchoolId !== DEFAULT_SCHOOL_ID) {
     const school = await schoolService.getById(callerSchoolId);
     const schoolCode = school?.code;
-    if (schoolCode && !storedUsername.endsWith(`@${schoolCode}`)) {
-      const baseUser = storedUsername.includes('@') ? storedUsername.split('@')[0].trim() : storedUsername;
+    if (schoolCode) {
       storedUsername = `${baseUser}@${schoolCode}`;
     }
   }
 
-  const existing = await teacherService.getByUsername(storedUsername, callerSchoolId);
+  const existing = await teacherService.getByUsername(storedUsername);
   if (existing) {
     return res.status(400).json({ error: 'Username already exists' });
   }

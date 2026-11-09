@@ -334,7 +334,6 @@ export default function InviteTeacherModal({ classId, className, userRole, onClo
                   >
                     <option value="teacher">Subject Teacher</option>
                     <option value="assistant">Assistant</option>
-                    {userRole === 'owner' && <option value="owner">Homeroom</option>}
                   </select>
                   <button
                     onClick={handleCreateInvite}

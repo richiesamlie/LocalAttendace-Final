@@ -1,12 +1,13 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { teacherService, sessionService, settingService } from '../../services';
+import { teacherService, sessionService, settingService, refreshTokenService } from '../../services';
 import { hashPassword } from '../../src/lib/bcrypt';
 import { safeLog } from '../../src/lib/log-redact';
-import { requireAuth, requireAdmin, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireAdmin, requireSystemAdmin, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
 import { validate, settingSchema } from '../../src/lib/validation';
-import db from '../../db';
+import db, { DB_FILE } from '../../db';
+import { checkpointWal } from '../db/connection';
 import { acquireRestoreLock, releaseRestoreLock } from '../db/writeQueue';
 import type { Teacher, SettingRow } from '../../src/types/db';
 import { metricsStore } from '../middleware/metricsStore';
@@ -23,9 +24,10 @@ export const adminRouter = express.Router();
 adminRouter.use(postLimiter);
 adminRouter.use(requireAuth, requireAdmin);
 
-adminRouter.get('/settings', async (_req, res) => {
+adminRouter.get('/settings', async (req, res) => {
   try {
-    const settings = await settingService.getAll() as SettingRow[];
+    const callerSchoolId = await resolveCallerSchoolId(req);
+    const settings = await settingService.getAll(callerSchoolId) as SettingRow[];
     const response: Record<string, string> = {};
     for (const row of settings) {
       if (row.key !== 'adminPassword') {
@@ -38,7 +40,9 @@ adminRouter.get('/settings', async (_req, res) => {
   }
 });
 
-adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {  const { key, value } = req.body;
+adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
+  const { key, value } = req.body;
+  const callerSchoolId = await resolveCallerSchoolId(req);
   if (key === 'adminPassword') {
     if (value.length < 4) {
       return res.status(400).json({ error: 'Password must be at least 4 characters' });
@@ -46,25 +50,28 @@ adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQue
 
     const hash = await hashPassword(value);
     const adminTeacher = (req as express.Request & { adminTeacher?: Teacher }).adminTeacher
-      || await teacherService.getByUsername('admin') as Teacher | null;
+      || await teacherService.getByUsername('admin', callerSchoolId) as Teacher | null;
     if (adminTeacher) {
       await teacherService.updatePassword(adminTeacher.id, hash);
       await sessionService.revokeAll(adminTeacher.id);
+      await refreshTokenService.revokeAllForTeacher(adminTeacher.id);
     }
   } else {
-    await settingService.set(key, value);
+    await settingService.set(key, value, callerSchoolId);
   }
   return res.json({ success: true });
 }));
 
-adminRouter.post('/database/backup', async (_req, res) => {  try {
-    const dbPath = path.join(process.cwd(), 'database.sqlite');
+adminRouter.post('/database/backup', requireSystemAdmin, async (_req, res) => {
+  try {
+    const dbPath = path.resolve(process.env.DB_FILE || DB_FILE);
     // F-016: async fs.access instead of sync existsSync
     try {
       await fs.promises.access(dbPath);
     } catch {
       return res.status(404).json({ error: 'Database file not found' });
     }
+    checkpointWal();
     res.setHeader('Content-Disposition', 'attachment; filename="database.sqlite"');
     res.setHeader('Content-Type', 'application/octet-stream');
     return res.sendFile(dbPath);
@@ -73,12 +80,12 @@ adminRouter.post('/database/backup', async (_req, res) => {  try {
   }
 });
 
-adminRouter.post('/database/restore', async (req, res): Promise<void> => {
+adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Promise<void> => {
   try {
     await db.enqueueWrite(() => {});
     acquireRestoreLock();
 
-    const dbPath = path.join(process.cwd(), 'database.sqlite');
+    const dbPath = path.resolve(process.env.DB_FILE || DB_FILE);
     const backupDir = path.join(process.cwd(), 'backups');
     // F-016: async fs.mkdir (recursive) instead of sync existsSync+mkdirSync
     await fs.promises.mkdir(backupDir, { recursive: true });
@@ -140,7 +147,7 @@ adminRouter.post('/database/restore', async (req, res): Promise<void> => {
 });
 
 // Performance metrics endpoints (admin only)
-adminRouter.get('/metrics', async (req, res) => {  try {
+adminRouter.get('/metrics', requireSystemAdmin, async (req, res) => {  try {
     // Get time window from query param (in minutes), default to last hour
     const windowMinutes = parseInt(req.query.window as string || '60', 10);
     const windowMs = windowMinutes * 60 * 1000;
@@ -160,7 +167,7 @@ adminRouter.get('/metrics', async (req, res) => {  try {
   }
 });
 
-adminRouter.get('/metrics/summary', async (_req, res) => {  try {
+adminRouter.get('/metrics/summary', requireSystemAdmin, async (_req, res) => {  try {
     const summary = metricsStore.getSummary();
     const bufferInfo = metricsStore.getBufferInfo();
     return res.json({ summary, bufferInfo });
@@ -170,7 +177,7 @@ adminRouter.get('/metrics/summary', async (_req, res) => {  try {
   }
 });
 
-adminRouter.delete('/metrics', async (_req, res) => {  try {
+adminRouter.delete('/metrics', requireSystemAdmin, async (_req, res) => {  try {
     metricsStore.clear();
     return res.json({ success: true, message: 'Metrics cleared' });
   } catch (error) {
@@ -180,7 +187,7 @@ adminRouter.delete('/metrics', async (_req, res) => {  try {
 });
 
 // Query profiling endpoints (admin only)
-adminRouter.post('/profiling/query', async (req, res) => {  try {
+adminRouter.post('/profiling/query', requireSystemAdmin, async (req, res) => {  try {
     const { sql } = req.body;
     if (!sql || typeof sql !== 'string') {
       return res.status(400).json({ error: 'SQL query is required' });
@@ -205,14 +212,30 @@ adminRouter.post('/profiling/query', async (req, res) => {  try {
   }
 });
 
-adminRouter.get('/profiling/statements', async (_req, res) => {
+adminRouter.get('/profiling/statements', requireSystemAdmin, async (_req, res) => {
+  const sampleQueries = [
+    { name: 'getStudentsByClass', sql: "SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = 'class_default' AND is_archived = 0 ORDER BY name" },
+    { name: 'getRecordsByClass', sql: "SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = 'class_default'" },
+    { name: 'getEventsByClass', sql: "SELECT id, class_id, date, title, type, description FROM events WHERE class_id = 'class_default' ORDER BY date DESC" },
+    { name: 'getTimetableByClass', sql: "SELECT id, class_id, day_of_week, start_time, end_time, subject, lesson FROM timetable_slots WHERE class_id = 'class_default' ORDER BY day_of_week, start_time" },
+  ];
+  const statements = sampleQueries.map(({ name, sql }) => {
+    try {
+      const profile = profileQuery(sql);
+      return { name, profile, score: getOptimizationScore(profile) };
+    } catch {
+      return null;
+    }
+  }).filter((item): item is NonNullable<typeof item> => item !== null);
+
   return res.json({
     message: 'Use POST /api/admin/profiling/query with { "sql": "SELECT ..." } to profile specific queries.',
     example: { sql: 'SELECT * FROM students WHERE class_id = ? AND archived = 0' },
+    statements,
   });
 });
 
-adminRouter.get('/profiling/indexes', async (_req, res) => {  try {
+adminRouter.get('/profiling/indexes', requireSystemAdmin, async (_req, res) => {  try {
     const indexes = getAllIndexes();
     return res.json({ indexes });
   } catch (error) {
@@ -221,7 +244,7 @@ adminRouter.get('/profiling/indexes', async (_req, res) => {  try {
   }
 });
 
-adminRouter.get('/profiling/stats', async (_req, res) => {  try {
+adminRouter.get('/profiling/stats', requireSystemAdmin, async (_req, res) => {  try {
     const stats = getTableStats();
     const indexes = getAllIndexes();
     
@@ -237,7 +260,7 @@ adminRouter.get('/profiling/stats', async (_req, res) => {  try {
 });
 
 // Resource monitoring endpoints (admin only)
-adminRouter.get('/resources', async (_req, res) => {  try {
+adminRouter.get('/resources', requireSystemAdmin, async (_req, res) => {  try {
     const current = resourceMonitor.getCurrent();
     const status = resourceMonitor.getStatus();
     return res.json({ current, status });
@@ -247,23 +270,24 @@ adminRouter.get('/resources', async (_req, res) => {  try {
   }
 });
 
-adminRouter.get('/resources/history', async (req, res) => {  try {
+adminRouter.get('/resources/history', requireSystemAdmin, async (req, res) => {  try {
     // Get time window from query param (in minutes), default to last hour
     const windowMinutes = parseInt(req.query.window as string || '60', 10);
     const windowMs = windowMinutes * 60 * 1000;
 
+    const current = resourceMonitor.getCurrent();
     const history = resourceMonitor.getHistory(windowMs);
     const stats = resourceMonitor.getStats(windowMs);
     const status = resourceMonitor.getStatus();
 
-    return res.json({ history, stats, status });
+    return res.json({ current, history, stats, status });
   } catch (error) {
     console.error('Error fetching resource history:', error);
     return res.status(500).json({ error: 'Failed to fetch resource history' });
   }
 });
 
-adminRouter.get('/resources/alerts', async (req, res) => {  try {
+adminRouter.get('/resources/alerts', requireSystemAdmin, async (req, res) => {  try {
     // Get time window from query param (in minutes), default to last hour
     const windowMinutes = parseInt(req.query.window as string || '60', 10);
     const windowMs = windowMinutes * 60 * 1000;

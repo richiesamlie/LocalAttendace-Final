@@ -1,8 +1,9 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { CheckSquare, Menu, X, Loader2 } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { cn } from './utils/cn';
 import { useStore } from './store';
+import { api } from './lib/api';
 import { useAuth, useLogin, useRegisterSchool, useLogout, useClassSync } from './hooks/useData';
 import { useSocket } from './hooks/useSocket';
 import Sidebar from './components/Sidebar';
@@ -251,14 +252,20 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
     const hashPage = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : '';
     if (hashPage && VALID_PAGES.has(hashPage)) return hashPage;
-    const saved = sessionStorage.getItem(CURRENT_PAGE_STORAGE_KEY);
-    return saved && VALID_PAGES.has(saved) ? saved : 'dashboard';
+    try {
+      const saved = sessionStorage.getItem(CURRENT_PAGE_STORAGE_KEY);
+      return saved && VALID_PAGES.has(saved) ? saved : 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const theme = useStore((state) => state.theme);
   const toggleTheme = useStore((state) => state.toggleTheme);
   const isInitialized = useStore(state => state.isInitialized);
   const initializeStore = useStore(state => state.initializeStore);
+  const isAdmin = useStore(state => state.isAdmin);
+  const clearAuth = useStore(state => state.clearAuth);
   
   const authQuery = useAuth();
   const logoutMutation = useLogout();
@@ -266,11 +273,36 @@ export default function App() {
   useSocket();           // Real-time sync via WebSocket
 
   useEffect(() => {
+    const handleAuthExpired = () => {
+      clearAuth();
+      void authQuery.refetch();
+    };
+    window.addEventListener('ta:auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('ta:auth-expired', handleAuthExpired);
+  }, [clearAuth, authQuery]);
+
+  useEffect(() => {
     // Only fetch full data if authenticated
     if (!isInitialized && authQuery.data?.authenticated) {
       initializeStore();
     }
   }, [isInitialized, authQuery.data?.authenticated, initializeStore]);
+
+  useEffect(() => {
+    if (!authQuery.data?.authenticated || typeof window === 'undefined') return;
+    const match = window.location.pathname.match(/^\/invite\/([A-Za-z0-9_-]+)$/);
+    if (!match) return;
+    const inviteCode = match[1];
+    window.history.replaceState({ page: currentPage }, '', `/#${currentPage}`);
+    api.redeemInvite(inviteCode)
+      .then((res) => {
+        toast.success(`Joined class ${res.className || ''} as ${res.role}!`);
+        void initializeStore();
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : 'Invalid or expired invite link');
+      });
+  }, [authQuery.data?.authenticated, currentPage, initializeStore]);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -281,7 +313,11 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    sessionStorage.setItem(CURRENT_PAGE_STORAGE_KEY, currentPage);
+    try {
+      sessionStorage.setItem(CURRENT_PAGE_STORAGE_KEY, currentPage);
+    } catch {
+      // Ignore storage errors
+    }
     if (typeof window !== 'undefined') {
       const targetHash = `#${currentPage}`;
       if (window.location.hash !== targetHash) {
@@ -327,10 +363,10 @@ export default function App() {
       case 'timer': return <ExamTimer />;
       case 'reports': return <Reports />;
       case 'settings': return <Settings />;
-      case 'admin': return <AdminDashboard navigate={setCurrentPage} />;
-      case 'performance': return <PerformanceMonitor />;
-      case 'profiler': return <QueryProfiler />;
-      case 'resources': return <ResourceMonitor />;
+      case 'admin': return isAdmin ? <AdminDashboard navigate={setCurrentPage} /> : <Dashboard navigate={setCurrentPage} />;
+      case 'performance': return isAdmin ? <PerformanceMonitor /> : <Dashboard navigate={setCurrentPage} />;
+      case 'profiler': return isAdmin ? <QueryProfiler /> : <Dashboard navigate={setCurrentPage} />;
+      case 'resources': return isAdmin ? <ResourceMonitor /> : <Dashboard navigate={setCurrentPage} />;
       case 'gatekeeper': return <Gatekeeper />;
       default: return <Dashboard navigate={setCurrentPage} />;
     }

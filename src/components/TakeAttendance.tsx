@@ -98,7 +98,7 @@ export default function TakeAttendance() {
   const markAllPresentHandler = () => {
     const unmarked = filteredStudents.filter(s => !records.some(r => r.studentId === s.id));
     if (unmarked.length === 0) {
-      toast('All students are already marked present.');
+      toast('All students are already marked for this date.');
       return;
     }
     markAllPresent(date);
@@ -186,7 +186,7 @@ export default function TakeAttendance() {
           >
             Mark All Present
           </button>
-          {lastAttendanceChange && activeTab === 'today' && (
+          {lastAttendanceChange && lastAttendanceChange.date === date && (
             <button
               onClick={undoLastAttendance}
               className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"

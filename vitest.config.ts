@@ -5,7 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.test.ts', '**/*.test.tsx'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/release/**', '**/node-portable/**'],
     env: {
       NODE_ENV: 'test',
     },

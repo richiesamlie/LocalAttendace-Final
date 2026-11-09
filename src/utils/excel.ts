@@ -543,11 +543,11 @@ export function importScheduleFromExcel(file: File): Promise<CalendarEvent[]> {
       }
 
       const typeStr = String(rawType).trim();
-      const validTypes: CalendarEvent['type'][] = ['Classwork', 'Test', 'Exam', 'Other'];
+      const validTypes: CalendarEvent['type'][] = ['Classwork', 'Test', 'Exam', 'Holiday', 'Other'];
       const matchedType = validTypes.find((t) => t.toLowerCase() === typeStr.toLowerCase());
 
       if (!matchedType) {
-        errors.push(`Row ${rowNum}: Invalid event type '${typeStr}'. Valid types are: Classwork, Test, Exam, Other.`);
+        errors.push(`Row ${rowNum}: Invalid event type '${typeStr}'. Valid types are: Classwork, Test, Exam, Holiday, Other.`);
         continue;
       }
 

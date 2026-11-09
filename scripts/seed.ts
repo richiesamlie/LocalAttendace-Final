@@ -1,13 +1,17 @@
+import 'dotenv/config';
 import Database from 'better-sqlite3';
 import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs';
+import { BCRYPT_COST } from '../src/lib/bcrypt';
 
-const DB_FILE = path.join(process.cwd(), 'database.sqlite');
+const DB_FILE = process.env.DB_FILE
+  ? path.resolve(process.cwd(), process.env.DB_FILE)
+  : path.join(process.cwd(), 'database.sqlite');
 
 // Sample data
 const SAMPLE_TEACHERS = [
-  { username: 'demo', password: process.env.DEMO_TEACHER_PASSWORD || 'demo_placeholder', name: 'Demo Teacher' },
+  { username: 'demo', password: process.env.DEMO_TEACHER_PASSWORD || 'demo123', name: 'Demo Teacher' },
   { username: 'john.doe', password: process.env.JOHN_DOE_PASSWORD || 'john_placeholder', name: 'John Doe' },
 ];
 
@@ -88,14 +92,20 @@ async function seed() {
   db.prepare("DELETE FROM students WHERE id LIKE 'student_%'").run();
   db.prepare("DELETE FROM events WHERE class_id LIKE 'class_%'").run();
   db.prepare("DELETE FROM classes WHERE id LIKE 'class_%'").run();
-  db.prepare("DELETE FROM teachers WHERE id LIKE 'teacher_%' AND username != 'admin'").run();
+  db.prepare("DELETE FROM teachers WHERE (id LIKE 'teacher_%' OR username IN ('demo', 'john.doe')) AND username != 'admin'").run();
+
+  // Ensure default school exists if schools table is present
+  const hasSchoolsTable = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'schools'").get();
+  if (hasSchoolsTable) {
+    db.prepare("INSERT OR IGNORE INTO schools (id, name, code) VALUES ('school_default', 'Default School', 'default')").run();
+  }
 
   // Insert teachers
   console.log('Creating teachers...');
   for (const teacher of SAMPLE_TEACHERS) {
     const id = generateId('teacher');
-    const hash = bcrypt.hashSync(teacher.password, 10);
-    db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, 0)')
+    const hash = bcrypt.hashSync(teacher.password, BCRYPT_COST);
+    db.prepare("INSERT INTO teachers (id, school_id, username, password_hash, name, is_admin) VALUES (?, 'school_default', ?, ?, ?, 0)")
       .run(id, teacher.username, hash, teacher.name);
     console.log(`  ✓ ${teacher.name} (${teacher.username})`);
   }
@@ -112,7 +122,7 @@ async function seed() {
   // Insert classes
   console.log('\nCreating classes...');
   for (const cls of SAMPLE_CLASSES) {
-    db.prepare('INSERT INTO classes (id, teacher_id, name) VALUES (?, ?, ?)')
+    db.prepare("INSERT INTO classes (id, school_id, teacher_id, name) VALUES (?, 'school_default', ?, ?)")
       .run(cls.id, demoTeacherId, cls.name);
     db.prepare("INSERT INTO class_teachers (class_id, teacher_id, role) VALUES (?, ?, 'owner')")
       .run(cls.id, demoTeacherId);
@@ -163,7 +173,7 @@ async function seed() {
     for (const student of students) {
       if (Math.random() > 0.9) continue; // Skip some students randomly
       const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const reason = status !== 'present' ? 'Sample reason' : null;
+      const reason = status !== 'Present' ? 'Sample reason' : null;
       db.prepare('INSERT OR REPLACE INTO attendance_records (student_id, class_id, date, status, reason) VALUES (?, ?, ?, ?, ?)')
         .run(student.id, 'class_1', date, status, reason);
     }

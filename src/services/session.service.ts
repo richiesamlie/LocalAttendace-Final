@@ -20,8 +20,8 @@ export const sessionService = {
 
   get(sessionId: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; teacher_id: string; is_revoked: number; expires_at: string }>(
-        'SELECT id, teacher_id, is_revoked, expires_at FROM user_sessions WHERE id = $1',
+      return pgQueryOne<{ id: string; teacher_id: string; device_name: string; ip_address: string; created_at: string; last_active: string; is_revoked: number; expires_at: string }>(
+        'SELECT id, teacher_id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE id = $1',
         [sessionId]
       );
     }
@@ -38,7 +38,7 @@ export const sessionService = {
 
   deleteExpired() {
     if (isPostgres()) {
-      return pgQuery('DELETE FROM user_sessions WHERE expires_at < NOW()');
+      return pgQuery('DELETE FROM user_sessions WHERE expires_at::timestamptz < NOW()');
     }
     return db.stmt.deleteExpiredSessions.run();
   },
@@ -46,7 +46,7 @@ export const sessionService = {
   getByTeacher(teacherId: string) {
     if (isPostgres()) {
       return pgQuery<{ id: string; device_name: string; ip_address: string; created_at: string; last_active: string; expires_at: string; is_revoked: number }>(
-        'SELECT id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE teacher_id = $1 ORDER BY created_at DESC',
+        'SELECT id, device_name, ip_address, created_at, last_active, expires_at, is_revoked FROM user_sessions WHERE teacher_id = $1 ORDER BY last_active DESC',
         [teacherId]
       );
     }

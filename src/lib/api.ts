@@ -53,6 +53,9 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
         },
       });
     }
+    if (response.status === 401 && endpoint !== '/auth/verify' && endpoint !== '/auth/verify-password' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ta:auth-expired'));
+    }
   }
 
   if (!response.ok) {

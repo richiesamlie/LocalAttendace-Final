@@ -13,13 +13,24 @@ export interface MassiveBackupPayload {
   };
 }
 
+const getZeroBasedMonth = (dateStr: string): number => {
+  const parts = dateStr.split('-');
+  if (parts.length >= 2) {
+    const parsed = Number(parts[1]) - 1;
+    if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 11) {
+      return parsed;
+    }
+  }
+  return new Date(dateStr).getMonth();
+};
+
 const isSem1 = (dateStr: string) => {
-  const month = new Date(dateStr).getMonth();
+  const month = getZeroBasedMonth(dateStr);
   return month >= 6 && month <= 11;
 };
 
 const isSem2 = (dateStr: string) => {
-  const month = new Date(dateStr).getMonth();
+  const month = getZeroBasedMonth(dateStr);
   return month >= 0 && month <= 5;
 };
 

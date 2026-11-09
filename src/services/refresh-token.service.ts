@@ -66,25 +66,30 @@ export const refreshTokenService = {
     teacherId: string,
     sessionId: string,
     familyId: string = randomUUID(),
-  ): IssuedRefreshToken {
+  ): IssuedRefreshToken & PromiseLike<IssuedRefreshToken> {
     const id = randomUUID();
     const rawValue = generateRawToken();
     const tokenHash = sha256(rawValue);
     const expiresAt = lifetimeIso();
+    const issued: IssuedRefreshToken = { rawValue, tokenHash, id, familyId, expiresAt };
 
     if (isPostgres()) {
-      pgQuery(
+      const p = pgQuery(
         `INSERT INTO refresh_tokens (id, family_id, token_hash, teacher_id, session_id, expires_at)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [id, familyId, tokenHash, teacherId, sessionId, expiresAt],
-      ).catch((err) => {
-        console.error('[refresh-token] Failed to insert refresh token in Postgres:', err);
-      });
-    } else {
-      db.stmt.insertRefreshToken.run(id, familyId, tokenHash, teacherId, sessionId, expiresAt);
+      )
+        .then(() => issued)
+        .catch((err) => {
+          console.error('[refresh-token] Failed to insert refresh token in Postgres:', err);
+          return issued;
+        });
+      return Object.assign(p, issued);
     }
 
-    return { rawValue, tokenHash, id, familyId, expiresAt };
+    db.stmt.insertRefreshToken.run(id, familyId, tokenHash, teacherId, sessionId, expiresAt);
+    const resolved = Promise.resolve(issued);
+    return Object.assign(resolved, issued);
   },
 
   /**
@@ -134,34 +139,57 @@ export const refreshTokenService = {
    * Called when reuse is detected OR on logout from a session that owns
    * tokens in the family.
    */
-  revokeFamily(familyId: string): void {
+  revokeFamily(familyId: string): Promise<void> {
     if (isPostgres()) {
-      pgQuery(
-        `UPDATE refresh_tokens SET used_at = NOW() WHERE family_id = $1`,
+      return pgQuery(
+        `UPDATE refresh_tokens SET used_at = NOW() WHERE family_id = $1 AND used_at IS NULL`,
         [familyId],
-      ).catch((err) => {
-        console.error('[refresh-token] Failed to revoke family in Postgres:', err);
-      });
-    } else {
-      db.stmt.revokeRefreshFamily.run(familyId);
+      )
+        .then(() => undefined)
+        .catch((err) => {
+          console.error('[refresh-token] Failed to revoke family in Postgres:', err);
+        });
     }
+    db.stmt.revokeRefreshFamily.run(familyId);
+    return Promise.resolve();
+  },
+
+  revokeAllForTeacher(teacherId: string): Promise<void> {
+    if (isPostgres()) {
+      return pgQuery(
+        `UPDATE refresh_tokens SET used_at = NOW() WHERE teacher_id = $1 AND used_at IS NULL`,
+        [teacherId],
+      )
+        .then(() => undefined)
+        .catch((err) => {
+          console.error('[refresh-token] Failed to revoke teacher tokens in Postgres:', err);
+        });
+    }
+    try {
+      db.prepare('UPDATE refresh_tokens SET used_at = CURRENT_TIMESTAMP WHERE teacher_id = ? AND used_at IS NULL').run(teacherId);
+    } catch {
+      /* non-critical */
+    }
+    return Promise.resolve();
   },
 
   /**
    * Best-effort cleanup of expired tokens. Safe to call periodically.
    */
-  cleanup(): void {
+  cleanup(): Promise<void> {
     if (isPostgres()) {
-      pgQuery(`DELETE FROM refresh_tokens WHERE expires_at < NOW()`).catch((err) => {
-        console.error('[refresh-token] Failed to cleanup expired tokens in Postgres:', err);
-      });
-    } else {
-      try {
-        db.stmt.deleteExpiredRefreshTokens.run();
-      } catch {
-        /* non-critical */
-      }
+      return pgQuery(`DELETE FROM refresh_tokens WHERE expires_at::timestamptz < NOW()`)
+        .then(() => undefined)
+        .catch((err) => {
+          console.error('[refresh-token] Failed to cleanup expired tokens in Postgres:', err);
+        });
     }
+    try {
+      db.stmt.deleteExpiredRefreshTokens.run();
+    } catch {
+      /* non-critical */
+    }
+    return Promise.resolve();
   },
 
   /**
@@ -172,7 +200,7 @@ export const refreshTokenService = {
     if (isPostgres()) {
       const row = await pgQueryOne<{ count: string }>(
         `SELECT COUNT(*)::text AS count FROM refresh_tokens
-         WHERE teacher_id = $1 AND used_at IS NULL AND expires_at > NOW()`,
+         WHERE teacher_id = $1 AND used_at IS NULL AND expires_at::timestamptz > NOW()`,
         [teacherId],
       );
       return parseInt(row?.count || '0', 10);

@@ -38,9 +38,15 @@ export const inviteService = {
     return db.stmt.insertInviteCode.run(code, classId, role, createdBy, expiresAt);
   },
 
-  delete(code: string) {
+  delete(code: string, classId?: string) {
     if (isPostgres()) {
+      if (classId) {
+        return pgQuery('DELETE FROM invite_codes WHERE code = $1 AND class_id = $2', [code, classId]);
+      }
       return pgQuery('DELETE FROM invite_codes WHERE code = $1', [code]);
+    }
+    if (classId && db.stmt.deleteInviteCodeByClass) {
+      return db.stmt.deleteInviteCodeByClass.run(code, classId);
     }
     return db.stmt.deleteInviteCode.run(code);
   },
@@ -77,7 +83,7 @@ export const inviteService = {
 
   deleteExpired() {
     if (isPostgres()) {
-      return pgQuery('DELETE FROM invite_codes WHERE expires_at < NOW()');
+      return pgQuery('DELETE FROM invite_codes WHERE expires_at::timestamptz < NOW()');
     }
     return db.stmt.deleteExpiredInviteCodes.run();
   },

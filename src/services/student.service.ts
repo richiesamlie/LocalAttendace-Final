@@ -1,4 +1,5 @@
 import { db, isPostgres, pgQuery, pgQueryOne } from './utils';
+import { teacherService } from './teacher.service';
 
 /**
  * Student Service
@@ -20,16 +21,37 @@ export const studentService = {
     return stmt.all(classId);
   },
 
-  getById(studentId: string, teacherId: string) {
+  async getById(studentId: string, teacherId: string) {
     if (isPostgres()) {
-      return pgQueryOne<{ id: string; name: string; class_id: string }>(
-        `SELECT s.id, s.name, s.class_id FROM students s 
+      const direct = await pgQueryOne<{ id: string; class_id: string; name: string; roll_number: string; parent_name: string | null; parent_phone: string | null; is_flagged: number; is_archived: number }>(
+        `SELECT s.id, s.class_id, s.name, s.roll_number, s.parent_name, s.parent_phone, s.is_flagged, s.is_archived FROM students s 
          JOIN class_teachers ct ON s.class_id = ct.class_id 
          WHERE s.id = $1 AND ct.teacher_id = $2`,
         [studentId, teacherId]
       );
+      if (direct) return direct;
+      if (await teacherService.getIsAdmin(teacherId)) {
+        return pgQueryOne<{ id: string; class_id: string; name: string; roll_number: string; parent_name: string | null; parent_phone: string | null; is_flagged: number; is_archived: number }>(
+          `SELECT s.id, s.class_id, s.name, s.roll_number, s.parent_name, s.parent_phone, s.is_flagged, s.is_archived FROM students s
+           JOIN classes c ON s.class_id = c.id
+           JOIN teachers t ON t.id = $2
+           WHERE s.id = $1 AND COALESCE(c.school_id, 'school_default') = COALESCE(t.school_id, 'school_default')`,
+          [studentId, teacherId]
+        );
+      }
+      return null;
     }
-    return db.stmt.getStudentById.get(studentId, teacherId);
+    const direct = db.stmt.getStudentById.get(studentId, teacherId);
+    if (direct) return direct;
+    if (await teacherService.getIsAdmin(teacherId)) {
+      return db.prepare(
+        `SELECT s.id, s.class_id, s.name, s.roll_number, s.parent_name, s.parent_phone, s.is_flagged, s.is_archived FROM students s
+         JOIN classes c ON s.class_id = c.id
+         JOIN teachers t ON t.id = ?
+         WHERE s.id = ? AND COALESCE(c.school_id, 'school_default') = COALESCE(t.school_id, 'school_default')`
+      ).get(teacherId, studentId);
+    }
+    return undefined;
   },
 
   insert(id: string, classId: string, name: string, rollNumber: string, parentName: string | null, parentPhone: string | null, isFlagged: number) {
@@ -42,7 +64,8 @@ export const studentService = {
     return db.stmt.insertStudent.run(id, classId, name, rollNumber, parentName, parentPhone, isFlagged);
   },
 
-  update(data: { name?: string; roll_number?: string; parent_name?: string; parent_phone?: string; is_flagged?: number; is_archived?: number }, studentId: string, teacherId: string) {
+  async update(data: { name?: string; roll_number?: string; parent_name?: string; parent_phone?: string; is_flagged?: number; is_archived?: number }, studentId: string, teacherId: string) {
+    const isAdmin = await teacherService.getIsAdmin(teacherId);
     if (isPostgres()) {
       const sets: string[] = [];
       const vals: unknown[] = [];
@@ -56,6 +79,12 @@ export const studentService = {
       if (sets.length === 0) return;
       sets.push(`updated_at = NOW()`);
       vals.push(studentId, teacherId);
+      if (isAdmin) {
+        return pgQuery(
+          `UPDATE students s SET ${sets.join(', ')} WHERE s.id = $${i} AND s.class_id IN (SELECT c.id FROM classes c JOIN teachers t ON t.id = $${i + 1} WHERE COALESCE(c.school_id, 'school_default') = COALESCE(t.school_id, 'school_default'))`,
+          vals
+        );
+      }
       return pgQuery(`UPDATE students s SET ${sets.join(', ')} WHERE s.id = $${i} AND s.class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = $${i + 1})`, vals);
     }
     // SQLite: build a dynamic SET clause to avoid NULLing fields not included in the partial update
@@ -69,14 +98,31 @@ export const studentService = {
     if (data.is_archived !== undefined) { setClauses.push('is_archived = ?'); vals.push(data.is_archived); }
     if (setClauses.length === 0) return;
     vals.push(studentId, teacherId);
+    if (isAdmin) {
+      return db.prepare(
+        `UPDATE students SET ${setClauses.join(', ')} WHERE id = ? AND class_id IN (SELECT c.id FROM classes c JOIN teachers t ON t.id = ? WHERE COALESCE(c.school_id, 'school_default') = COALESCE(t.school_id, 'school_default'))`
+      ).run(...vals);
+    }
     return db.prepare(
       `UPDATE students SET ${setClauses.join(', ')} WHERE id = ? AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)`
     ).run(...vals);
   },
 
-  archive(studentId: string, teacherId: string) {
+  async archive(studentId: string, teacherId: string) {
+    const isAdmin = await teacherService.getIsAdmin(teacherId);
     if (isPostgres()) {
+      if (isAdmin) {
+        return pgQuery(
+          `UPDATE students SET is_archived = 1 WHERE id = $1 AND class_id IN (SELECT c.id FROM classes c JOIN teachers t ON t.id = $2 WHERE COALESCE(c.school_id, 'school_default') = COALESCE(t.school_id, 'school_default'))`,
+          [studentId, teacherId]
+        );
+      }
       return pgQuery('UPDATE students SET is_archived = 1 WHERE id = $1 AND class_id IN (SELECT class_id FROM class_teachers WHERE teacher_id = $2)', [studentId, teacherId]);
+    }
+    if (isAdmin) {
+      return db.prepare(
+        `UPDATE students SET is_archived = 1 WHERE id = ? AND class_id IN (SELECT c.id FROM classes c JOIN teachers t ON t.id = ? WHERE COALESCE(c.school_id, 'school_default') = COALESCE(t.school_id, 'school_default'))`
+      ).run(studentId, teacherId);
     }
     return db.stmt.archiveStudent.run(studentId, teacherId);
   },

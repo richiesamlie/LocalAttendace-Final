@@ -1,14 +1,17 @@
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 
-const DB_FILE = path.join(process.cwd(), 'database.sqlite');
+const DB_FILE = process.env.DB_FILE
+  ? path.resolve(process.cwd(), process.env.DB_FILE)
+  : path.join(process.cwd(), 'database.sqlite');
 const BACKUP_DIR = path.join(process.cwd(), 'backups');
 const MAX_PRE_RESTORE_BACKUPS = 5;
 
 function listBackups(): string[] {
   if (!fs.existsSync(BACKUP_DIR)) return [];
   return fs.readdirSync(BACKUP_DIR)
-    .filter(f => f.startsWith('database-backup-') && f.endsWith('.sqlite'))
+    .filter(f => (f.startsWith('database-backup-') || f.startsWith('db-')) && f.endsWith('.sqlite'))
     .sort()
     .reverse();
 }
@@ -54,6 +57,16 @@ function restore(backupFile: string): void {
     cleanupPreRestoreBackups();
   }
 
+  for (const suffix of ['-wal', '-shm']) {
+    const sidecar = `${DB_FILE}${suffix}`;
+    if (fs.existsSync(sidecar)) {
+      try {
+        fs.unlinkSync(sidecar);
+      } catch {
+        // Ignore if unable to unlink
+      }
+    }
+  }
   fs.copyFileSync(backupPath, DB_FILE);
   console.log(`[RESTORE] Database restored from: ${backupPath}`);
   console.log('[RESTORE] Restart the app to apply changes.');

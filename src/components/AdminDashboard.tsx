@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Shield, Lock, Database, Users, Calendar, BookOpen, FileText, Archive, Trash2, Search, Upload, Activity, Server } from 'lucide-react';
 import { useStore } from '../store';
+import { api } from '../lib/api';
 import toast from 'react-hot-toast';
 import StatCard from './AdminDashboard/StatCard';
 import TabButton from './AdminDashboard/TabButton';
@@ -42,14 +43,8 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/auth/verify-password', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await api.verifyAdminPassword(passwordInput);
+      if (data.success) {
         setIsUnlocked(true);
         setError('');
         loadAllClassesData();
@@ -76,19 +71,22 @@ export default function AdminDashboard({ navigate }: AdminDashboardProps) {
     }
   }, []);
 
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     if (!newPassword || !confirmNewPassword) {
       toast.error('Please fill in both password fields.');
+      return;
+    }
+    if (newPassword.length < 4) {
+      toast.error('Password must be at least 4 characters.');
       return;
     }
     if (newPassword !== confirmNewPassword) {
       toast.error('New passwords do not match.');
       return;
     }
-    updateAdminPassword(newPassword);
+    await updateAdminPassword(newPassword);
     setNewPassword('');
     setConfirmNewPassword('');
-    toast.success('Admin password updated successfully.');
   };
 
   const handleImportMassiveBackup = (event: React.ChangeEvent<HTMLInputElement>) => {

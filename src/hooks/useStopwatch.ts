@@ -15,10 +15,10 @@ const readPersistedStopwatchState = (): PersistedStopwatchState => {
     startedAtMs: null,
   };
 
-  const raw = window.localStorage.getItem(STOPWATCH_STORAGE_KEY);
-  if (!raw) return fallback;
-
   try {
+    const raw = window.localStorage.getItem(STOPWATCH_STORAGE_KEY);
+    if (!raw) return fallback;
+
     const parsed = JSON.parse(raw) as Partial<PersistedStopwatchState>;
     const accumulatedMs =
       typeof parsed.accumulatedMs === 'number' && parsed.accumulatedMs >= 0
@@ -41,7 +41,11 @@ const readPersistedStopwatchState = (): PersistedStopwatchState => {
 };
 
 const persistStopwatchState = (state: PersistedStopwatchState) => {
-  window.localStorage.setItem(STOPWATCH_STORAGE_KEY, JSON.stringify(state));
+  try {
+    window.localStorage.setItem(STOPWATCH_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Ignore storage quota or private-mode errors
+  }
 };
 
 export function useStopwatch() {

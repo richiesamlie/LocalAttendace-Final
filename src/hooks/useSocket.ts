@@ -47,6 +47,7 @@ export function useSocket() {
   // --- Connection lifecycle ---
   useEffect(() => {
     if (!isAuthenticated) {
+      prevClassIdRef.current = null;
       // Disconnect cleanly on logout
       if (socket.connected) socket.disconnect();
       return;
@@ -55,9 +56,10 @@ export function useSocket() {
     socket.connect();
 
     socket.on('connect', () => {
-      // Re-join the current class room after a reconnection
-      if (currentClassId) {
-        socket.emit('join_class', currentClassId);
+      // Re-join the current class room after a reconnection using live store state
+      const activeClassId = useStore.getState().currentClassId;
+      if (activeClassId) {
+        socket.emit('join_class', activeClassId);
       }
     });
 
@@ -65,9 +67,6 @@ export function useSocket() {
       socket.off('connect');
       socket.disconnect();
     };
-    // We intentionally only run this when auth status changes, not on every
-    // currentClassId change (that is handled by the effect below).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // --- Room management + event listeners ---

@@ -46,10 +46,12 @@ RUN npm install -g npm@11.14.1 --no-audit --no-fund
 
 # Production-only dependencies.
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && \
+    npm rebuild better-sqlite3 bcrypt
 
 # Copy built frontend + server entrypoints from the builder stage.
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist-server ./dist-server
 COPY --from=builder /app/server.ts ./
 COPY --from=builder /app/db.ts ./
 COPY --from=builder /app/routes.ts ./

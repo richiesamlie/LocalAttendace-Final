@@ -21,7 +21,7 @@ export default function Roster() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [rawSelectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const [searchVal, setSearchVal] = useState('');
@@ -90,6 +90,11 @@ export default function Roster() {
     )
     .sort((a, b) => a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true, sensitivity: 'base' })),
   [students, searchQuery, showArchived]);
+
+  const selectedIds = useMemo(() => {
+    const visibleIds = new Set(filteredStudents.map(s => s.id));
+    return new Set([...rawSelectedIds].filter(id => visibleIds.has(id)));
+  }, [rawSelectedIds, filteredStudents]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds(prev => {
@@ -430,12 +435,12 @@ export default function Roster() {
               <Trash2 className="w-5 h-5 text-rose-600 dark:text-rose-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Delete Students</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300">This action cannot be undone.</p>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Archive Students</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Archived students can be restored later via &quot;Show Archived&quot;.</p>
             </div>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
-            Are you sure you want to delete <strong>{selectedIds.size} student(s)</strong>? Their attendance records and data will be permanently removed.
+            Are you sure you want to archive <strong>{selectedIds.size} student(s)</strong>? Their past attendance records will be preserved.
           </p>
           <div className="flex gap-3 justify-end">
             <button
@@ -448,7 +453,7 @@ export default function Roster() {
               onClick={handleBulkDelete}
               className="px-4 py-2 min-h-[44px] text-sm font-medium text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors focus-ring"
             >
-              Delete {selectedIds.size} Student(s)
+              Archive {selectedIds.size} Student(s)
             </button>
           </div>
         </div>

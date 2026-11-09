@@ -46,7 +46,9 @@ $nsiScript = Join-Path $repoRoot "installer\teacher-assistant.nsi"
 
 Push-Location (Join-Path $repoRoot "installer")
 try {
-    & $makensis $nsiScript
+    $pkgJson = Get-Content (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-Json
+    $version = if ($env:VERSION) { $env:VERSION -replace '^v', '' } else { $pkgJson.version }
+    & $makensis "/DVERSION=$version" $nsiScript
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ Setup installer created: release\TeacherAssistant-Setup.exe" -ForegroundColor Green
     } else {

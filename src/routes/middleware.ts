@@ -179,6 +179,19 @@ export const requireAdmin: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const requireSystemAdmin: RequestHandler = async (req, res, next) => {
+  try {
+    const callerSchoolId = await resolveCallerSchoolId(req);
+    if (callerSchoolId !== svc.DEFAULT_SCHOOL_ID) {
+      return res.status(403).json({ error: 'System administrator access required' });
+    }
+    return next();
+  } catch (error) {
+    console.error('[admin] Failed to verify system admin school:', error);
+    return res.status(503).json({ error: 'Authentication service unavailable' });
+  }
+};
+
 const SESSION_ACTIVITY_THROTTLE_MS = 60_000;
 const sessionActivityLastUpdated = new Map<string, number>();
 
@@ -376,6 +389,7 @@ export const withWriteQueue = (handler: WriteHandler): RequestHandler => {
 export interface SocketAuthContext {
   teacherId: string;
   sessionId?: string;
+  schoolId?: string;
 }
 
 /**
@@ -447,5 +461,5 @@ export async function verifySocketAuth(headers: { cookie?: string } | undefined)
     }
   }
 
-  return { teacherId: decoded.teacherId, sessionId: decoded.sessionId };
+  return { teacherId: decoded.teacherId, sessionId: decoded.sessionId, schoolId: decoded.schoolId };
 }

@@ -11,6 +11,7 @@ export interface ClassSummary {
   id: string;
   teacher_id: string;
   name: string;
+  school_id?: string;
   owner_name: string;
   role?: string;
 }
@@ -19,7 +20,8 @@ export interface ClassSummary {
  * Check if using PostgreSQL database (vs SQLite)
  */
 export function isPostgres(): boolean {
-  return (process.env.DB_TYPE || 'sqlite') === 'postgres';
+  if (process.env.DB_TYPE === 'sqlite') return false;
+  return process.env.DB_TYPE === 'postgres' || Boolean(process.env.DATABASE_URL);
 }
 
 /**

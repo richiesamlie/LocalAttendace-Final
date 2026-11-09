@@ -33,9 +33,9 @@ export default function Gatekeeper() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  // Flatten all students from all classes
+  // Flatten all active (non-archived) students from all classes
   const allStudents = useMemo(() => classes.flatMap(c => 
-    (c.students || []).map(s => ({
+    (c.students || []).filter(s => !s.isArchived).map(s => ({
       ...s,
       classId: c.id,
       className: c.name,

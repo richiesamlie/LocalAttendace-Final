@@ -12,8 +12,10 @@ import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 import { performanceMonitor } from "./src/middleware/performance";
 import { verifySocketAuth } from "./src/routes/middleware";
-import { classService, teacherService, sessionService, refreshTokenService } from "./services";
-import { checkpointWal } from "./src/db/connection";
+import { classService, teacherService, sessionService, refreshTokenService, DEFAULT_SCHOOL_ID } from "./services";
+import { checkpointWal, openDatabase } from "./src/db/connection";
+import { initSchema } from "./src/db/schema";
+import { initStatements } from "./src/db/statements";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
@@ -63,6 +65,9 @@ async function configureDatabase() {
     } catch (err) {
       console.warn('[db] PostgreSQL connection failed, falling back to SQLite:', (err as Error).message);
       process.env.DB_TYPE = 'sqlite';
+      openDatabase();
+      initSchema();
+      initStatements();
       return;
     }
   }
@@ -129,6 +134,7 @@ async function startServer() {
     }
     socket.data.teacherId = auth.teacherId;
     socket.data.sessionId = auth.sessionId;
+    socket.data.schoolId = auth.schoolId;
     next();
   });
 
@@ -146,7 +152,15 @@ async function startServer() {
       }
       try {
         const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
-        if (!isGlobalAdmin) {
+        if (isGlobalAdmin) {
+          const callerTeacher = await teacherService.getById(teacherId);
+          const callerSchoolId = (socket.data.schoolId as string | undefined) || callerTeacher?.school_id || DEFAULT_SCHOOL_ID;
+          const cls = await classService.getExistingById(classId);
+          if (!cls || (cls.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
+            socket.emit('error', { message: `Access denied for class ${classId}` });
+            return;
+          }
+        } else {
           const access = await classService.isClassTeacher(classId, teacherId);
           if (!access) {
             socket.emit('error', { message: `Access denied for class ${classId}` });
@@ -269,7 +283,7 @@ async function startServer() {
     const cleanupInterval = setInterval(async () => {
       try {
         await sessionService.deleteExpired();
-        refreshTokenService.cleanup();
+        await refreshTokenService.cleanup();
       } catch (err) {
         console.warn('[janitor] Expired session cleanup failed:', (err as Error).message);
       }

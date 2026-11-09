@@ -26,35 +26,40 @@ export function useAuth() {
   return useQuery({
     queryKey: queryKeys.auth,
     queryFn: async () => {
-      const result = await api.verifyAuth();
-      if (result.authenticated && result.teacherId) {
-        if (result.name !== undefined && result.isAdmin !== undefined) {
-          setAuth(result.teacherId, result.name, !!result.isAdmin, {
-            schoolId: result.schoolId,
-            schoolCode: result.schoolCode,
-            schoolName: result.schoolName,
-          });
-        } else {
-          try {
-            const teacher = await api.getMe();
-            setAuth(result.teacherId, teacher.name, teacher.isAdmin, {
-              schoolId: teacher.schoolId,
-              schoolCode: teacher.schoolCode,
-              schoolName: teacher.schoolName,
-            });
-          } catch {
-            // Fallback to /auth/verify payload instead of force-downgrading to non-admin.
-            setAuth(result.teacherId, result.name || 'Teacher', !!result.isAdmin, {
+      try {
+        const result = await api.verifyAuth();
+        if (result.authenticated && result.teacherId) {
+          if (result.name !== undefined && result.isAdmin !== undefined) {
+            setAuth(result.teacherId, result.name, !!result.isAdmin, {
               schoolId: result.schoolId,
               schoolCode: result.schoolCode,
               schoolName: result.schoolName,
             });
+          } else {
+            try {
+              const teacher = await api.getMe();
+              setAuth(result.teacherId, teacher.name, teacher.isAdmin, {
+                schoolId: teacher.schoolId,
+                schoolCode: teacher.schoolCode,
+                schoolName: teacher.schoolName,
+              });
+            } catch {
+              // Fallback to /auth/verify payload instead of force-downgrading to non-admin.
+              setAuth(result.teacherId, result.name || 'Teacher', !!result.isAdmin, {
+                schoolId: result.schoolId,
+                schoolCode: result.schoolCode,
+                schoolName: result.schoolName,
+              });
+            }
           }
+        } else {
+          clearAuth();
         }
-      } else {
+        return result;
+      } catch {
         clearAuth();
+        return { authenticated: false };
       }
-      return result;
     },
 
   });
@@ -108,6 +113,14 @@ export function useLogout() {
     mutationFn: api.logout,
     onSuccess: () => {
       clearAuth();
+      try {
+        sessionStorage.removeItem('ta-current-page');
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({ page: 'dashboard' }, '', '#dashboard');
+        }
+      } catch {
+        // Ignore storage errors
+      }
       queryClient.setQueryData(queryKeys.auth, { authenticated: false });
       queryClient.clear();
     },

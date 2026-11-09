@@ -5,6 +5,7 @@ import fs from 'fs';
 export const DB_FILE = process.env.DB_FILE || path.join(process.cwd(), 'database.sqlite');
 
 export function isPostgresMode(): boolean {
+  if (process.env.DB_TYPE === 'sqlite') return false;
   return process.env.DB_TYPE === 'postgres' || Boolean(process.env.DATABASE_URL);
 }
 
@@ -21,7 +22,7 @@ export function getDefaultPassword(): string {
 }
 
 export function createBackup(): void {
-  if (isPostgresMode()) return;
+  if (isPostgresMode() || process.env.NODE_ENV === 'test' || DB_FILE === ':memory:') return;
   try {
     if (!fs.existsSync(DB_FILE)) return;
 

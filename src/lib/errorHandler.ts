@@ -47,12 +47,13 @@ export function errorHandler(
   }
 
   // Database errors
-  if (err.message?.includes('SQLITE_CONSTRAINT_UNIQUE')) {
+  const pgCode = (err as { code?: string }).code;
+  if (err.message?.includes('SQLITE_CONSTRAINT_UNIQUE') || pgCode === '23505') {
     res.status(409).json({ error: 'Resource already exists' });
     return;
   }
 
-  if (err.message?.includes('SQLITE_CONSTRAINT_FOREIGNKEY')) {
+  if (err.message?.includes('SQLITE_CONSTRAINT_FOREIGNKEY') || pgCode === '23503') {
     res.status(400).json({ error: 'Referenced resource does not exist' });
     return;
   }

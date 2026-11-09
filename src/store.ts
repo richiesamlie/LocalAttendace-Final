@@ -150,14 +150,35 @@ export const useStore = create<AppState>()((set, get) => ({
   theme: 'light',
   lastAttendanceChange: null,
 
-  setAuth: (teacherId, teacherName, isAdmin = false, schoolInfo) => set({
-    isAuthenticated: true,
-    teacherId,
-    teacherName,
-    isAdmin,
-    schoolId: schoolInfo?.schoolId ?? null,
-    schoolCode: schoolInfo?.schoolCode ?? null,
-    schoolName: schoolInfo?.schoolName ?? null,
+  setAuth: (teacherId, teacherName, isAdmin = false, schoolInfo) => set((state) => {
+    const nextSchoolId = schoolInfo?.schoolId ?? state.schoolId ?? null;
+    const isSwitchingAccount = Boolean(
+      (state.teacherId && state.teacherId !== teacherId) ||
+      (state.schoolId && nextSchoolId && state.schoolId !== nextSchoolId)
+    );
+    return {
+      isAuthenticated: true,
+      teacherId,
+      teacherName,
+      isAdmin,
+      schoolId: nextSchoolId,
+      schoolCode: schoolInfo?.schoolCode ?? state.schoolCode ?? null,
+      schoolName: schoolInfo?.schoolName ?? state.schoolName ?? null,
+      ...(isSwitchingAccount
+        ? {
+            isInitialized: false,
+            classes: [],
+            currentClassId: null,
+            students: [],
+            records: [],
+            dailyNotes: {},
+            events: [],
+            timetable: [],
+            seatingLayout: {},
+            lastAttendanceChange: null,
+          }
+        : {}),
+    };
   }),
   clearAuth: () => set({
     isAuthenticated: false,
@@ -168,6 +189,7 @@ export const useStore = create<AppState>()((set, get) => ({
     schoolCode: null,
     schoolName: null,
     isInitialized: false,
+    isLoading: false,
     classes: [],
     currentClassId: null,
     students: [],
@@ -176,6 +198,7 @@ export const useStore = create<AppState>()((set, get) => ({
     events: [],
     timetable: [],
     seatingLayout: {},
+    lastAttendanceChange: null,
   }),
 
   initializeStore: async () => {
@@ -447,20 +470,25 @@ export const useStore = create<AppState>()((set, get) => ({
     await runSwallowedAction(
       async () => {
         await api.deleteClass(id);
+        let nextClassToLoad: string | null = null;
         set((state) => {
           const newClasses = state.classes.filter(c => c.id !== id);
           if (state.currentClassId === id) {
             const nextClass = newClasses[0];
             if (nextClass) {
+              if (!nextClass.loaded) {
+                nextClassToLoad = nextClass.id;
+              }
               return {
                 classes: newClasses,
                 currentClassId: nextClass.id,
-                students: nextClass.students,
-                records: nextClass.records,
-                dailyNotes: nextClass.dailyNotes,
-                events: nextClass.events,
-                timetable: nextClass.timetable,
-                seatingLayout: nextClass.seatingLayout,
+                students: nextClass.students || [],
+                records: nextClass.records || [],
+                dailyNotes: nextClass.dailyNotes || {},
+                events: nextClass.events || [],
+                timetable: nextClass.timetable || [],
+                seatingLayout: nextClass.seatingLayout || {},
+                lastAttendanceChange: null,
               };
             } else {
               return {
@@ -472,11 +500,26 @@ export const useStore = create<AppState>()((set, get) => ({
                 events: [],
                 timetable: [],
                 seatingLayout: {},
+                lastAttendanceChange: null,
               };
             }
           }
           return { classes: newClasses };
         });
+        if (nextClassToLoad) {
+          await get().loadClassData(nextClassToLoad);
+          const loaded = get().classes.find(c => c.id === nextClassToLoad);
+          if (loaded && get().currentClassId === nextClassToLoad) {
+            set({
+              students: loaded.students || [],
+              records: loaded.records || [],
+              dailyNotes: loaded.dailyNotes || {},
+              events: loaded.events || [],
+              timetable: loaded.timetable || [],
+              seatingLayout: loaded.seatingLayout || {},
+            });
+          }
+        }
       },
       'Class deleted',
       'Failed to delete class'
@@ -489,9 +532,24 @@ export const useStore = create<AppState>()((set, get) => ({
     const targetClass = state.classes.find(c => c.id === id);
     if (!targetClass) return;
 
+    set({
+      currentClassId: id,
+      students: targetClass.students || [],
+      records: targetClass.records || [],
+      dailyNotes: targetClass.dailyNotes || {},
+      events: targetClass.events || [],
+      timetable: targetClass.timetable || [],
+      seatingLayout: targetClass.seatingLayout || {},
+      lastAttendanceChange: null,
+      isLoading: !targetClass.loaded,
+    });
+
     if (!targetClass.loaded) {
-      set({ isLoading: true });
       await get().loadClassData(id);
+    }
+
+    if (get().currentClassId !== id) {
+      return;
     }
 
     const updated = get().classes.find(c => c.id === id);
@@ -501,12 +559,12 @@ export const useStore = create<AppState>()((set, get) => ({
     }
     set({
       currentClassId: id,
-      students: updated.students,
-      records: updated.records,
-      dailyNotes: updated.dailyNotes,
-      events: updated.events,
-      timetable: updated.timetable,
-      seatingLayout: updated.seatingLayout,
+      students: updated.students || [],
+      records: updated.records || [],
+      dailyNotes: updated.dailyNotes || {},
+      events: updated.events || [],
+      timetable: updated.timetable || [],
+      seatingLayout: updated.seatingLayout || {},
       isLoading: false,
     });
   },
@@ -612,7 +670,11 @@ export const useStore = create<AppState>()((set, get) => ({
           }
           return {
             ...updateCurrentClass(state, { records: newRecords }),
-            lastAttendanceChange: existingRecord || null,
+            lastAttendanceChange: existingRecord || {
+              studentId: record.studentId,
+              date: record.date,
+              status: '' as AttendanceStatus,
+            },
           };
         });
       },

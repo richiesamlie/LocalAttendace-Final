@@ -4,6 +4,10 @@
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
 
+!ifndef VERSION
+  !define VERSION "1.0.0"
+!endif
+
 ; General Settings
 Name "Teacher Assistant"
 OutFile "..\release\TeacherAssistant-Setup.exe"
@@ -40,18 +44,18 @@ RequestExecutionLevel user
 !insertmacro MUI_LANGUAGE "English"
 
 ; Version Info
-VIProductVersion "1.0.0.0"
+VIProductVersion "${VERSION}.0"
 VIAddVersionKey "ProductName" "Teacher Assistant"
-VIAddVersionKey "ProductVersion" "1.0.0"
+VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileDescription" "Teacher Assistant Desktop Installer"
-VIAddVersionKey "FileVersion" "1.0.0"
+VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "LegalCopyright" "Educational & Classroom Management"
 
 Section "Install"
   SetOutPath "$INSTDIR"
 
   ; Release source directory (matches release folder output from build-release)
-  File /r "..\release\TeacherAssistant-v1.0.0\*.*"
+  File /r "..\release\TeacherAssistant-v${VERSION}\*.*"
 
   ; Store installation folder in registry
   WriteRegStr HKCU "Software\TeacherAssistant" "InstallDir" "$INSTDIR"
@@ -87,7 +91,7 @@ Section "Install"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "DisplayName" "Teacher Assistant"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "DisplayIcon" "$INSTDIR\public\icon.ico"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "Publisher" "Teacher Assistant"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "DisplayVersion" "1.0.0"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\TeacherAssistant" "NoRepair" 1

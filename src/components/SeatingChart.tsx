@@ -20,12 +20,24 @@ export default function SeatingChart() {
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [draggedStudent, setDraggedStudent] = useState<string | null>(null);
 
-  const totalSeats = students.length;
+  const activeStudentIds = useMemo(() => new Set(students.map(s => s.id)), [students]);
+  const seatedStudentIds = useMemo(
+    () => Object.values(seatingLayout).filter((id) => Boolean(id) && activeStudentIds.has(id)),
+    [seatingLayout, activeStudentIds]
+  );
+  const totalSeats = useMemo(() => {
+    const maxSeatedIdx = Object.entries(seatingLayout)
+      .filter(([, sid]) => Boolean(sid) && activeStudentIds.has(sid))
+      .reduce((max, [key]) => {
+        const idx = parseInt(key.replace('seat-', ''), 10);
+        return Number.isFinite(idx) ? Math.max(max, idx + 1) : max;
+      }, 0);
+    return Math.max(students.length, maxSeatedIdx);
+  }, [students.length, seatingLayout, activeStudentIds]);
   const cols = Math.ceil(Math.sqrt(totalSeats)) || 1;
   const rows = Math.ceil(totalSeats / cols) || 1;
 
   // Find students who haven't been seated yet
-  const seatedStudentIds = Object.values(seatingLayout);
   const unseatedStudents = students.filter(s => !seatedStudentIds.includes(s.id));
 
   const handleSeatClick = (seatId: string) => {

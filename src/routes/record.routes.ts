@@ -1,7 +1,7 @@
 import express from 'express';
-import { recordService, classService, studentService, teacherService, isPostgres } from '../../services';
+import { recordService, classService, studentService, teacherService, isPostgres, DEFAULT_SCHOOL_ID } from '../../services';
 import db from '../../db';
-import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, attendanceRecordsPayloadSchema } from '../../src/lib/validation';
 
@@ -49,12 +49,20 @@ recordRouter.post('/', postLimiter, requireAuth, validate(attendanceRecordsPaylo
   const records = (Array.isArray(req.body) ? req.body : [req.body]) as AttendanceInput[];
 
   const isGlobalAdmin = await teacherService.getIsAdmin(teacherId);
+  const callerSchoolId = isGlobalAdmin ? await resolveCallerSchoolId(req) : undefined;
   const verifiedClasses = new Set<string>();
   for (const r of records) {
-    if (!isGlobalAdmin && !verifiedClasses.has(r.classId)) {
-      const access = await classService.isClassTeacher(r.classId, teacherId);
-      if (!access) {
-        return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
+    if (!verifiedClasses.has(r.classId)) {
+      if (isGlobalAdmin) {
+        const cls = await classService.getExistingById(r.classId);
+        if (!cls || (cls.school_id || DEFAULT_SCHOOL_ID) !== callerSchoolId) {
+          return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
+        }
+      } else {
+        const access = await classService.isClassTeacher(r.classId, teacherId);
+        if (!access) {
+          return res.status(404).json({ error: `Class ${r.classId} not found or access denied` });
+        }
       }
       verifiedClasses.add(r.classId);
     }
