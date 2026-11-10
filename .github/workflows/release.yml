@@ -50,7 +50,7 @@ jobs:
           powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1
 
       - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: TeacherAssistant-Windows-Release
           path: |
@@ -164,6 +164,6 @@ jobs:
           generateReleaseNotes: true
           prerelease: false
           makeLatest: true
-          artifacts: "release/*.*"
+          artifacts: "release/*.zip,release/*.exe"
           token: ${{ secrets.GITHUB_TOKEN }}
 
