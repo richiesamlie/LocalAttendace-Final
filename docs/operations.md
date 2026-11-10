@@ -2,7 +2,7 @@
 
 This runbook is the fast path for daily operations after the 2026-06-18 audit closeout.
 
-**Last Updated:** 2026-08-04
+**Last Updated:** 2026-11-10
 
 ## 1) Daily Commands (Operator Quick Start)
 
@@ -254,7 +254,7 @@ Suggested locations:
 The automated release workflow (`.github/workflows/release.yml`) triggers on every push to `main` (or via manual `workflow_dispatch`):
 1. **Compiles System Tray Runner**: `scripts/build-tray.ps1` compiles `tray/TeacherAssistantTray.cs` into `TeacherAssistant.exe` via the Windows .NET `csc.exe` compiler.
 2. **Bundles Production Backend**: `scripts/build-release.ps1` compiles `server.ts` into a single CommonJS bundle (`dist-server/index.cjs`) via `esbuild`.
-3. **Downloads Portable Node.js**: Downloads Node.js 20 LTS for Windows and embeds it into the distribution directory (`node/node.exe`).
+3. **Downloads Portable Node.js**: Downloads Node.js 22 LTS for Windows (matching the host/CI ABI for `better-sqlite3` prebuilds) and embeds it into the distribution directory (`node/node.exe`).
 4. **Packages Portable ZIP**: Compresses the standalone directory into `TeacherAssistant-v1.0.0-Windows-Portable.zip`.
 5. **Compiles NSIS Installer**: Compiles `installer/teacher-assistant.nsi` via NSIS into `TeacherAssistant-Setup.exe`, supporting zero-admin user installation, process termination safeguards on uninstall, and autostart integration.
 6. **Publishes Release**: Creates or updates GitHub release with binary assets and beginner user guide.

@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated:** 2026-08-04
+**Last Updated:** 2026-11-10
 **Purpose:** Single source index for active project documentation only.
 **Bahasa / Language:** English as canonical text, with concise Indonesian guidance for key operational notes.
 
@@ -15,7 +15,7 @@
 | [troubleshooting.md](troubleshooting.md) | Common issues and fixes | All users |
 | [migration-guide.md](migration-guide.md) | SQLite → PostgreSQL migration guide | All users |
 | [developer-guide.md](developer-guide.md) | Developer workflows, coding patterns, testing | Developers |
-| [architecture.md](architecture.md) | System architecture, backend/frontend data flow, security model | Developers |
+| [architecture.md](architecture.md) | System architecture, multi-school tenancy, backend/frontend data flow, security model | Developers |
 | [api-reference.md](api-reference.md) | API endpoint contracts and validation schemas | Developers |
 | [contributing.md](contributing.md) | Branching, commits, PR process, contribution standards | Contributors |
 | [dependency-governance.md](dependency-governance.md) | Dependency update cadence, validation, and rollback strategy | Maintainers |
@@ -27,12 +27,11 @@
 
 ## Current Repository Status
 
-- **Windows Desktop Release Pipeline**: Automated NSIS installer (`TeacherAssistant-Setup.exe`), portable zip, and native C# system tray runner (`TeacherAssistant.exe`) with autostart support.
+- **Multi-School Tenancy & PostgreSQL Parity**: Full tenant isolation across REST endpoints, Socket.IO rooms, admin settings, and invite codes; PostgreSQL parity for refresh tokens and schema initialization.
+- **Windows Desktop Release Pipeline**: Automated NSIS installer (`TeacherAssistant-Setup.exe`), portable zip (Node 22 LTS), and native C# system tray runner (`TeacherAssistant.exe`) with autostart support.
 - **Security audit completed 2026-06-18** — 15 of 15 findings closed (Phase 10, Batches 1-6)
-- Audit closeout docs in `docs/plans/2026-06-18-phase10-batch{1..6}-remediation-report.md`
-- Cumulative release notes in `docs/release-notes-develop-to-main-2026-06-18-audit-remediation-batch{1..6}.md`
-- Excel engine: `exceljs` (with import/export guardrails)
-- Runtime: bcrypt cost 12, async-only paths
+- Excel engine: `exceljs` (with import/export guardrails and formula injection escaping)
+- Runtime: Node.js 22 LTS in CI & portable builds, bcrypt cost 12, async-only paths
 - CI: GitHub Actions dual-runtime (Bun + npm) with Automated Release workflow; `develop` is blocking/hardening lane, `main` is stable
 
 ---

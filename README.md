@@ -13,7 +13,8 @@ Everything runs locally on your computer — no internet connection is required,
 - **Seating Charts:** Visual drag-and-drop classroom desk layouts.
 - **Timetables & Calendar:** Plan weekly class schedules and track school events.
 - **Reports:** Generate printable monthly attendance summaries and export them to Excel.
-- **Offline First:** All data is saved on your computer in a single file (`database.sqlite`).
+- **Multi-School Support:** Register isolated school workspaces with dedicated school codes, or run as a single default school.
+- **Offline First:** All data is saved on your computer in a single file (`database.sqlite`), with optional PostgreSQL support.
 - **Classroom Wi-Fi Sharing (Optional):** Broadcast the app across your classroom Wi-Fi so you can take attendance from your phone or tablet.
 
 ---
@@ -56,7 +57,7 @@ If you want to run from source code or host on a server:
 
 ### Run from Source (Node.js)
 
-**Prerequisites:** Node.js 18 or newer.
+**Prerequisites:** Node.js 20 or newer (Node.js 22 LTS recommended).
 
 ```bash
 # 1. Clone the repository
@@ -66,7 +67,11 @@ cd LocalAttendace-Final
 # 2. Install dependencies
 npm install
 
-# 3. Start development server (with hot reload)
+# 3. Generate environment secrets (.env)
+powershell -ExecutionPolicy Bypass -File setup-env.ps1  # Windows
+bash setup-env.sh                                       # Linux/macOS
+
+# 4. Start development server (with hot reload)
 npm run dev
 
 # Or build and run production server
@@ -101,12 +106,14 @@ The app will be available at `http://localhost:3000`. Data is stored in the Dock
 
 | Guide | Description |
 |---|---|
-| [User Guide](docs/user-guide.md) | Full tutorial on classes, attendance, grading, and settings |
+| [User Guide](docs/user-guide.md) | Full tutorial on classes, attendance, multi-school login, and settings |
 | [Troubleshooting](docs/troubleshooting.md) | Solutions for common questions, port issues, and firewall alerts |
+| [Migration Guide](docs/migration-guide.md) | Seamless SQLite to PostgreSQL migration guide |
 | [Developer Guide](docs/developer-guide.md) | Coding standards, folder structure, and test commands |
-| [Architecture](docs/architecture.md) | Technical architecture, data flow, and Windows packaging |
+| [Architecture](docs/architecture.md) | Technical architecture, multi-school tenancy, data flow, and Windows packaging |
 | [API Reference](docs/api-reference.md) | REST API endpoints and data schemas |
 | [Operations Runbook](docs/operations.md) | CI/CD workflows, release packaging, and deployment |
+| [Contributing](docs/contributing.md) | Branching, commits, PR checklist, and dependency workflow |
 | [Documentation Map](docs/documentation-map.md) | Full index of all documentation files |
 
 ---

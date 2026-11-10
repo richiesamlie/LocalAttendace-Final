@@ -2,7 +2,7 @@
 
 Tujuan dokumen ini adalah menjaga dependency tetap sehat, aman, dan minim regresi.
 
-**Last Updated:** 2026-08-04
+**Last Updated:** 2026-11-10
 
 ## Policy
 
@@ -48,28 +48,36 @@ Commit both lockfiles in the same change. CI uses both — drift between them ca
     "form-data": "^4.0.6",
     "tmp": "^0.2.7",
     "vite": "^6.4.3",
-    "ip-address": ">=10.4.0",
-    "brace-expansion": ">=5.0.8",
+    "ip-address": ">=10.7.4",
+    "brace-expansion": ">=5.0.11",
     "minimatch": ">=10.2.6",
     "postcss": ">=8.5.23",
     "socket.io-parser": ">=4.2.7",
-    "engine.io": ">=6.6.7",
+    "engine.io": ">=6.6.10",
+    "qs": ">=6.16.1",
+    "body-parser": ">=1.20.9",
+    "zod": "^4.6.6",
     "fast-uri": ">=3.1.5",
-    "undici": ">=7.29.0"
+    "undici": ">=7.29.1 <8.0.0",
+    "proxy-addr": ">=2.0.8"
   },
   "resolutions": {
     "ws": "^8.21.0",
     "form-data": "^4.0.6",
     "tmp": "^0.2.7",
     "vite": "^6.4.3",
-    "ip-address": ">=10.4.0",
-    "brace-expansion": ">=5.0.8",
+    "ip-address": ">=10.7.4",
+    "brace-expansion": ">=5.0.11",
     "minimatch": ">=10.2.6",
     "postcss": ">=8.5.23",
     "socket.io-parser": ">=4.2.7",
-    "engine.io": ">=6.6.7",
+    "engine.io": ">=6.6.10",
+    "qs": ">=6.16.1",
+    "body-parser": ">=1.20.9",
+    "zod": "^4.6.6",
     "fast-uri": ">=3.1.5",
-    "undici": ">=7.29.0"
+    "undici": ">=7.29.1 <8.0.0",
+    "proxy-addr": ">=2.0.8"
   }
 }
 ```
@@ -80,14 +88,18 @@ Commit both lockfiles in the same change. CI uses both — drift between them ca
 | `form-data: ^4.0.6` | Fix CVE-2025-7783 (CRLF injection in multipart names) | 2026-06 | npm clean; bun flagged before |
 | `tmp: ^0.2.7` | Fix CVE-2025-47906 (path traversal in prefix/postfix) | 2026-06 | npm clean; bun flagged before |
 | `vite: ^6.4.3` | Fix CVE-2025-30208 (fs.deny bypass on Windows alternate paths) | 2026-06 | npm clean; bun flagged before |
-| `ip-address: >=10.4.0` | Fix GHSA-mwp4-54f8-5fhr (SSRF via leading-zero octets) | 2026-08 | bun audit HIGH |
-| `brace-expansion: >=5.0.8` | Fix GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895, GHSA-3jxr-9vmj-r5cp (DoS, 3 CVEs) | 2026-08 | bun audit HIGH |
-| `minimatch: >=10.2.6` | Transitive: pulls brace-expansion ^5.0.8 | 2026-08 | bun audit HIGH |
+| `ip-address: >=10.7.4` | Fix GHSA-mwp4-54f8-5fhr (SSRF via leading-zero octets) | 2026-11 | npm + bun audit clean |
+| `brace-expansion: >=5.0.11` | Fix GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895, GHSA-3jxr-9vmj-r5cp (DoS, 3 CVEs) | 2026-11 | npm + bun audit clean |
+| `minimatch: >=10.2.6` | Transitive: pulls brace-expansion >=5.0.11 | 2026-08 | bun audit HIGH |
 | `postcss: >=8.5.23` | Fix GHSA-r28c-9q8g-f849 (sourceMappingURL path traversal) | 2026-08 | bun audit HIGH |
 | `socket.io-parser: >=4.2.7` | Fix GHSA-2m8v-j782-fhvr (zero-attachment memory exhaustion) | 2026-08 | npm + bun audit HIGH |
-| `engine.io: >=6.6.7` | Fix GHSA-r635-g3xr-vw7x (polling transport connection exhaustion) | 2026-08 | bun audit HIGH |
+| `engine.io: >=6.6.10` | Fix GHSA-r635-g3xr-vw7x (polling transport connection exhaustion) | 2026-11 | npm + bun audit clean |
+| `qs: >=6.16.1` | Fix query-string prototype pollution / DoS advisories | 2026-11 | npm + bun audit clean |
+| `body-parser: >=1.20.9` | Pulls patched `qs` and `bytes` transitive dependencies | 2026-11 | npm + bun audit clean |
+| `zod: ^4.6.6` | Unify transitive schema validator version | 2026-11 | npm + bun audit clean |
 | `fast-uri: >=3.1.5` | Fix GHSA-4c8g-83qw-93j6, GHSA-7p8r-x3mc-p8w7, GHSA-v2hh-gcrm-f6hx (host confusion, 3 CVEs) | 2026-08 | bun audit HIGH |
-| `undici: >=7.29.0` | Fix multiple HIGH CVEs (TLS bypass, response queue poisoning, etc.) | 2026-08 | bun audit HIGH |
+| `undici: >=7.29.1 <8.0.0` | Fix multiple HIGH CVEs (TLS bypass, response queue poisoning, etc.) | 2026-11 | npm + bun audit clean |
+| `proxy-addr: >=2.0.8` | Transitive Express IP forwarding parser update | 2026-11 | npm + bun audit clean |
 
 **When adding a new override:**
 1. Document the CVE / advisory in the commit message body

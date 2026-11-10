@@ -1,7 +1,7 @@
 # Developer Guide — Teacher Assistant
 
-**Last Updated:** 2026-08-04
-**Branch:** `develop`
+**Last Updated:** 2026-11-10
+**Branch:** `main`
 
 ---
 
@@ -9,7 +9,7 @@
 
 ### Prerequisites
 - **Bun** (v1.1+ recommended) — For package installation and building frontend production assets.
-- **Node.js** (v18+ recommended) — For executing the Express backend server (strictly required due to Windows Bun native C++ binding limitations with `better-sqlite3`).
+- **Node.js** (v20+ required, v22 LTS recommended) — For executing the Express backend server (strictly required due to Windows Bun native C++ binding limitations with `better-sqlite3`).
 
 ### Setup
 
@@ -31,10 +31,12 @@ npx tsx server.ts
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `JWT_SECRET` | **Yes** | JWT signing key. Generate with `openssl rand -hex 32` |
+| `JWT_SECRET` | **Yes (Prod)** | JWT signing key (>= 32 chars). Generate with `openssl rand -hex 32` |
 | `DEFAULT_ADMIN_PASSWORD` | **Yes** | Initial admin password. App throws on startup if missing |
 | `NODE_ENV` | No | Set to `production` for production mode |
+| `DB_FILE` | No | Custom SQLite database file path (defaults to `database.sqlite`) |
 | `DATABASE_URL` | No | PostgreSQL connection string. If set, uses PostgreSQL instead of SQLite |
+| `COOKIE_SECURE` | No | Override cookie `Secure` flag (`true`/`false`) for HTTP LAN deployments |
 
 ---
 
@@ -42,22 +44,23 @@ npx tsx server.ts
 
 ### Backend
 
-| File | Lines | Purpose |
+| File | Scope | Purpose |
 |------|-------|---------|
-| `routes.ts` | 278 | Delegates to `src/routes/*.routes.ts` |
-| `src/routes/` | 13 files | Route modules (auth, class, student, etc.) |
-| `src/routes/middleware.ts` | 184 | Shared auth/class/role middleware |
-| `services.ts` | 715 | Service layer (11 service objects) |
-| `src/db/` | 6 files | Database: schema, statements, cache, queue |
+| `routes.ts` | Aggregator | Delegates to `src/routes/*.routes.ts` |
+| `src/routes/` | 13 route modules | Route handlers (`auth`, `class`, `student`, `record`, `event`, `note`, `timetable`, `seating`, `invite`, `session`, `teacher`, `admin`, `health`) + `middleware.ts` |
+| `src/routes/middleware.ts` | Shared RBAC | Auth, multi-school tenant isolation (`resolveCallerSchoolId`, `requireSystemAdmin`), class roles, write queue |
+| `services.ts` / `src/services/` | 13 services + `utils.ts` | Service layer (`school`, `teacher`, `session`, `class`, `student`, `record`, `note`, `event`, `timetable`, `seating`, `setting`, `invite`, `refresh-token`) |
+| `db.ts` / `src/db/` | 8 files | Database: `connection`, `schema`, `auto-migrate`, `statements`, `cache`, `writeQueue`, `profiling`, `index` |
 
 ### Frontend
 
-| File | Lines | Purpose |
+| File | Scope | Purpose |
 |------|-------|---------|
-| `src/store.ts` | 759 | Zustand store with all state + actions |
-| `src/lib/api.ts` | ~80 | Fetch wrapper (all API calls) |
-| `src/hooks/useData.ts` | 393 | React Query hooks + sync |
-| `src/components/` | 15+ | Page components |
+| `src/store.ts` | Zustand store | Primary client state + actions |
+| `src/lib/api.ts` | Fetch wrapper | Typed HTTP client with automatic `/auth/refresh` retry |
+| `src/hooks/useData.ts` | React Query | Query/mutation hooks + class sync |
+| `src/hooks/useSocket.ts` | Socket.IO | Real-time event listener reconciling React Query and Zustand |
+| `src/components/` | 15+ pages | Classroom, roster, attendance, seating, timetable, reports, and admin views |
 
 ---
 

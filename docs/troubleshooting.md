@@ -1,7 +1,7 @@
 # Troubleshooting — Teacher Assistant
 
-**Last Updated:** 2026-08-04
-**Branch:** `develop`
+**Last Updated:** 2026-11-10
+**Branch:** `main`
 
 ---
 
@@ -137,12 +137,13 @@ bun run lint
 
 ### Login fails with correct credentials
 
-**Cause:** Session expired or server clock drift.
+**Cause:** Session expired, wrong school code, or server clock drift.
 
 **Fix:**
 1. Clear cookies and try again
-2. Check server time is accurate
-3. JWT has 7-day expiry â€” session may need re-login
+2. If your account belongs to a specific school, enter the school code (or `username@schoolCode`)
+3. Check server time is accurate
+4. Access tokens last 1 hour and automatically rotate via a 7-day refresh token — after 7 days of inactivity, re-login is required
 
 ---
 
@@ -178,7 +179,7 @@ Client-generated IDs use `class_${Date.now()}` format. If two classes are create
 
 ### SQLite WAL Files
 
-`database.sqlite-wal` and `database.sqlite-shm` are normal â€” SQLite WAL mode creates them. Do not delete them while server is running.
+`database.sqlite-wal` and `database.sqlite-shm` are normal — SQLite WAL mode creates them. Do not delete them while server is running.
 
 ### E2E Test Database
 
@@ -186,7 +187,7 @@ E2E tests share a single database. Running in parallel causes flaky failures. Ru
 
 ### Sidebar Class Badge
 
-`Sidebar.tsx` uses `useStore.getState()` inside JSX render for badge label â€” known anti-pattern but harmless since classes rarely change mid-render.
+`Sidebar.tsx` uses `useStore.getState()` inside JSX render for badge label — known anti-pattern but harmless since classes rarely change mid-render.
 
 ### Write Queue "async"
 
@@ -214,10 +215,10 @@ E2E tests share a single database. Running in parallel causes flaky failures. Ru
 - Session check failed (DB error)
 - Server may need restart
 
-### "Invalid invite code"
-- Code expired (default: 7 days)
+### "Invalid or expired invite code"
+- Code expired (default: 48 hours, max: 30 days)
 - Code already used
-- Code doesn't exist
+- Code doesn't exist or belongs to a different school
 
 ---
 
@@ -228,7 +229,7 @@ E2E tests share a single database. Running in parallel causes flaky failures. Ru
 **Check:**
 1. PostgreSQL is running
 2. Database exists: `createdb teacher_assistant`
-3. Schema is applied automatically on server startup via `src/db/schema.ts` (no manual SQL import needed)
+3. Schema is applied automatically on server startup via `src/db/auto-migrate.ts` (no manual SQL import needed)
 4. Connection string correct in `DATABASE_URL`
 
 ---
@@ -238,7 +239,7 @@ E2E tests share a single database. Running in parallel causes flaky failures. Ru
 ### Slow queries
 
 **Check:**
-1. Indexes are created (20+ indexes on common query patterns)
+1. Indexes are created (25+ indexes on common query patterns)
 2. WAL mode enabled (pragma `journal_mode=WAL`)
 3. Cache hit rate (5s TTL for most data)
 
@@ -298,7 +299,7 @@ curl http://localhost:3000/api/health
 
 ## See Also
 
-- `architecture.md` â€” System design
-- `developer-guide.md` â€” How to add features
-- `documentation-map.md` â€” Active documentation index
+- [Architecture](architecture.md) — System design
+- [Developer Guide](developer-guide.md) — How to add features
+- [Documentation Map](documentation-map.md) — Active documentation index
 

@@ -1,6 +1,6 @@
 # SQLite → PostgreSQL Migration Guide
 
-**Last Updated:** 2026-08-04
+**Last Updated:** 2026-11-10
 
 ---
 
@@ -99,6 +99,7 @@ You'll see output like this:
 Creating PostgreSQL schema...
 Reading SQLite data...
 Migrating data...
+  ✓ schools: 1/1 rows
   ✓ teachers: 1/1 rows
   ✓ classes: 3/3 rows
   ✓ class_teachers: 3/3 rows
@@ -114,6 +115,7 @@ Migrating data...
   ✓ refresh_tokens: 1/1 rows
 
 Validating:
+  ✅ schools: SQLite=1, PostgreSQL=1
   ✅ teachers: SQLite=1, PostgreSQL=1
   ✅ classes: SQLite=3, PostgreSQL=3
   ✅ students: SQLite=45, PostgreSQL=45
@@ -258,10 +260,11 @@ The app uses SQLite again with your original data.
 
 ## What Gets Migrated
 
-All 13 tables are migrated in the correct order:
+All 14 tables are migrated in foreign-key-safe order:
 
 | Table | Description |
 |-------|-------------|
+| `schools` | Multi-school tenant records |
 | `teachers` | Teacher accounts and passwords |
 | `classes` | Class metadata |
 | `class_teachers` | Teacher-class relationships |
@@ -276,7 +279,7 @@ All 13 tables are migrated in the correct order:
 | `user_sessions` | Active sessions |
 | `refresh_tokens` | Auth tokens |
 
-All indexes (20+) and data relationships are preserved.
+All indexes (25+) and data relationships are preserved.
 
 ---
 

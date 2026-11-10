@@ -1,7 +1,7 @@
 # Contributing — Teacher Assistant
 
-**Last Updated:** 2026-08-04
-**Branch:** `develop`
+**Last Updated:** 2026-11-10
+**Branch:** `main`
 
 ---
 
@@ -314,14 +314,18 @@ npm install           # updates package-lock.json
     "form-data": "^4.0.6",
     "tmp": "^0.2.7",
     "vite": "^6.4.3",
-    "ip-address": ">=10.4.0",
-    "brace-expansion": ">=5.0.8",
+    "ip-address": ">=10.7.4",
+    "brace-expansion": ">=5.0.11",
     "minimatch": ">=10.2.6",
     "postcss": ">=8.5.23",
     "socket.io-parser": ">=4.2.7",
-    "engine.io": ">=6.6.7",
+    "engine.io": ">=6.6.10",
+    "qs": ">=6.16.1",
+    "body-parser": ">=1.20.9",
+    "zod": "^4.6.6",
     "fast-uri": ">=3.1.5",
-    "undici": ">=7.29.0"
+    "undici": ">=7.29.1 <8.0.0",
+    "proxy-addr": ">=2.0.8"
   }
 }
 ```
@@ -385,7 +389,7 @@ docker exec -it teacher-assistant sh
 
 ### Migration Note (Batch 5)
 
-The bind-mount `./data:/app/data` was replaced by a named volume `teacher-assistant-data`. For existing deployments, see `docs/plans/2026-06-18-phase10-batch5-remediation-report.md` for the one-time migration command.
+The bind-mount `./data:/app/data` was replaced by a named volume `teacher-assistant-data` for container security and non-root volume ownership (`1001:1001`).
 
 ---
 
