@@ -2,6 +2,19 @@ import { _db, DEFAULTS, getDefaultPassword, createBackup } from './connection';
 import bcrypt from 'bcrypt';
 import { BCRYPT_COST } from '../lib/bcrypt';
 
+function ensureColumn(table: string, column: string, definition: string): void {
+  const info = _db.pragma(`table_info(${table})`) as Array<{ name: string }>;
+  if (info.some(col => col.name === column)) return;
+  try {
+    _db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/duplicate column name/i.test(msg)) {
+      throw err;
+    }
+  }
+}
+
 export function initSchema(): void {
   createBackup();
 
@@ -113,7 +126,7 @@ export function initSchema(): void {
   const tables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='class_teachers'").all();
   if (tables.length === 0) {
     _db.exec(`
-      CREATE TABLE class_teachers (
+      CREATE TABLE IF NOT EXISTS class_teachers (
         class_id TEXT NOT NULL,
         teacher_id TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'teacher',
@@ -121,22 +134,14 @@ export function initSchema(): void {
         FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
         FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
       );
-      CREATE INDEX idx_class_teachers_class ON class_teachers(class_id);
-      CREATE INDEX idx_class_teachers_teacher ON class_teachers(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_class_teachers_class ON class_teachers(class_id);
+      CREATE INDEX IF NOT EXISTS idx_class_teachers_teacher ON class_teachers(teacher_id);
     `);
     _db.exec(`INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes`);
   }
 
-  const studentsInfo = _db.pragma('table_info(students)') as Array<{ name: string }>;
-  const hasFlaggedColumn = studentsInfo.some(col => col.name === 'is_flagged');
-  if (!hasFlaggedColumn) {
-    _db.exec('ALTER TABLE students ADD COLUMN is_flagged INTEGER DEFAULT 0');
-  }
-
-  const hasArchivedColumn = studentsInfo.some(col => col.name === 'is_archived');
-  if (!hasArchivedColumn) {
-    _db.exec('ALTER TABLE students ADD COLUMN is_archived INTEGER DEFAULT 0');
-  }
+  ensureColumn('students', 'is_flagged', 'INTEGER DEFAULT 0');
+  ensureColumn('students', 'is_archived', 'INTEGER DEFAULT 0');
 
   const classesInfo = _db.pragma('table_info(classes)') as Array<{ name: string }>;
   const hasTeacherId = classesInfo.some(col => col.name === 'teacher_id');
@@ -146,26 +151,24 @@ export function initSchema(): void {
     if (existingTeachers.count === 0) {
       const defaultPassword = getDefaultPassword();
       const hash = bcrypt.hashSync(defaultPassword, BCRYPT_COST);
-      _db.prepare('INSERT INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
+      const insertResult = _db.prepare('INSERT OR IGNORE INTO teachers (id, username, password_hash, name) VALUES (?, ?, ?, ?)').run(
         DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME
       );
-      console.log('[db] Default admin created. Change password immediately.');
+      if (insertResult.changes > 0) {
+        console.log('[db] Default admin created. Change password immediately.');
+      }
     } else {
       const teacher = _db.prepare('SELECT id FROM teachers LIMIT 1').get() as { id: string };
       defaultTeacherId = teacher?.id || defaultTeacherId;
     }
-    _db.exec('ALTER TABLE classes ADD COLUMN teacher_id TEXT');
-    _db.prepare('UPDATE classes SET teacher_id = ?').run(defaultTeacherId);
+    ensureColumn('classes', 'teacher_id', 'TEXT');
+    _db.prepare('UPDATE classes SET teacher_id = ? WHERE teacher_id IS NULL').run(defaultTeacherId);
     _db.exec('CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id)');
   }
 
   const tablesToAddUpdatedAt = ['students', 'attendance_records', 'events', 'timetable_slots', 'daily_notes', 'seating_layout', 'classes'];
   for (const table of tablesToAddUpdatedAt) {
-    const tableInfo = _db.pragma(`table_info(${table})`) as Array<{ name: string }>;
-    const hasUpdatedAt = tableInfo.some(col => col.name === 'updated_at');
-    if (!hasUpdatedAt) {
-      _db.exec(`ALTER TABLE ${table} ADD COLUMN updated_at TEXT`);
-    }
+    ensureColumn(table, 'updated_at', 'TEXT');
   }
 
   const triggerTables = [
@@ -203,7 +206,7 @@ export function initSchema(): void {
   const inviteTables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='invite_codes'").all();
   if (inviteTables.length === 0) {
     _db.exec(`
-      CREATE TABLE invite_codes (
+      CREATE TABLE IF NOT EXISTS invite_codes (
         code TEXT PRIMARY KEY,
         class_id TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'teacher',
@@ -216,15 +219,15 @@ export function initSchema(): void {
         FOREIGN KEY (created_by) REFERENCES teachers (id) ON DELETE CASCADE,
         FOREIGN KEY (used_by) REFERENCES teachers (id) ON DELETE SET NULL
       );
-      CREATE INDEX idx_invite_codes_class ON invite_codes(class_id);
-      CREATE INDEX idx_invite_codes_code ON invite_codes(code);
+      CREATE INDEX IF NOT EXISTS idx_invite_codes_class ON invite_codes(class_id);
+      CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
     `);
   }
 
   const sessionTables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='user_sessions'").all();
   if (sessionTables.length === 0) {
     _db.exec(`
-      CREATE TABLE user_sessions (
+      CREATE TABLE IF NOT EXISTS user_sessions (
         id TEXT PRIMARY KEY,
         teacher_id TEXT NOT NULL,
         device_name TEXT,
@@ -235,21 +238,13 @@ export function initSchema(): void {
         is_revoked INTEGER DEFAULT 0,
         FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
       );
-      CREATE INDEX idx_user_sessions_teacher ON user_sessions(teacher_id);
-      CREATE INDEX idx_user_sessions_expires ON user_sessions(expires_at);
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_teacher ON user_sessions(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_user_sessions_expires ON user_sessions(expires_at);
     `);
   }
 
-  const teachersInfo = _db.pragma('table_info(teachers)') as Array<{ name: string }>;
-  const hasLastLogin = teachersInfo.some(col => col.name === 'last_login');
-  if (!hasLastLogin) {
-    _db.exec('ALTER TABLE teachers ADD COLUMN last_login TEXT');
-  }
-
-  const hasIsAdmin = teachersInfo.some(col => col.name === 'is_admin');
-  if (!hasIsAdmin) {
-    _db.exec('ALTER TABLE teachers ADD COLUMN is_admin INTEGER DEFAULT 0');
-  }
+  ensureColumn('teachers', 'last_login', 'TEXT');
+  ensureColumn('teachers', 'is_admin', 'INTEGER DEFAULT 0');
 
   // Multi-School (Path B) Tenancy Schema
   _db.exec(`
@@ -262,17 +257,10 @@ export function initSchema(): void {
     INSERT OR IGNORE INTO schools (id, code, name) VALUES ('school_default', 'default', 'Default School');
   `);
 
-  const hasTeacherSchoolId = teachersInfo.some(col => col.name === 'school_id');
-  if (!hasTeacherSchoolId) {
-    _db.exec("ALTER TABLE teachers ADD COLUMN school_id TEXT NOT NULL DEFAULT 'school_default'");
-  }
+  ensureColumn('teachers', 'school_id', "TEXT NOT NULL DEFAULT 'school_default'");
   _db.exec('CREATE INDEX IF NOT EXISTS idx_teachers_school_id ON teachers(school_id)');
 
-  const classesInfoForSchool = _db.pragma('table_info(classes)') as Array<{ name: string }>;
-  const hasClassSchoolId = classesInfoForSchool.some(col => col.name === 'school_id');
-  if (!hasClassSchoolId) {
-    _db.exec("ALTER TABLE classes ADD COLUMN school_id TEXT NOT NULL DEFAULT 'school_default'");
-  }
+  ensureColumn('classes', 'school_id', "TEXT NOT NULL DEFAULT 'school_default'");
   _db.exec('CREATE INDEX IF NOT EXISTS idx_classes_school_id ON classes(school_id)');
 
   _db.exec(`CREATE INDEX IF NOT EXISTS idx_invite_codes_class_active ON invite_codes (class_id, expires_at, used_by)`);
@@ -304,10 +292,12 @@ export function initSchema(): void {
   if (teacherCount.count === 0) {
     const defaultPassword = getDefaultPassword();
     const hash = bcrypt.hashSync(defaultPassword, BCRYPT_COST);
-    _db.prepare('INSERT INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, ?)').run(
+    const insertResult = _db.prepare('INSERT OR IGNORE INTO teachers (id, username, password_hash, name, is_admin) VALUES (?, ?, ?, ?, ?)').run(
       DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME, 1
     );
-    console.log(`[db] Default administrator created. Password: ${defaultPassword} (change immediately!)`);
+    if (insertResult.changes > 0) {
+      console.log(`[db] Default administrator created. Password: ${defaultPassword} (change immediately!)`);
+    }
 
     _db.exec(`UPDATE classes SET teacher_id = '${DEFAULTS.TEACHER_ID}' WHERE teacher_id IS NULL`);
     _db.exec("INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes");
