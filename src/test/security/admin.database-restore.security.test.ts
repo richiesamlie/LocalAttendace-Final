@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { teacherService } from '../../../services';
+import db from '../../../db';
 import { JWT_SECRET } from '../../../src/routes/middleware';
 
 process.env.DEFAULT_ADMIN_PASSWORD ??= 'test-default-admin-password';
@@ -58,5 +59,31 @@ describe('Admin database restore endpoint security', () => {
 
     expect(res.status).toBe(400);
     expect(String(res.body.error)).toMatch(/Invalid SQLite database file/i);
+  });
+
+  it('releases restore lock after rejected restore attempts so db.enqueueWrite does not deadlock', async () => {
+    const cookie = await mintAdminCookie();
+
+    const badTypeRes = await request(app)
+      .post('/api/admin/database/restore')
+      .set('Cookie', cookie)
+      .set('Content-Type', 'application/json')
+      .send({ data: 'not sqlite' });
+    expect(badTypeRes.status).toBe(415);
+
+    const badPayloadRes = await request(app)
+      .post('/api/admin/database/restore')
+      .set('Cookie', cookie)
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from('not-a-sqlite-file'));
+    expect(badPayloadRes.status).toBe(400);
+
+    const writeOutcome = await Promise.race([
+      db.enqueueWrite(() => undefined).then(() => 'resolved'),
+      new Promise<string>((_resolve, reject) =>
+        setTimeout(() => reject(new Error('write queue deadlocked after rejected restore')), 1000),
+      ),
+    ]);
+    expect(writeOutcome).toBe('resolved');
   });
 });

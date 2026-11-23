@@ -1,14 +1,13 @@
 import express from 'express';
 import { randomUUID } from 'crypto';
 import { classService, teacherService, inviteService, studentService, recordService, eventService, timetableService, noteService, seatingService, DEFAULT_SCHOOL_ID } from '../../services';
-import { requireAuth, requireClassAccess, requireClassOwner, requireRole, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, requireClassOwner, requireRole, resolveCallerSchoolId, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { validate, classSchema, classUpdateSchema, classTeacherAddSchema, classTeacherRoleUpdateSchema, classInviteCreateSchema } from '../../src/lib/validation';
 import type { ClassWithRole, ClassTeacher } from '../../src/types/db';
 
 export const classRouter = express.Router();
-classRouter.use(postLimiter);
 
-classRouter.get('/', postLimiter, requireAuth, async (req, res) => {
+classRouter.get('/', readLimiter, requireAuth, async (req, res) => {
   try {
     const teacherId = req.teacherId;
 
@@ -99,7 +98,7 @@ classRouter.delete('/:id', postLimiter, requireAuth, withWriteQueue(async (req, 
   return res.json({ success: true });
 }));
 
-classRouter.get('/:classId/dashboard-payload', postLimiter, requireClassAccess('classId'), async (req, res) => {
+classRouter.get('/:classId/dashboard-payload', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const [students, records, events, timetable, dailyNotes, seatingLayout] = await Promise.all([
@@ -194,7 +193,7 @@ classRouter.get('/:classId/dashboard-payload', postLimiter, requireClassAccess('
   }
 });
 
-classRouter.get('/:classId/teachers', postLimiter, requireClassAccess('classId'), async (req, res) => {
+classRouter.get('/:classId/teachers', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const teachers = await classService.getTeachers(classId);
@@ -280,7 +279,7 @@ classRouter.post('/:classId/invites', postLimiter, requireRole('classId', 'teach
   return res.json({ success: true, code, inviteUrl, role: inviteRole, expiresAt });
 }));
 
-classRouter.get('/:classId/invites', postLimiter, requireRole('classId', 'teacher'), async (req, res) => {
+classRouter.get('/:classId/invites', readLimiter, requireRole('classId', 'teacher'), async (req, res) => {
   try {
     await inviteService.deleteExpired();
     const codes = await inviteService.getByClass(req.params.classId);

@@ -1,14 +1,13 @@
 import express from 'express';
 import { seatingService } from '../../services';
-import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireClassAccess, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, seatingSeatUpdatePayloadSchema, seatingLayoutPayloadSchema } from '../../src/lib/validation';
 import type { SeatingLayoutRow } from '../../src/types/db';
 
 export const seatingRouter = express.Router();
-seatingRouter.use(postLimiter);
 
-seatingRouter.get('/classes/:classId/seating', postLimiter, requireClassAccess('classId'), async (req, res) => {
+seatingRouter.get('/classes/:classId/seating', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const layout = await seatingService.getByClass(classId) as SeatingLayoutRow[];

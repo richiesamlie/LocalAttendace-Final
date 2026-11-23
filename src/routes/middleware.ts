@@ -7,8 +7,9 @@ import db from '../../db';
 import type { Session, ClassTeacher, Teacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
-// Disable rate limiting in test environment to avoid issues with integration tests
-const skipRateLimitInTests = process.env.NODE_ENV === 'test';
+// Disable rate limiting in test environment unless explicitly opted in by rate-limit tests
+const shouldSkipRateLimit = () =>
+  process.env.NODE_ENV === 'test' && process.env.ENABLE_RATE_LIMIT_IN_TESTS !== 'true';
 
 // Cookie security policy.
 // - Default: secure cookies in production, plain cookies in dev/test.
@@ -58,7 +59,7 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
   skipSuccessfulRequests: true, // Only count failed attempts for rate limiting
-  skip: () => skipRateLimitInTests,
+  skip: shouldSkipRateLimit,
 });
 
 // General POST/API request rate limiter
@@ -68,7 +69,17 @@ export const postLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please try again later.' },
-  skip: () => skipRateLimitInTests,
+  skip: shouldSkipRateLimit,
+});
+
+// Read/GET request rate limiter (higher ceiling than write routes)
+export const readLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 2000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+  skip: shouldSkipRateLimit,
 });
 
 // Invite-code redemption rate limiter (F-008).
@@ -81,7 +92,7 @@ export const inviteRedeemLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many invite redemption attempts. Please try again in 15 minutes.' },
-  skip: () => skipRateLimitInTests,
+  skip: shouldSkipRateLimit,
 });
 
 export const JWT_SECRET: string = (() => {

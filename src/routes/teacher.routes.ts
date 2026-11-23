@@ -1,7 +1,7 @@
 import express from 'express';
 import { teacherService, classService, schoolService, DEFAULT_SCHOOL_ID } from '../../services';
 import { hashPassword } from '../../src/lib/bcrypt';
-import { requireAuth, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, resolveCallerSchoolId, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { validate, teacherSchema } from '../../src/lib/validation';
 
 interface ClassRole {
@@ -9,9 +9,8 @@ interface ClassRole {
 }
 
 export const teacherRouter = express.Router();
-teacherRouter.use(postLimiter);
 
-teacherRouter.get('/', postLimiter, requireAuth, async (req, res) => {
+teacherRouter.get('/', readLimiter, requireAuth, async (req, res) => {
   try {
     const callerSchoolId = await resolveCallerSchoolId(req);
     const teachers = await teacherService.getAll(callerSchoolId);

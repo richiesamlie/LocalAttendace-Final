@@ -19,6 +19,7 @@ import { initStatements } from "./src/db/statements";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
+let activeHttpServer: ReturnType<typeof createHttpServer> | null = null;
 
 // Get allowed origins from environment or default to localhost
 const getAllowedOrigins = () => {
@@ -86,6 +87,7 @@ async function startServer() {
   
   const app = express();
   const httpServer = createHttpServer(app);
+  activeHttpServer = httpServer;
   const PORT = 3000;
 
   // Initialise Socket.io on the same HTTP server
@@ -248,6 +250,20 @@ async function startServer() {
     });
   }
 
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    console.error(`\n\x1b[31m[server] Fatal HTTP server error:\x1b[0m`, err.message);
+    logServerError('HTTP SERVER ERROR', err);
+    const exitTimer = setTimeout(() => process.exit(1), 500);
+    exitTimer.unref();
+    try {
+      errorLogStream.end(() => {
+        process.exit(1);
+      });
+    } catch {
+      process.exit(1);
+    }
+  });
+
   httpServer.listen(PORT, HOST, () => {
     console.log(`\n========================================`);
     console.log(` Teacher Assistant Server Started`);
@@ -324,11 +340,27 @@ process.on('unhandledRejection', (reason) => {
   logServerError('UNHANDLED REJECTION', reason);
 });
 
+let isShuttingDown = false;
 const handleShutdown = () => {
-  try {
-    checkpointWal();
-  } catch (_e) {
-    void 0;
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  const finalize = () => {
+    try {
+      checkpointWal();
+    } catch (_e) {
+      void 0;
+    }
+    process.exit(0);
+  };
+
+  const forceExitTimer = setTimeout(finalize, 2000);
+  forceExitTimer.unref();
+
+  if (activeHttpServer && activeHttpServer.listening) {
+    activeHttpServer.close(finalize);
+  } else {
+    finalize();
   }
 };
 process.on('SIGTERM', handleShutdown);

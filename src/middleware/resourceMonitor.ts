@@ -91,6 +91,7 @@ export class ResourceMonitor {
     this.intervalHandle = setInterval(() => {
       this.sample();
     }, this.config.sampleIntervalMs);
+    this.intervalHandle.unref();
 
     // Take initial sample
     this.sample();

@@ -1,7 +1,7 @@
 import express from 'express';
 import { recordService, classService, studentService, teacherService, isPostgres, DEFAULT_SCHOOL_ID } from '../../services';
 import db from '../../db';
-import { requireAuth, requireClassAccess, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, resolveCallerSchoolId, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, attendanceRecordsPayloadSchema } from '../../src/lib/validation';
 
@@ -21,9 +21,8 @@ interface AttendanceDbRow {
 }
 
 export const recordRouter = express.Router();
-recordRouter.use(postLimiter);
 
-recordRouter.get('/classes/:classId/records', postLimiter, requireClassAccess('classId'), async (req, res) => {
+recordRouter.get('/classes/:classId/records', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const { from, to } = req.query as { from?: string; to?: string };

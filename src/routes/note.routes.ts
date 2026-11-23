@@ -1,14 +1,13 @@
 import express from 'express';
 import { noteService } from '../../services';
-import { requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireClassAccess, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, dailyNotePayloadSchema } from '../../src/lib/validation';
 import type { DailyNote } from '../../src/types/db';
 
 export const noteRouter = express.Router();
-noteRouter.use(postLimiter);
 
-noteRouter.get('/classes/:classId/daily-notes', postLimiter, requireClassAccess('classId'), async (req, res) => {
+noteRouter.get('/classes/:classId/daily-notes', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const notes = await noteService.getByClass(classId) as DailyNote[];

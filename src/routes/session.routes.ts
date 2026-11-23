@@ -1,13 +1,12 @@
 import express from 'express';
 import { sessionService } from '../../services';
-import { requireAuth, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { validate, sessionRevokeSchema } from '../../src/lib/validation';
 import type { Session } from '../../src/types/db';
 
 export const sessionRouter = express.Router();
-sessionRouter.use(postLimiter);
 
-sessionRouter.get('/', postLimiter, requireAuth, async (req, res) => {
+sessionRouter.get('/', readLimiter, requireAuth, async (req, res) => {
   try {
     const teacherId = req.teacherId;
     await sessionService.deleteExpired();

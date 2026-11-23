@@ -1,6 +1,6 @@
 import express from 'express';
 import { timetableService } from '../../services';
-import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { validate, timetableSlotSchema, timetableSlotUpdateSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 import type { TimetableSlot } from '../../src/types/db';
@@ -15,9 +15,8 @@ interface TimetableRow {
 }
 
 export const timetableRouter = express.Router();
-timetableRouter.use(postLimiter);
 
-timetableRouter.get('/classes/:classId/timetable', postLimiter, requireClassAccess('classId'), async (req, res) => {
+timetableRouter.get('/classes/:classId/timetable', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const slots = await timetableService.getByClass(classId) as TimetableRow[];

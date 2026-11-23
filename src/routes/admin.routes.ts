@@ -40,7 +40,7 @@ adminRouter.get('/settings', async (req, res) => {
   }
 });
 
-adminRouter.post('/settings', postLimiter, validate(settingSchema), withWriteQueue(async (req, res) => {
+adminRouter.post('/settings', validate(settingSchema), withWriteQueue(async (req, res) => {
   const { key, value } = req.body;
   const callerSchoolId = await resolveCallerSchoolId(req);
   if (key === 'adminPassword') {
@@ -81,9 +81,20 @@ adminRouter.post('/database/backup', requireSystemAdmin, async (_req, res) => {
 });
 
 adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Promise<void> => {
+  let lockAcquired = false;
+  let lockReleased = false;
+  const safeReleaseRestoreLock = () => {
+    if (lockAcquired && !lockReleased) {
+      lockReleased = true;
+      releaseRestoreLock();
+    }
+  };
+
   try {
     await db.enqueueWrite(() => {});
     acquireRestoreLock();
+    lockAcquired = true;
+    res.on('close', safeReleaseRestoreLock);
 
     const dbPath = path.resolve(process.env.DB_FILE || DB_FILE);
     const backupDir = path.join(process.cwd(), 'backups');
@@ -101,7 +112,7 @@ adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Prom
     const maxRestoreBytes = 25 * 1024 * 1024;
     const contentType = String(req.headers['content-type'] || '').toLowerCase();
     if (!contentType.includes('application/octet-stream')) {
-      releaseRestoreLock();
+      safeReleaseRestoreLock();
       res.status(415).json({ error: 'Unsupported content type. Use application/octet-stream' });
       return;
     }
@@ -111,23 +122,29 @@ adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Prom
     req.on('data', (chunk: Buffer) => {
       totalBytes += chunk.length;
       if (totalBytes > maxRestoreBytes) {
-        res.status(413).json({ error: 'Backup file too large. Maximum 25MB' });
+        safeReleaseRestoreLock();
+        if (!res.headersSent) {
+          res.status(413).json({ error: 'Backup file too large. Maximum 25MB' });
+        }
         req.destroy();
         return;
       }
       chunks.push(chunk);
     });
     req.on('error', () => {
-      releaseRestoreLock();
+      safeReleaseRestoreLock();
       if (!res.headersSent) {
         res.status(400).json({ error: 'Failed to read restore payload' });
       }
     });
     req.on('end', () => {
-      if (res.headersSent) return;
+      if (res.headersSent) {
+        safeReleaseRestoreLock();
+        return;
+      }
       const fileBuffer = Buffer.concat(chunks);
       if (fileBuffer.length < 100 || fileBuffer.toString('utf8', 0, 15) !== 'SQLite format 3') {
-        releaseRestoreLock();
+        safeReleaseRestoreLock();
         res.status(400).json({ error: 'Invalid SQLite database file' });
         return;
       }
@@ -137,11 +154,11 @@ adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Prom
       } catch (_err) {
         res.status(500).json({ error: 'Failed to restore database' });
       } finally {
-        releaseRestoreLock();
+        safeReleaseRestoreLock();
       }
     });
   } catch (_error) {
-    releaseRestoreLock();
+    safeReleaseRestoreLock();
     res.status(500).json({ error: 'Failed to restore database' });
   }
 });

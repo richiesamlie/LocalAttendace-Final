@@ -1,7 +1,7 @@
 import express from 'express';
 import { studentService, isPostgres } from '../../services';
 import db from '../../db';
-import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { validate, studentSchema, studentUpdateSchema, studentSyncPayloadSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 
@@ -26,9 +26,8 @@ interface StudentSyncItem {
 }
 
 export const studentRouter = express.Router();
-studentRouter.use(postLimiter);
 
-studentRouter.get('/:classId/students', postLimiter, requireClassAccess('classId'), async (req, res) => {
+studentRouter.get('/:classId/students', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const includeArchived = req.query.includeArchived === 'true';

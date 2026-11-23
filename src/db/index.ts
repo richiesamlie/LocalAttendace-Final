@@ -25,6 +25,7 @@ function startCheckpointInterval(): void {
       // Ignore checkpoint errors during active transactions
     }
   }, 60000);
+  checkpointInterval.unref();
 }
 
 startCheckpointInterval();

@@ -24,6 +24,9 @@ import {
 
 const router = express.Router();
 
+// Mount health probe first so it bypasses route-specific rate limiters
+router.use('/', healthRouter);
+
 // Mount all route modules
 router.use('/auth', authRouter);
 router.use('/classes', classRouter);
@@ -64,6 +67,5 @@ router.use('/invites', inviteRouter);
 router.use('/sessions', sessionRouter);
 router.use('/teachers', teacherRouter);
 router.use('/admin', adminRouter);
-router.use('/', healthRouter);
 
 export default router;

@@ -15,7 +15,7 @@ import { validate, loginSchema, registerSchoolSchema } from '../../src/lib/valid
 import { hashPassword, needsRehash } from '../../src/lib/bcrypt';
 import {
   authLimiter,
-  postLimiter,
+  readLimiter,
   JWT_SECRET,
   requireAuth,
   withWriteQueue,
@@ -380,7 +380,7 @@ authRouter.post('/refresh', async (req, res) => {
   return res.json({ success: true, teacherId: teacher.id, schoolId: resolvedSchoolId });
 });
 
-authRouter.get('/verify', postLimiter, requireAuth, async (req, res) => {
+authRouter.get('/verify', readLimiter, requireAuth, async (req, res) => {
   const teacherId = req.teacherId;
   const teacher = await teacherService.getById(teacherId);
   if (!teacher) return res.status(401).json({ authenticated: false });
@@ -397,7 +397,7 @@ authRouter.get('/verify', postLimiter, requireAuth, async (req, res) => {
   });
 });
 
-authRouter.get('/me', postLimiter, requireAuth, async (req, res) => {
+authRouter.get('/me', readLimiter, requireAuth, async (req, res) => {
   const teacherId = req.teacherId;
   const teacher = await teacherService.getById(teacherId) as Teacher | null;
   if (!teacher) {

@@ -93,6 +93,12 @@ namespace TeacherAssistant
         private ToolStripMenuItem modeToggleItem;
         private ToolStripMenuItem copyItem;
         private SynchronizationContext syncContext;
+        private int currentEpoch = 0;
+        private volatile bool isStopping = false;
+        private int consecutiveCrashCount = 0;
+        private DateTime lastStartTime = DateTime.MinValue;
+        private const int MaxAutoRestarts = 3;
+        private readonly object logLock = new object();
 
         public TrayApplicationContext(string[] args)
         {
@@ -122,10 +128,10 @@ namespace TeacherAssistant
             Application.ApplicationExit += (s, e) => StopServer();
 
             InitializeTray();
-            StartServer();
+            int startEpoch = StartServer();
 
             // Wait for server health in background and optionally open browser
-            WaitForServerHealth(!isStartupMode);
+            WaitForServerHealth(!isStartupMode, startEpoch);
         }
 
         private void InitializeTray()
@@ -198,17 +204,16 @@ namespace TeacherAssistant
             notifyIcon.BalloonTipClicked += (s, e) => OpenBrowser();
         }
 
-        private int currentEpoch = 0;
-
         private void ToggleNetworkMode()
         {
             isNetworkMode = !isNetworkMode;
             UpdateModeUI();
 
             statusMenuItem.Text = "⏳ Server: Switching mode...";
+            consecutiveCrashCount = 0;
             StopServer();
-            StartServer();
-            WaitForServerHealth(true);
+            int startEpoch = StartServer();
+            WaitForServerHealth(true, startEpoch);
 
             try
             {
@@ -258,12 +263,19 @@ namespace TeacherAssistant
             notifyIcon.Text = text;
         }
 
-        private void StartServer()
+        private int StartServer()
         {
+            int startEpoch = Interlocked.Increment(ref currentEpoch);
+            isStopping = false;
+
             try
             {
-                // Kill any lingering process on port 3000
+                // Kill any lingering process on port 3000 and wait until port is free
                 KillProcessOnPort(3000);
+                WaitForPortRelease(3000, 3000);
+
+                RotateLogIfLarge("server-stdout.log", 5 * 1024 * 1024);
+                RotateLogIfLarge("server-stderr.log", 5 * 1024 * 1024);
 
                 string nodeExe = Path.Combine(baseDir, @"node\node.exe");
                 if (!File.Exists(nodeExe))
@@ -296,24 +308,119 @@ namespace TeacherAssistant
                     WorkingDirectory = baseDir,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardErrorEncoding = System.Text.Encoding.UTF8
                 };
 
                 psi.EnvironmentVariables["COOKIE_SECURE"] = "false";
                 psi.EnvironmentVariables["NODE_ENV"] = "production";
 
-                nodeProcess = Process.Start(psi);
+                var startedProc = new Process();
+                startedProc.StartInfo = psi;
+                startedProc.EnableRaisingEvents = true;
+
+                startedProc.OutputDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        AppendLog("server-stdout.log", e.Data);
+                    }
+                };
+                startedProc.ErrorDataReceived += (s, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        AppendLog("server-stderr.log", e.Data);
+                    }
+                };
+                startedProc.Exited += (s, e) => OnNodeProcessExited(startedProc, startEpoch);
+
+                lastStartTime = DateTime.UtcNow;
+                startedProc.Start();
+                startedProc.BeginOutputReadLine();
+                startedProc.BeginErrorReadLine();
+                nodeProcess = startedProc;
             }
             catch (Exception ex)
             {
+                AppendLog("tray-error.log", DateTime.Now.ToString("s") + " [StartServer] " + ex);
                 MessageBox.Show("Failed to start Teacher Assistant backend:\n" + ex.Message,
                     "Teacher Assistant Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+
+            return startEpoch;
         }
 
-        private void WaitForServerHealth(bool openBrowserOnSuccess = true)
+        private void OnNodeProcessExited(Process proc, int epoch)
         {
-            int myEpoch = Interlocked.Increment(ref currentEpoch);
+            if (isStopping || epoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+            {
+                return;
+            }
+
+            int exitCode = -1;
+            try { exitCode = proc.ExitCode; } catch { }
+
+            AppendLog("tray-error.log", DateTime.Now.ToString("s") + " [ProcessExited] Server exited unexpectedly with code " + exitCode);
+
+            syncContext.Post(__ =>
+            {
+                if (isStopping || epoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+                {
+                    return;
+                }
+
+                if ((DateTime.UtcNow - lastStartTime).TotalSeconds >= 60)
+                {
+                    consecutiveCrashCount = 0;
+                }
+                consecutiveCrashCount++;
+
+                try
+                {
+                    if (consecutiveCrashCount <= MaxAutoRestarts)
+                    {
+                        statusMenuItem.Text = "⏳ Server: Recovering (" + consecutiveCrashCount + "/" + MaxAutoRestarts + ")...";
+                        UpdateTrayText("Teacher Assistant: Restarting...");
+                        notifyIcon.ShowBalloonTip(3000, "Teacher Assistant",
+                            "Server stopped unexpectedly (code " + exitCode + "). Restarting automatically...", ToolTipIcon.Warning);
+
+                        ThreadPool.QueueUserWorkItem(___ =>
+                        {
+                            Thread.Sleep(2000);
+                            if (isStopping || epoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+                            {
+                                return;
+                            }
+                            syncContext.Post(____ =>
+                            {
+                                if (isStopping || epoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+                                {
+                                    return;
+                                }
+                                int nextEpoch = StartServer();
+                                WaitForServerHealth(false, nextEpoch);
+                            }, null);
+                        });
+                    }
+                    else
+                    {
+                        statusMenuItem.Text = "⚠️ Server: Stopped (crashed)";
+                        UpdateTrayText("Teacher Assistant: Stopped");
+                        notifyIcon.ShowBalloonTip(5000, "Teacher Assistant",
+                            "Server crashed repeatedly (exit code " + exitCode + "). Check server-stderr.log or server-error.log, then right-click tray icon to restart.", ToolTipIcon.Error);
+                    }
+                }
+                catch { }
+            }, null);
+        }
+
+        private void WaitForServerHealth(bool openBrowserOnSuccess, int expectedEpoch)
+        {
+            int myEpoch = expectedEpoch;
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -384,17 +491,13 @@ namespace TeacherAssistant
                                     OpenBrowser();
                                 }
                             }
-                            else
+                            else if (nodeProcess == null || !nodeProcess.HasExited)
                             {
-                                string failMsg = (nodeProcess != null && nodeProcess.HasExited)
-                                    ? "Server exited unexpectedly (exit code " + nodeProcess.ExitCode + ")"
-                                    : "Server failed to respond on port 3000";
-
                                 statusMenuItem.Text = "⚠️ Server: Failed / Stopped";
                                 UpdateTrayText("Teacher Assistant: Stopped");
 
                                 notifyIcon.ShowBalloonTip(4000, "Teacher Assistant",
-                                    failMsg + ".\nRight-click tray icon to restart.", ToolTipIcon.Warning);
+                                    "Server failed to respond on port 3000.\nRight-click tray icon to restart.", ToolTipIcon.Warning);
                             }
                         }
                         catch { }
@@ -402,14 +505,7 @@ namespace TeacherAssistant
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        File.AppendAllText(
-                            Path.Combine(baseDir, "tray-error.log"),
-                            DateTime.Now.ToString("s") + " [HealthCheck] " + ex + Environment.NewLine
-                        );
-                    }
-                    catch { }
+                    AppendLog("tray-error.log", DateTime.Now.ToString("s") + " [HealthCheck] " + ex);
                 }
             });
         }
@@ -417,9 +513,10 @@ namespace TeacherAssistant
         private void RestartServer()
         {
             statusMenuItem.Text = "⏳ Server: Restarting...";
+            consecutiveCrashCount = 0;
             StopServer();
-            StartServer();
-            WaitForServerHealth(false);
+            int startEpoch = StartServer();
+            WaitForServerHealth(false, startEpoch);
             try
             {
                 notifyIcon.ShowBalloonTip(2000, "Teacher Assistant", "Server is restarting...", ToolTipIcon.Info);
@@ -429,6 +526,9 @@ namespace TeacherAssistant
 
         private void StopServer()
         {
+            isStopping = true;
+            Interlocked.Increment(ref currentEpoch);
+
             try
             {
                 if (nodeProcess != null && !nodeProcess.HasExited)
@@ -440,6 +540,54 @@ namespace TeacherAssistant
             catch { }
 
             KillProcessOnPort(3000);
+            WaitForPortRelease(3000, 3000);
+        }
+
+        private void WaitForPortRelease(int port, int timeoutMs)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            while (DateTime.UtcNow < deadline && IsPortInUse(port))
+            {
+                Thread.Sleep(100);
+            }
+        }
+
+        private void AppendLog(string filename, string line)
+        {
+            try
+            {
+                string logPath = Path.Combine(baseDir, filename);
+                lock (logLock)
+                {
+                    File.AppendAllText(logPath, line + Environment.NewLine, System.Text.Encoding.UTF8);
+                }
+            }
+            catch { }
+        }
+
+        private void RotateLogIfLarge(string filename, long maxBytes)
+        {
+            try
+            {
+                string logPath = Path.Combine(baseDir, filename);
+                lock (logLock)
+                {
+                    if (File.Exists(logPath))
+                    {
+                        var info = new FileInfo(logPath);
+                        if (info.Length > maxBytes)
+                        {
+                            string oldPath = logPath + ".old";
+                            if (File.Exists(oldPath))
+                            {
+                                File.Delete(oldPath);
+                            }
+                            File.Move(logPath, oldPath);
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         private bool IsPortInUse(int port)

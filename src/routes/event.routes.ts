@@ -1,7 +1,7 @@
 import express from 'express';
 import { eventService, isPostgres } from '../../services';
 import db from '../../db';
-import { requireAuth, requireClassAccess, withWriteQueue, postLimiter } from './middleware';
+import { requireAuth, requireClassAccess, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { validate, eventPayloadSchema, eventUpdateSchema } from '../../src/lib/validation';
 import { io } from '../../server';
 import type { CalendarEvent } from '../../src/types/db';
@@ -15,9 +15,8 @@ interface EventPayload {
 }
 
 export const eventRouter = express.Router();
-eventRouter.use(postLimiter);
 
-eventRouter.get('/classes/:classId/events', postLimiter, requireClassAccess('classId'), async (req, res) => {
+eventRouter.get('/classes/:classId/events', readLimiter, requireClassAccess('classId'), async (req, res) => {
   try {
     const classId = req.params.classId;
     const events = await eventService.getByClass(classId);
