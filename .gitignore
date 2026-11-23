@@ -25,3 +25,4 @@ audit/
 release/
 node-portable/
 tray/*.exe
+.secrets/

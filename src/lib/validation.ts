@@ -149,6 +149,14 @@ export const studentSyncPayloadSchema = z.object({
   students: z.array(studentSyncItemSchema),
 });
 
+export const updateInstallSchema = z.object({
+  mode: z.enum(['now', 'on-exit']),
+});
+
+export const updateConfigSchema = z.object({
+  autoCheckEnabled: z.boolean(),
+});
+
 export function validate(schema: z.ZodSchema) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {

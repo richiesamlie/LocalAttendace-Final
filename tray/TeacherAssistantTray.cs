@@ -4,6 +4,8 @@ using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -92,6 +94,17 @@ namespace TeacherAssistant
         private ToolStripMenuItem statusMenuItem;
         private ToolStripMenuItem modeToggleItem;
         private ToolStripMenuItem copyItem;
+        private ToolStripMenuItem versionMenuItem;
+        private ToolStripMenuItem checkUpdateMenuItem;
+        private ToolStripMenuItem installUpdateMenuItem;
+        private ToolStripMenuItem installOnExitMenuItem;
+        private ToolStripMenuItem autoCheckMenuItem;
+        private UpdateManager updateManager;
+        private LocalControlServer controlServer;
+        private string trayControlToken;
+        private string serverShutdownToken;
+        private System.Threading.Timer autoCheckTimer;
+        private volatile bool isShuttingDownTray = false;
         private SynchronizationContext syncContext;
         private int currentEpoch = 0;
         private volatile bool isStopping = false;
@@ -123,15 +136,34 @@ namespace TeacherAssistant
                 appUrl = "http://" + localIp + ":3000";
             }
 
+            trayControlToken = GenerateHexToken(32);
+            serverShutdownToken = GenerateHexToken(32);
+
+            updateManager = new UpdateManager(
+                baseDir,
+                delegate { return isNetworkMode; },
+                delegate { return isStartupMode; },
+                StopServer,
+                StartServer,
+                RequestTrayExitFromUpdater,
+                LogTrayMessage
+            );
+            updateManager.StatusChanged += OnUpdateStatusChanged;
+            updateManager.NotifyUser += OnUpdateNotifyUser;
+            controlServer = new LocalControlServer(trayControlToken, updateManager, LogTrayMessage);
+
             // Hook system shutdown/logoff to clean up child process
-            SystemEvents.SessionEnding += (s, e) => StopServer();
-            Application.ApplicationExit += (s, e) => StopServer();
+            SystemEvents.SessionEnding += (s, e) => ShutdownTrayResources(false);
+            Application.ApplicationExit += (s, e) => ShutdownTrayResources(false);
 
             InitializeTray();
             int startEpoch = StartServer();
 
             // Wait for server health in background and optionally open browser
             WaitForServerHealth(!isStartupMode, startEpoch);
+
+            // Background update check: 30s after startup (if enabled & >24h since last check), then every 24h
+            autoCheckTimer = new System.Threading.Timer(OnAutoCheckTimerTick, null, 30000, 24 * 60 * 60 * 1000);
         }
 
         private void InitializeTray()
@@ -167,6 +199,27 @@ namespace TeacherAssistant
 
             var restartItem = new ToolStripMenuItem("🔄 Restart Server", null, (s, e) => RestartServer());
             menu.Items.Add(restartItem);
+
+            menu.Items.Add(new ToolStripSeparator());
+
+            versionMenuItem = new ToolStripMenuItem("Teacher Assistant v" + updateManager.CurrentVersion, null);
+            versionMenuItem.Enabled = false;
+            menu.Items.Add(versionMenuItem);
+
+            checkUpdateMenuItem = new ToolStripMenuItem("Check for Updates", null, (s, e) => updateManager.StartCheckAsync(true));
+            menu.Items.Add(checkUpdateMenuItem);
+
+            installUpdateMenuItem = new ToolStripMenuItem("Install Update", null, (s, e) => updateManager.TryStartInstallAsync(false));
+            installUpdateMenuItem.Visible = false;
+            menu.Items.Add(installUpdateMenuItem);
+
+            installOnExitMenuItem = new ToolStripMenuItem("Install Update on Exit", null, (s, e) => updateManager.TryStartInstallAsync(true));
+            installOnExitMenuItem.Visible = false;
+            menu.Items.Add(installOnExitMenuItem);
+
+            autoCheckMenuItem = new ToolStripMenuItem("Auto-Check for Updates", null, (s, e) => updateManager.SetAutoCheckEnabled(!updateManager.AutoCheckEnabled));
+            autoCheckMenuItem.Checked = updateManager.AutoCheckEnabled;
+            menu.Items.Add(autoCheckMenuItem);
 
             menu.Items.Add(new ToolStripSeparator());
 
@@ -317,6 +370,9 @@ namespace TeacherAssistant
 
                 psi.EnvironmentVariables["COOKIE_SECURE"] = "false";
                 psi.EnvironmentVariables["NODE_ENV"] = "production";
+                psi.EnvironmentVariables["TRAY_CONTROL_PORT"] = controlServer != null ? controlServer.Port.ToString() : "";
+                psi.EnvironmentVariables["TRAY_CONTROL_TOKEN"] = trayControlToken ?? "";
+                psi.EnvironmentVariables["SERVER_SHUTDOWN_TOKEN"] = serverShutdownToken ?? "";
 
                 var startedProc = new Process();
                 startedProc.StartInfo = psi;
@@ -356,7 +412,7 @@ namespace TeacherAssistant
 
         private void OnNodeProcessExited(Process proc, int epoch)
         {
-            if (isStopping || epoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
+            if (isStopping || (updateManager != null && updateManager.IsApplyingUpdate) || epoch != Interlocked.CompareExchange(ref currentEpoch, 0, 0))
             {
                 return;
             }
@@ -533,14 +589,45 @@ namespace TeacherAssistant
             {
                 if (nodeProcess != null && !nodeProcess.HasExited)
                 {
-                    nodeProcess.Kill();
-                    nodeProcess.WaitForExit(3000);
+                    TryGracefulServerShutdown();
+                    if (!nodeProcess.WaitForExit(4000))
+                    {
+                        nodeProcess.Kill();
+                        nodeProcess.WaitForExit(3000);
+                    }
                 }
             }
             catch { }
 
             KillProcessOnPort(3000);
             WaitForPortRelease(3000, 3000);
+        }
+
+        private void TryGracefulServerShutdown()
+        {
+            if (string.IsNullOrEmpty(serverShutdownToken))
+            {
+                return;
+            }
+            try
+            {
+                var req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:3000/api/_internal/shutdown");
+                req.Method = "POST";
+                req.Timeout = 2000;
+                req.ReadWriteTimeout = 2000;
+                req.ContentType = "application/json";
+                req.Headers["x-tray-shutdown-token"] = serverShutdownToken;
+                byte[] body = Encoding.UTF8.GetBytes("{}");
+                req.ContentLength = body.Length;
+                using (Stream reqStream = req.GetRequestStream())
+                {
+                    reqStream.Write(body, 0, body.Length);
+                }
+                using (var resp = (HttpWebResponse)req.GetResponse())
+                {
+                }
+            }
+            catch { }
         }
 
         private void WaitForPortRelease(int port, int timeoutMs)
@@ -664,14 +751,187 @@ namespace TeacherAssistant
             return "127.0.0.1";
         }
 
-        private void Exit()
+        private void OnAutoCheckTimerTick(object state)
         {
-            StopServer();
+            try
+            {
+                if (!isShuttingDownTray && updateManager != null && updateManager.ShouldRunScheduledAutoCheck())
+                {
+                    updateManager.StartCheckAsync(false);
+                }
+            }
+            catch { }
+        }
+
+        private void OnUpdateStatusChanged(UpdateStatus st)
+        {
+            if (isShuttingDownTray || st == null) return;
+            syncContext.Post(delegate
+            {
+                UpdateTrayMenuFromStatus(st);
+            }, null);
+        }
+
+        private void OnUpdateNotifyUser(string title, string body, bool isError)
+        {
+            if (isShuttingDownTray || notifyIcon == null) return;
+            syncContext.Post(delegate
+            {
+                try
+                {
+                    if (notifyIcon != null && notifyIcon.Visible)
+                    {
+                        notifyIcon.ShowBalloonTip(4000, title, body, isError ? ToolTipIcon.Warning : ToolTipIcon.Info);
+                    }
+                }
+                catch { }
+            }, null);
+        }
+
+        private void UpdateTrayMenuFromStatus(UpdateStatus st)
+        {
+            if (st == null || isShuttingDownTray) return;
+            try
+            {
+                if (versionMenuItem != null)
+                {
+                    versionMenuItem.Text = "Teacher Assistant v" + st.currentVersion;
+                }
+                if (statusMenuItem != null && (st.state == "up-to-date" || st.state == "rolled-back") && nodeProcess != null && !nodeProcess.HasExited)
+                {
+                    statusMenuItem.Text = isNetworkMode
+                        ? "🟢 Server: Wi-Fi (" + appUrl.Replace("http://", "") + ")"
+                        : "🟢 Server: Running (Local)";
+                    UpdateTrayText("Teacher Assistant: " + (isNetworkMode ? "Wi-Fi" : "Local") + "\n" + appUrl);
+                }
+                if (autoCheckMenuItem != null)
+                {
+                    autoCheckMenuItem.Checked = st.autoCheckEnabled;
+                }
+
+                bool isBusy = st.state == "checking" || st.state == "downloading" || st.state == "applying" || st.state == "restarting";
+                if (checkUpdateMenuItem != null)
+                {
+                    checkUpdateMenuItem.Enabled = !isBusy;
+                    if (st.state == "checking")
+                    {
+                        checkUpdateMenuItem.Text = "Checking for Updates...";
+                    }
+                    else if (st.state == "downloading")
+                    {
+                        checkUpdateMenuItem.Text = "Downloading Update (" + st.downloadProgress + "%)...";
+                    }
+                    else if (st.state == "applying" || st.state == "restarting")
+                    {
+                        checkUpdateMenuItem.Text = "Applying Update...";
+                    }
+                    else
+                    {
+                        checkUpdateMenuItem.Text = "Check for Updates";
+                    }
+                }
+
+                bool hasUpdate = st.state == "available" && !string.IsNullOrEmpty(st.availableVersion);
+                if (installUpdateMenuItem != null)
+                {
+                    installUpdateMenuItem.Visible = hasUpdate;
+                    installUpdateMenuItem.Enabled = hasUpdate && !isBusy;
+                    installUpdateMenuItem.Text = hasUpdate
+                        ? "Install Update (v" + st.availableVersion + ")"
+                        : "Install Update";
+                }
+
+                if (installOnExitMenuItem != null)
+                {
+                    installOnExitMenuItem.Visible = hasUpdate;
+                    installOnExitMenuItem.Enabled = hasUpdate && !isBusy && !st.installOnExit;
+                    installOnExitMenuItem.Checked = st.installOnExit;
+                    installOnExitMenuItem.Text = st.installOnExit
+                        ? "Scheduled: Install v" + st.availableVersion + " on Exit"
+                        : "Install Update on Exit";
+                }
+            }
+            catch { }
+        }
+
+        private void LogTrayMessage(string line)
+        {
+            AppendLog("tray-error.log", line);
+        }
+
+        private static string GenerateHexToken(int byteCount)
+        {
+            byte[] bytes = new byte[byteCount];
+            using (var rng = new RNGCryptoServiceProvider())
+            {
+                rng.GetBytes(bytes);
+            }
+            var sb = new StringBuilder(byteCount * 2);
+            foreach (byte b in bytes)
+            {
+                sb.Append(b.ToString("x2"));
+            }
+            return sb.ToString();
+        }
+
+        private void RequestTrayExitFromUpdater()
+        {
+            syncContext.Post(delegate
+            {
+                ShutdownTrayResources(false);
+                Application.Exit();
+            }, null);
+        }
+
+        private void ShutdownTrayResources(bool applyPendingExitUpdate)
+        {
+            if (isShuttingDownTray) return;
+            isShuttingDownTray = true;
+
+            try
+            {
+                if (autoCheckTimer != null)
+                {
+                    autoCheckTimer.Dispose();
+                    autoCheckTimer = null;
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (controlServer != null)
+                {
+                    controlServer.Dispose();
+                    controlServer = null;
+                }
+            }
+            catch { }
+
+            if (applyPendingExitUpdate && updateManager != null && updateManager.HasPendingExitUpdate())
+            {
+                updateManager.ApplyPendingExitUpdateBlocking();
+            }
+            else
+            {
+                StopServer();
+            }
+
             if (notifyIcon != null)
             {
-                notifyIcon.Visible = false;
-                notifyIcon.Dispose();
+                try
+                {
+                    notifyIcon.Visible = false;
+                    notifyIcon.Dispose();
+                }
+                catch { }
+                notifyIcon = null;
             }
+        }
+
+        private void Exit()
+        {
+            ShutdownTrayResources(true);
             Application.Exit();
         }
     }

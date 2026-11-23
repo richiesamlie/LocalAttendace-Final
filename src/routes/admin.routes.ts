@@ -4,8 +4,17 @@ import fs from 'fs';
 import { teacherService, sessionService, settingService, refreshTokenService } from '../../services';
 import { hashPassword } from '../../src/lib/bcrypt';
 import { safeLog } from '../../src/lib/log-redact';
-import { requireAuth, requireAdmin, requireSystemAdmin, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
-import { validate, settingSchema } from '../../src/lib/validation';
+import { requireAuth, requireAdmin, requireSystemAdmin, requireLocalhost, resolveCallerSchoolId, withWriteQueue, postLimiter } from './middleware';
+import { validate, settingSchema, updateInstallSchema, updateConfigSchema } from '../../src/lib/validation';
+import {
+  getUpdateStatus,
+  isLoopbackAddress,
+  TrayControlError,
+  triggerUpdateCheck,
+  triggerUpdateInstall,
+  updateAutoCheckConfig,
+  UpdaterUnavailableError,
+} from '../lib/updater';
 import db, { DB_FILE } from '../../db';
 import { checkpointWal } from '../db/connection';
 import { acquireRestoreLock, releaseRestoreLock } from '../db/writeQueue';
@@ -314,5 +323,60 @@ adminRouter.get('/resources/alerts', requireSystemAdmin, async (req, res) => {  
   } catch (error) {
     console.error('Error fetching alerts:', error);
     return res.status(500).json({ error: 'Failed to fetch alerts' });
+  }
+});
+
+// Self-update control endpoints (system admin only; mutating routes restricted to localhost)
+adminRouter.get('/update/status', requireSystemAdmin, async (req, res) => {
+  try {
+    const status = await getUpdateStatus(isLoopbackAddress(req.socket?.remoteAddress));
+    return res.json(status);
+  } catch (error) {
+    if (error instanceof TrayControlError || error instanceof UpdaterUnavailableError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error('Error fetching update status:', safeLog(error));
+    return res.status(500).json({ error: 'Failed to fetch update status' });
+  }
+});
+
+adminRouter.post('/update/check', requireSystemAdmin, requireLocalhost, async (_req, res) => {
+  try {
+    const status = await triggerUpdateCheck(true);
+    return res.json(status);
+  } catch (error) {
+    if (error instanceof TrayControlError || error instanceof UpdaterUnavailableError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error('Error checking for updates:', safeLog(error));
+    return res.status(500).json({ error: 'Failed to check for updates' });
+  }
+});
+
+adminRouter.post('/update/install', requireSystemAdmin, requireLocalhost, validate(updateInstallSchema), async (req, res) => {
+  try {
+    const { mode } = req.body as { mode: 'now' | 'on-exit' };
+    const status = await triggerUpdateInstall(mode);
+    return res.json(status);
+  } catch (error) {
+    if (error instanceof TrayControlError || error instanceof UpdaterUnavailableError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error('Error starting update install:', safeLog(error));
+    return res.status(500).json({ error: 'Failed to start update install' });
+  }
+});
+
+adminRouter.post('/update/config', requireSystemAdmin, requireLocalhost, validate(updateConfigSchema), async (req, res) => {
+  try {
+    const { autoCheckEnabled } = req.body as { autoCheckEnabled: boolean };
+    const status = await updateAutoCheckConfig(autoCheckEnabled);
+    return res.json(status);
+  } catch (error) {
+    if (error instanceof TrayControlError || error instanceof UpdaterUnavailableError) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error('Error updating auto-check configuration:', safeLog(error));
+    return res.status(500).json({ error: 'Failed to update configuration' });
   }
 });

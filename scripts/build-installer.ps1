@@ -1,4 +1,4 @@
-# Builds the release folder and (if makensis is available) the Windows setup installer
+﻿# Builds the release folder and (if makensis is available) the Windows setup installer
 param(
     [switch]$SkipReleaseBuild = $false
 )
@@ -51,6 +51,13 @@ try {
     & $makensis "/DVERSION=$version" $nsiScript
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ Setup installer created: release\TeacherAssistant-Setup.exe" -ForegroundColor Green
+        $manifestScript = Join-Path $repoRoot "scripts\update-manifest.mjs"
+        $releaseDir = Join-Path $repoRoot "release\TeacherAssistant-v$version"
+        $outDir = Join-Path $repoRoot "release"
+        node $manifestScript generate-manifest --release-dir "$releaseDir" --out-dir "$outDir" --version "$version"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to update release manifest after NSIS build."
+        }
     } else {
         Write-Error "NSIS compilation failed with exit code $LASTEXITCODE"
     }

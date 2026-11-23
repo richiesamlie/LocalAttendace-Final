@@ -73,6 +73,17 @@ export function checkpointWal(): void {
   }
 }
 
+export function closeDatabase(): void {
+  if (isPostgresMode()) return;
+  try {
+    if (_db && _db.open) {
+      _db.close();
+    }
+  } catch (_err) {
+    // Non-critical during shutdown
+  }
+}
+
 export function openDatabase(): Database.Database {
   _db = new Database(isPostgresMode() ? ':memory:' : DB_FILE, { timeout: 5000 });
   initConnection();

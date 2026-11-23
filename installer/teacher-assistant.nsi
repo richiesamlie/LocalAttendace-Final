@@ -52,6 +52,11 @@ VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "LegalCopyright" "Educational & Classroom Management"
 
 Section "Install"
+  ; Terminate any running instances inside $INSTDIR or on port 3000 so in-place/silent upgrades succeed
+  nsExec::Exec 'cmd.exe /c "taskkill /F /IM TeacherAssistant.exe /T >nul 2>&1"'
+  nsExec::Exec 'powershell.exe -NoProfile -Command "try { $c = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if ($c) { $c | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } } catch {}; Get-Process -Name node,TeacherAssistant -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path -like \"$INSTDIR*\" } | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"'
+  Sleep 1000
+
   SetOutPath "$INSTDIR"
 
   ; Release source directory (matches release folder output from build-release)

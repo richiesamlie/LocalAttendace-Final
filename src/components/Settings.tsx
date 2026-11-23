@@ -1,7 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useStore } from '../store';
+import UpdateCard from './UpdateCard';
 
 export default function Settings() {
+  const isAdmin = useStore((state) => state.isAdmin);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -70,6 +73,8 @@ export default function Settings() {
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings & Data Management</h1>
         <p className="text-slate-600 dark:text-slate-300 text-sm mt-1">Manage your database backups and cloud sync options.</p>
       </div>
+
+      {isAdmin && <UpdateCard />}
 
       {/* Cloud Sync Section */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-6 sm:p-8">

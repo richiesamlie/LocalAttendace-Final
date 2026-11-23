@@ -8,14 +8,16 @@ import { Server as SocketIOServer } from "socket.io";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import crypto from "crypto";
 import apiRoutes from "./routes";
 import { errorHandler } from "./src/lib/errorHandler";
 import { performanceMonitor } from "./src/middleware/performance";
 import { verifySocketAuth } from "./src/routes/middleware";
 import { classService, teacherService, sessionService, refreshTokenService, DEFAULT_SCHOOL_ID } from "./services";
-import { checkpointWal, openDatabase } from "./src/db/connection";
+import { checkpointWal, closeDatabase, openDatabase } from "./src/db/connection";
 import { initSchema } from "./src/db/schema";
 import { initStatements } from "./src/db/statements";
+import { isLoopbackAddress } from "./src/lib/updater";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
@@ -211,6 +213,24 @@ async function startServer() {
   app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
   app.use(cookieParser());
 
+  // Loopback-only graceful shutdown hook for the Windows System Tray runner so SQLite WAL
+  // flushes cleanly before updates or shutdown. Only mounted when launched by the tray runner.
+  if (process.env.SERVER_SHUTDOWN_TOKEN) {
+    app.post('/api/_internal/shutdown', (req, res) => {
+      if (!isLoopbackAddress(req.socket?.remoteAddress)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const expected = Buffer.from(process.env.SERVER_SHUTDOWN_TOKEN || '', 'utf8');
+      const provided = Buffer.from(String(req.headers['x-tray-shutdown-token'] || ''), 'utf8');
+      if (expected.length === 0 || provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      res.status(200).json({ ok: true });
+      setImmediate(handleShutdown);
+      return;
+    });
+  }
+
   // Use separated API routes
   app.use("/api", apiRoutes);
 
@@ -348,6 +368,7 @@ const handleShutdown = () => {
   const finalize = () => {
     try {
       checkpointWal();
+      closeDatabase();
     } catch (_e) {
       void 0;
     }

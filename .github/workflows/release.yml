@@ -2,12 +2,14 @@ name: Automated Release
 
 on:
   push:
-    branches:
-      - main
-      - master
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.1.0). Defaults to package.json version.'
+        required: false
+        type: string
 
 jobs:
   build-and-release:
@@ -41,11 +43,24 @@ jobs:
 
       - name: Set Version
         shell: pwsh
-        # This generates a version like v1.0.1, v1.0.2 based on the GitHub run number
-        run: echo "VERSION=v1.0.${{ github.run_number }}" >> $env:GITHUB_ENV
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME) {
+            $ver = $env:GITHUB_REF_NAME
+          } elseif (-not [string]::IsNullOrWhiteSpace($env:INPUT_VERSION)) {
+            $raw = $env:INPUT_VERSION.Trim()
+            $ver = if ($raw -match '^v') { $raw } else { "v$raw" }
+          } else {
+            $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+            $ver = "v$($pkg.version)"
+          }
+          echo "VERSION=$ver" >> $env:GITHUB_ENV
 
       - name: Build Portable Windows Bundle & Installer
         shell: pwsh
+        env:
+          UPDATE_SIGNING_PRIVATE_KEY: ${{ secrets.UPDATE_SIGNING_PRIVATE_KEY }}
         run: |
           powershell -ExecutionPolicy Bypass -File scripts\build-installer.ps1
 
@@ -56,6 +71,7 @@ jobs:
           path: |
             release/*.zip
             release/*.exe
+            release/update-manifest.json*
           if-no-files-found: warn
 
       - name: Publish Release
@@ -68,6 +84,8 @@ jobs:
 
             Welcome! This application requires **zero developer setup** (Node.js, Git, or command-line tools are not needed). Everything is pre-bundled and runs directly on Windows.
 
+            > 🔄 **Built-in Updates:** Installed desktop copies automatically check for updates once per day (when online) or on demand via **System Tray → Check for Updates** or **Settings & Backup → Application Updates**.
+
             ---
 
             ### 📦 Step 1: Which file should I download?
@@ -79,7 +97,7 @@ jobs:
                - Automatically installs to your user programs folder and places a **Teacher Assistant** shortcut on your Desktop and Start Menu.
                - Includes a clean uninstaller in Windows Settings / Apps.
 
-            2. **`TeacherAssistant-v1.0.0-Windows-Portable.zip` (Portable / USB Flash Drive)**
+            2. **`TeacherAssistant-${{ env.VERSION }}-Windows-Portable.zip` (Portable / USB Flash Drive)**
                - **No installation required.**
                - Unzip anywhere (e.g. `Downloads`, `Documents`, or a portable USB drive).
                - Keeps all settings and attendance data self-contained inside the folder without touching the Windows registry.
@@ -164,6 +182,6 @@ jobs:
           generateReleaseNotes: true
           prerelease: false
           makeLatest: true
-          artifacts: "release/*.zip,release/*.exe"
+          artifacts: "release/*.zip,release/*.exe,release/update-manifest.json*"
           token: ${{ secrets.GITHUB_TOKEN }}
 

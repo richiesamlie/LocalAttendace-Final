@@ -12,6 +12,7 @@ $pkgJson = Get-Content (Join-Path $repoRoot "package.json") -Raw | ConvertFrom-J
 $version = if ($env:VERSION) { $env:VERSION -replace '^v', '' } else { $pkgJson.version }
 $releaseName = "TeacherAssistant-v$version"
 $releaseDir = Join-Path $repoRoot "release\$releaseName"
+$appBundleZipPath = Join-Path $repoRoot "release\$releaseName-AppBundle.zip"
 $zipPath = Join-Path $repoRoot "release\$releaseName-Windows-Portable.zip"
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -35,7 +36,7 @@ Write-Host "`n[2/6] Ensuring portable Node.js and building Tray runner..." -Fore
 $portableNodeExe = Join-Path $repoRoot "node-portable\node.exe"
 
 try {
-    & (Join-Path $PSScriptRoot "build-tray.ps1")
+    & (Join-Path $PSScriptRoot "build-tray.ps1") -Version $version
 } catch {
     Write-Warning "Could not build tray runner: $_"
 }
@@ -120,9 +121,51 @@ foreach ($dep in $nativeDeps) {
     }
 }
 
-# 6. Create Zip archive
+# Stamp version.json (including deterministic runtimeHash) into releaseDir so both AppBundle & Portable carry it
+$manifestScript = Join-Path $repoRoot "scripts\update-manifest.mjs"
+node $manifestScript write-version --release-dir "$releaseDir" --version "$version"
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to write version.json via update-manifest.mjs"
+}
+
+# 6. Create Zip archives (fast AppBundle + full Portable) and update-manifest.json
 if (-not $SkipZip) {
-    Write-Host "`n[6/6] Creating portable ZIP archive: $zipPath..." -ForegroundColor Cyan
+    Write-Host "`n[6/6] Creating AppBundle ZIP archive: $appBundleZipPath..." -ForegroundColor Cyan
+    if (Test-Path $appBundleZipPath) {
+        Remove-Item $appBundleZipPath -Force
+    }
+    $appStageDir = Join-Path $repoRoot "release\_appbundle_stage"
+    if (Test-Path $appStageDir) {
+        Remove-Item $appStageDir -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $appStageDir -Force | Out-Null
+    try {
+        foreach ($appDir in @("dist", "dist-server", "public", "scripts")) {
+            $srcDir = Join-Path $releaseDir $appDir
+            if (Test-Path $srcDir) {
+                Copy-Item $srcDir -Destination (Join-Path $appStageDir $appDir) -Recurse -Force
+            }
+        }
+        $appRootFiles = @("version.json", "QUICKSTART.txt") + $rootFiles
+        foreach ($rf in $appRootFiles) {
+            $srcFile = Join-Path $releaseDir $rf
+            if (Test-Path $srcFile) {
+                Copy-Item $srcFile -Destination (Join-Path $appStageDir $rf) -Force
+            }
+        }
+        if (Get-Command "tar.exe" -ErrorAction SilentlyContinue) {
+            tar.exe -a -cf "$appBundleZipPath" -C "$appStageDir" .
+        } else {
+            Compress-Archive -Path "$appStageDir\*" -DestinationPath $appBundleZipPath -Force
+        }
+        Write-Host "AppBundle created successfully ($([math]::Round((Get-Item $appBundleZipPath).Length / 1MB, 2)) MB)" -ForegroundColor Green
+    } finally {
+        if (Test-Path $appStageDir) {
+            Remove-Item $appStageDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Write-Host "`nCreating portable ZIP archive: $zipPath..." -ForegroundColor Cyan
     if (Test-Path $zipPath) {
         Remove-Item $zipPath -Force
     }
@@ -134,10 +177,16 @@ if (-not $SkipZip) {
     Write-Host "Archive created successfully ($([math]::Round((Get-Item $zipPath).Length / 1MB, 2)) MB)" -ForegroundColor Green
 }
 
+node $manifestScript generate-manifest --release-dir "$releaseDir" --out-dir (Join-Path $repoRoot "release") --version "$version"
+if ($LASTEXITCODE -ne 0) {
+    throw "Failed to generate update-manifest.json via update-manifest.mjs"
+}
+
 Write-Host "`n========================================" -ForegroundColor Green
 Write-Host " Release build complete!" -ForegroundColor Green
 Write-Host " Directory: $releaseDir" -ForegroundColor White
 if (-not $SkipZip) {
+    Write-Host " AppBundle: $appBundleZipPath" -ForegroundColor White
     Write-Host " Archive  : $zipPath" -ForegroundColor White
 }
 Write-Host "========================================" -ForegroundColor Green

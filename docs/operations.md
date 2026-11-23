@@ -251,11 +251,18 @@ Suggested locations:
 ## 8) Desktop Release Operations
 
 ### Build & Release Pipeline
-The automated release workflow (`.github/workflows/release.yml`) triggers on every push to `main` (or via manual `workflow_dispatch`):
-1. **Compiles System Tray Runner**: `scripts/build-tray.ps1` compiles `tray/TeacherAssistantTray.cs` into `TeacherAssistant.exe` via the Windows .NET `csc.exe` compiler.
+The automated release workflow (`.github/workflows/release.yml`) triggers on pushed version tags (`v*`) or via manual `workflow_dispatch`:
+1. **Compiles System Tray Runner**: `scripts/build-tray.ps1` compiles `tray/TeacherAssistantTray.cs`, `tray/UpdateManager.cs`, and `tray/LocalControlServer.cs` into `TeacherAssistant.exe` via the Windows .NET `csc.exe` compiler, stamping the release version and embedding `installer/update-public-key.xml` when present.
 2. **Bundles Production Backend**: `scripts/build-release.ps1` compiles `server.ts` into a single CommonJS bundle (`dist-server/index.cjs`) via `esbuild`.
 3. **Downloads Portable Node.js**: Downloads Node.js 22 LTS for Windows (matching the host/CI ABI for `better-sqlite3` prebuilds) and embeds it into the distribution directory (`node/node.exe`).
-4. **Packages Portable ZIP**: Compresses the standalone directory into `TeacherAssistant-v1.0.0-Windows-Portable.zip`.
-5. **Compiles NSIS Installer**: Compiles `installer/teacher-assistant.nsi` via NSIS into `TeacherAssistant-Setup.exe`, supporting zero-admin user installation, process termination safeguards on uninstall, and autostart integration.
-6. **Publishes Release**: Creates or updates GitHub release with binary assets and beginner user guide.
+4. **Stamps `version.json` & Packages Archives**: `scripts/update-manifest.mjs` computes a deterministic `runtimeHash` and stamps `version.json`, then packages both `TeacherAssistant-v<VERSION>-AppBundle.zip` (fast in-place app payload) and `TeacherAssistant-v<VERSION>-Windows-Portable.zip`.
+5. **Compiles NSIS Installer**: Compiles `installer/teacher-assistant.nsi` via NSIS into `TeacherAssistant-Setup.exe`, supporting zero-admin user installation, process termination safeguards on install/uninstall, and autostart integration.
+6. **Generates & Signs Update Manifest**: `scripts/update-manifest.mjs` writes `update-manifest.json` with SHA-256 checksums and file sizes; when `UPDATE_SIGNING_PRIVATE_KEY` is configured in GitHub Secrets, it also produces and verifies `update-manifest.json.sig` (RSA-2048 SHA-256).
+7. **Publishes Release**: Creates or updates the GitHub release (`git tag vX.Y.Z && git push origin vX.Y.Z` or `workflow_dispatch`) with all binaries, `update-manifest.json`, and optional `.sig`.
+
+### Cryptographic Manifest Signing Setup (One-Time)
+To enforce cryptographic signature verification on desktop self-updates:
+1. Run `node scripts/generate-update-keypair.mjs`.
+2. Commit `installer/update-public-key.xml` to the repository (never commit `.secrets/`).
+3. Copy the private PEM from `.secrets/update-signing-key.pem` into the GitHub Actions repository secret `UPDATE_SIGNING_PRIVATE_KEY`.
 

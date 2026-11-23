@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { randomBytes } from 'crypto';
 import * as svc from '../../services';
 import db from '../../db';
+import { isLoopbackAddress } from '../lib/updater';
 import type { Session, ClassTeacher, Teacher } from '../types/db';
 import type { RequestHandler } from 'express';
 
@@ -201,6 +202,13 @@ export const requireSystemAdmin: RequestHandler = async (req, res, next) => {
     console.error('[admin] Failed to verify system admin school:', error);
     return res.status(503).json({ error: 'Authentication service unavailable' });
   }
+};
+
+export const requireLocalhost: RequestHandler = (req, res, next) => {
+  if (!isLoopbackAddress(req.socket?.remoteAddress)) {
+    return res.status(403).json({ error: 'This action is only allowed from the host computer (localhost)' });
+  }
+  return next();
 };
 
 const SESSION_ACTIVITY_THROTTLE_MS = 60_000;

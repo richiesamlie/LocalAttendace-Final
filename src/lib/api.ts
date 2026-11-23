@@ -4,6 +4,36 @@ const API_BASE = '/api';
 
 type JsonObject = Record<string, unknown>;
 
+export interface UpdateStatus {
+  currentVersion: string;
+  currentRuntimeHash: string;
+  installType: 'installed' | 'portable' | 'standalone';
+  managedByTray: boolean;
+  canSelfUpdate: boolean;
+  state: 'idle' | 'checking' | 'available' | 'up-to-date' | 'downloading' | 'applying' | 'restarting' | 'error' | 'rolled-back';
+  autoCheckEnabled: boolean;
+  lastCheckedAt: string | null;
+  availableVersion: string | null;
+  releaseNotesUrl: string | null;
+  updateKind: 'app-bundle' | 'full-installer' | 'full-portable' | '';
+  downloadSizeBytes: number;
+  downloadProgress: number;
+  signatureVerified: boolean;
+  signatureRequired: boolean;
+  installOnExit: boolean;
+  lastError: string | null;
+  isLocalhost?: boolean;
+}
+
+export class ApiError extends Error {
+  public readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -64,7 +94,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
       const body = await response.json();
       if (body?.error) message = body.error;
     } catch { /* ignore JSON parse errors */ }
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
   return response.json();
 }
@@ -158,4 +188,16 @@ export const api = {
     const params = windowMinutes ? `?window=${windowMinutes}` : '';
     return fetchApi<JsonObject>(`/admin/resources/alerts${params}`);
   },
+
+  // --- SELF-UPDATE (System Admin only) ---
+  getUpdateStatus: () => fetchApi<UpdateStatus>('/admin/update/status'),
+  checkForUpdates: () => fetchApi<UpdateStatus>('/admin/update/check', { method: 'POST' }),
+  installUpdate: (mode: 'now' | 'on-exit') => fetchApi<UpdateStatus>('/admin/update/install', {
+    method: 'POST',
+    body: JSON.stringify({ mode }),
+  }),
+  setUpdateConfig: (autoCheckEnabled: boolean) => fetchApi<UpdateStatus>('/admin/update/config', {
+    method: 'POST',
+    body: JSON.stringify({ autoCheckEnabled }),
+  }),
 };
