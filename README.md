@@ -25,8 +25,8 @@ No installation of Node.js, Git, or command-line tools is required. Download the
 
 | File | Type | Best For |
 |---|---|---|
-| **`TeacherAssistant-Setup.exe`** | Windows Installer | Most Windows users. Installs to your user folder, creates Desktop & Start Menu shortcuts, and includes an uninstaller. |
-| **`TeacherAssistant-v1.0.0-Windows-Portable.zip`** | Portable ZIP | Running from a USB flash drive or computers where you cannot install software. Unzip and run. |
+| **`TeacherAssistant-Setup.exe`** | Windows Installer | Most Windows users. Installs to your user folder, creates Desktop & Start Menu shortcuts, and includes an uninstaller and built-in self-updater. |
+| **`TeacherAssistant-v2.0.1-Windows-Portable.zip`** | Portable ZIP | Running from a USB flash drive or computers where you cannot install software. Unzip and run. |
 
 ### Quick Start in 3 Steps
 

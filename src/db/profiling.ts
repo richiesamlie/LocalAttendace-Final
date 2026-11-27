@@ -12,7 +12,13 @@
  * - Performance recommendations
  */
 
-import { _db } from './connection';
+import { _db, isPostgresMode } from './connection';
+
+function assertSqliteMode(): void {
+  if (isPostgresMode()) {
+    throw new Error('SQLite query profiling is not available in PostgreSQL mode');
+  }
+}
 
 function assertSafeIdentifier(identifier: string): string {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(identifier)) {
@@ -46,6 +52,7 @@ export interface ProfileResult {
  * Analyze a SQL query using EXPLAIN QUERY PLAN
  */
 export function profileQuery(sql: string): ProfileResult {
+  assertSqliteMode();
   try {
     // Get query plan
     const plan = _db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all() as QueryPlan[];
@@ -205,6 +212,7 @@ function determineSeverity(analysis: ProfileResult['analysis']): ProfileResult['
  * Get list of all indexes in the database
  */
 export function getAllIndexes(): Array<{ name: string; table: string; sql: string | null }> {
+  assertSqliteMode();
   const indexes = _db.prepare(`
     SELECT name, tbl_name as 'table', sql
     FROM sqlite_master 
@@ -220,6 +228,7 @@ export function getAllIndexes(): Array<{ name: string; table: string; sql: strin
  * Get table statistics (row counts, size estimates)
  */
 export function getTableStats(): Array<{ table: string; rowCount: number }> {
+  assertSqliteMode();
   const tables = _db.prepare(`
     SELECT name 
     FROM sqlite_master 

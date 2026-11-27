@@ -1,4 +1,12 @@
-import { db, isPostgres, pgQuery } from './utils';
+import { db, isPostgres, pgQuery, pgTransaction } from './utils';
+
+export interface AttendanceRecordWriteInput {
+  classId: string;
+  studentId: string;
+  date: string;
+  status: string;
+  reason: string | null;
+}
 
 /**
  * Record Service
@@ -42,5 +50,34 @@ export const recordService = {
       );
     }
     return db.stmt.insertAttendance.run(studentId, classId, date, status, reason);
+  },
+
+  async insertMany(records: AttendanceRecordWriteInput[]) {
+    if (records.length === 0) return;
+    if (isPostgres()) {
+      await pgTransaction(async (client) => {
+        for (const r of records) {
+          await client.query(
+            `INSERT INTO attendance_records (student_id, class_id, date, status, reason) VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (student_id, date) DO UPDATE SET status = $4, reason = $5, updated_at = NOW()`,
+            [r.studentId, r.classId, r.date, r.status, r.reason]
+          );
+        }
+      });
+      return;
+    }
+
+    if (records.length === 1) {
+      const [r] = records;
+      db.stmt.insertAttendance.run(r.studentId, r.classId, r.date, r.status, r.reason);
+      return;
+    }
+
+    const runBatch = db.transaction((items: AttendanceRecordWriteInput[]) => {
+      for (const r of items) {
+        db.stmt.insertAttendance.run(r.studentId, r.classId, r.date, r.status, r.reason);
+      }
+    });
+    runBatch(records);
   },
 };

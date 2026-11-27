@@ -28,10 +28,9 @@ const socket: Socket = io({
  *  1. When the user authenticates, the socket connects to the server.
  *  2. When the user switches to a class (currentClassId changes), the socket
  *     joins that class "room" and leaves the previous one.
- *  3. When the server emits an update event (e.g. "records_updated"), we call
- *     queryClient.invalidateQueries() for the relevant React Query key.
- *     React Query then re-fetches fresh data in the background and updates
- *     the UI automatically — no manual state management needed.
+ *  3. When the server emits an update event (e.g. "records_updated"), we
+ *     debounce and reload only the affected Zustand store slice(s) (or full
+ *     class payload when 3+ distinct resources update together).
  *  4. On logout (isAuthenticated becomes false), the socket disconnects.
  *
  * Usage: call this hook once in App.tsx — it has no return value.
@@ -83,8 +82,8 @@ export function useSocket() {
     socket.emit('join_class', currentClassId);
 
     // ----- Event listeners -----
-    // Invalidate React Query cache AND trigger granular Zustand slice reload so
-    // components observing Zustand immediately update only the changed resource.
+    // Trigger debounced granular Zustand slice reloads so components observing
+    // Zustand immediately update only the changed resource.
     type SyncResource = 'records' | 'students' | 'seating' | 'events' | 'notes' | 'timetable';
     const pendingResources = new Set<SyncResource>();
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;

@@ -8,6 +8,8 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/release/**', '**/node-portable/**'],
     env: {
       NODE_ENV: 'test',
+      DB_FILE: ':memory:',
+      DEFAULT_ADMIN_PASSWORD: 'test-default-admin-password',
     },
     coverage: {
       provider: 'v8',

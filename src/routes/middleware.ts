@@ -212,7 +212,22 @@ export const requireLocalhost: RequestHandler = (req, res, next) => {
 };
 
 const SESSION_ACTIVITY_THROTTLE_MS = 60_000;
+const SESSION_ACTIVITY_MAX_ENTRIES = 1000;
 const sessionActivityLastUpdated = new Map<string, number>();
+
+function pruneSessionActivityCache(now: number): void {
+  if (sessionActivityLastUpdated.size <= SESSION_ACTIVITY_MAX_ENTRIES) return;
+  for (const [sid, ts] of sessionActivityLastUpdated) {
+    if (now - ts >= SESSION_ACTIVITY_THROTTLE_MS) {
+      sessionActivityLastUpdated.delete(sid);
+    }
+  }
+  while (sessionActivityLastUpdated.size > SESSION_ACTIVITY_MAX_ENTRIES) {
+    const oldestKey = sessionActivityLastUpdated.keys().next().value;
+    if (!oldestKey) break;
+    sessionActivityLastUpdated.delete(oldestKey);
+  }
+}
 
 async function verifyAndPopulateTeacher(req: express.Request, res: express.Response): Promise<string | null> {
   const decoded = verifyRequestToken(req);
@@ -236,6 +251,7 @@ async function verifyAndPopulateTeacher(req: express.Request, res: express.Respo
       const lastUpdated = sessionActivityLastUpdated.get(decoded.sessionId) ?? 0;
       if (now - lastUpdated >= SESSION_ACTIVITY_THROTTLE_MS) {
         sessionActivityLastUpdated.set(decoded.sessionId, now);
+        pruneSessionActivityCache(now);
         try { await svc.sessionService.updateActivity(decoded.sessionId); } catch (e) {
           console.warn('[auth] Failed to update session activity:', (e as Error).message);
         }

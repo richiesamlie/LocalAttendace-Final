@@ -5,18 +5,6 @@ import { useStore } from '../store';
 
 export const queryKeys = {
   auth: ['auth'] as const,
-  classes: ['classes'] as const,
-  settings: ['settings'] as const,
-  students: (classId: string) => ['students', classId] as const,
-  records: (classId: string) => ['records', classId] as const,
-  events: (classId: string) => ['events', classId] as const,
-  timetable: (classId: string) => ['timetable', classId] as const,
-  seating: (classId: string) => ['seating', classId] as const,
-  dailyNotes: (classId: string) => ['dailyNotes', classId] as const,
-  classTeachers: (classId: string) => ['classTeachers', classId] as const,
-  classInvites: (classId: string) => ['classInvites', classId] as const,
-  sessions: ['sessions'] as const,
-  teachers: ['teachers'] as const,
 };
 
 export function useAuth() {

@@ -33,6 +33,21 @@ const ACCESS_TOKEN_TTL_SECONDS = 60 * 60; // 1 hour
 
 export const authRouter = express.Router();
 
+export function isPublicSchoolRegistrationEnabled(): boolean {
+  const raw = process.env.ALLOW_PUBLIC_SCHOOL_REGISTRATION?.trim().toLowerCase();
+  if (raw === 'true' || raw === '1') return true;
+  if (raw === 'false' || raw === '0') return false;
+  if (process.env.NODE_ENV === 'test') return true;
+  if (process.argv.includes('--network')) return false;
+  return true;
+}
+
+authRouter.get('/config', readLimiter, (_req, res) => {
+  return res.json({
+    allowPublicSchoolRegistration: isPublicSchoolRegistrationEnabled(),
+  });
+});
+
 /**
  * Resolve school and teacher from login inputs.
  * Supports:
@@ -171,7 +186,17 @@ authRouter.post('/login', authLimiter, validate(loginSchema), async (req, res) =
   });
 });
 
-authRouter.post('/register-school', authLimiter, validate(registerSchoolSchema), withWriteQueue(async (req, res) => {
+authRouter.post(
+  '/register-school',
+  authLimiter,
+  (_req, res, next) => {
+    if (!isPublicSchoolRegistrationEnabled()) {
+      return res.status(403).json({ error: 'Public school registration is disabled on this server' });
+    }
+    return next();
+  },
+  validate(registerSchoolSchema),
+  withWriteQueue(async (req, res) => {
   const { schoolName, schoolCode, username, password, adminName } = req.body;
   const normalizedCode = schoolCode.trim().toLowerCase();
 

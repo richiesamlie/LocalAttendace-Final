@@ -86,4 +86,35 @@ describe('Admin database restore endpoint security', () => {
     ]);
     expect(writeOutcome).toBe('resolved');
   });
+
+  it('returns 501 for SQLite backup and restore when DB_TYPE is postgres', async () => {
+    const teacher = await teacherService.getByUsername('admin') as { id: string; username: string };
+    const cookie = await mintAdminCookie();
+    const prevDbType = process.env.DB_TYPE;
+    const getByIdSpy = vi.spyOn(teacherService, 'getById').mockResolvedValue({
+      id: teacher.id,
+      username: teacher.username,
+      name: 'Administrator',
+      is_admin: 1,
+      school_id: 'school_default',
+    } as never);
+    process.env.DB_TYPE = 'postgres';
+    try {
+      const backupRes = await request(app)
+        .post('/api/admin/database/backup')
+        .set('Cookie', cookie);
+      expect(backupRes.status).toBe(501);
+
+      const restoreRes = await request(app)
+        .post('/api/admin/database/restore')
+        .set('Cookie', cookie)
+        .set('Content-Type', 'application/octet-stream')
+        .send(Buffer.from('SQLite format 3\x00fake'));
+      expect(restoreRes.status).toBe(501);
+    } finally {
+      getByIdSpy.mockRestore();
+      if (prevDbType === undefined) delete process.env.DB_TYPE;
+      else process.env.DB_TYPE = prevDbType;
+    }
+  });
 });

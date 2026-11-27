@@ -36,8 +36,18 @@ Sets `access_token` (1h) and `refresh_token` (7d) cookies (HttpOnly, `__Host-` p
 
 ---
 
+### GET /auth/config
+Check public authentication configuration flags (used by the login screen).
+
+**Response (200):**
+```json
+{ "allowPublicSchoolRegistration": true }
+```
+
+---
+
 ### POST /auth/register-school
-Register a new isolated school workspace along with its initial administrator account and default class (`My First Class`).
+Register a new isolated school workspace along with its initial administrator account and default class (`My First Class`). Gated by `ALLOW_PUBLIC_SCHOOL_REGISTRATION` (defaults to enabled locally and disabled in `--network` classroom Wi-Fi mode).
 
 **Request:**
 ```json
@@ -65,7 +75,9 @@ Register a new isolated school workspace along with its initial administrator ac
 ```
 Sets `access_token` (1h) and `refresh_token` (7d) cookies.
 
-**Errors:** 400 — School code or username already registered
+**Errors:**
+- `400` — School code or username already registered
+- `403` — Public school registration is disabled on this server
 
 ---
 

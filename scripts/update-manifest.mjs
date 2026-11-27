@@ -227,15 +227,15 @@ function runGenerateManifest(flags) {
   fs.writeFileSync(manifestPath, manifestText, 'utf8');
   console.log(`[update-manifest] Wrote ${manifestPath} (${Object.keys(assets).length} asset(s))`);
 
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const repoRoot = path.resolve(scriptDir, '..');
+  const publicKeyXmlPath = path.join(repoRoot, 'installer', 'update-public-key.xml');
   const rawPrivateKey = process.env.UPDATE_SIGNING_PRIVATE_KEY || '';
   if (rawPrivateKey.trim()) {
     const privatePem = normalizePrivateKeyPem(rawPrivateKey);
     const manifestBytes = fs.readFileSync(manifestPath);
     const signature = signBufferRsaSha256(manifestBytes, privatePem);
 
-    const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-    const repoRoot = path.resolve(scriptDir, '..');
-    const publicKeyXmlPath = path.join(repoRoot, 'installer', 'update-public-key.xml');
     if (fs.existsSync(publicKeyXmlPath)) {
       const publicXml = fs.readFileSync(publicKeyXmlPath, 'utf8');
       const publicPem = dotNetRsaXmlToPem(publicXml);
@@ -248,6 +248,15 @@ function runGenerateManifest(flags) {
     const sigPath = path.join(outDir, 'update-manifest.json.sig');
     fs.writeFileSync(sigPath, `${signature}\n`, 'utf8');
     console.log(`[update-manifest] Wrote signature ${sigPath}`);
+  } else if (fs.existsSync(publicKeyXmlPath)) {
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      throw new Error(
+        'installer/update-public-key.xml is present, so UPDATE_SIGNING_PRIVATE_KEY must be set in GitHub Actions secrets to sign update-manifest.json'
+      );
+    }
+    console.warn(
+      '[update-manifest] Warning: installer/update-public-key.xml exists but UPDATE_SIGNING_PRIVATE_KEY is unset; manifest will not be signed.'
+    );
   }
 }
 

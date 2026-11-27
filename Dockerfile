@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 # Stage 1: builder
 # ----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN npm run build
 # ----------------------------------------------------------------------------
 # Stage 2: production
 # ----------------------------------------------------------------------------
-FROM node:20-alpine
+FROM node:22-alpine
 
 # F-028 hardening:
 #   - Pin npm to a specific version that includes recent security fixes
@@ -44,27 +44,17 @@ WORKDIR /app
 # Pin npm to a version with current security patches.
 RUN npm install -g npm@11.14.1 --no-audit --no-fund
 
-# Production-only dependencies.
+# Production-only dependencies + native addon build toolchain (cleaned up after rebuild).
 COPY package*.json ./
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && \
-    npm rebuild better-sqlite3 bcrypt
+RUN apk add --no-cache --virtual .build-deps python3 make g++ && \
+    npm ci --omit=dev --ignore-scripts --no-audit --no-fund && \
+    npm rebuild better-sqlite3 bcrypt && \
+    apk del .build-deps
 
-# Copy built frontend + server entrypoints from the builder stage.
+# Copy built frontend, pre-bundled server, and env template from the builder stage.
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server
-COPY --from=builder /app/server.ts ./
-COPY --from=builder /app/db.ts ./
-COPY --from=builder /app/routes.ts ./
-COPY --from=builder /app/services.ts ./
-COPY --from=builder /app/tsconfig.json ./
-
-# Server-side module tree required by routes.ts / services.ts / db.ts / server.ts
-COPY --from=builder /app/src/db ./src/db
-COPY --from=builder /app/src/lib ./src/lib
-COPY --from=builder /app/src/middleware ./src/middleware
-COPY --from=builder /app/src/routes ./src/routes
-COPY --from=builder /app/src/services ./src/services
-COPY --from=builder /app/src/types ./src/types
+COPY --from=builder /app/.env.example ./.env.example
 
 # Create data + backup directories with proper ownership BEFORE switching
 # to the non-root user (root is needed for chown).
@@ -87,4 +77,4 @@ ENV DB_FILE=/app/data/database.sqlite
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-CMD ["npx", "tsx", "server.ts", "--network"]
+CMD ["node", "dist-server/index.cjs", "--network"]

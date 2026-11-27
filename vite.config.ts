@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -64,22 +63,6 @@ export default defineConfig(({mode}) => {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: {
         ignored: ['**/database.json', 'database.json'],
-      },
-    },
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      setupFiles: './src/test/setup.ts',
-      include: ['src/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
-      exclude: ['**/node_modules/**', '**/e2e/**', '**/release/**', '**/dist/**'],
-      coverage: {
-        reporter: ['text', 'html'],
-        exclude: ['**/node_modules/**', '**/e2e/**', '**/release/**', '**/dist/**', '**/*.d.ts'],
-        thresholds: {
-          lines: 50,
-          functions: 50,
-          branches: 50,
-        },
       },
     },
     esbuild: {

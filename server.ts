@@ -18,20 +18,20 @@ import { checkpointWal, closeDatabase, openDatabase } from "./src/db/connection"
 import { initSchema } from "./src/db/schema";
 import { initStatements } from "./src/db/statements";
 import { isLoopbackAddress } from "./src/lib/updater";
+import { resolveAllowedOrigins, isSameHostNetworkOrigin } from "./src/lib/networkOrigins";
 
 // Singleton Socket.io instance — exported so routes.ts can emit events
 export let io: SocketIOServer;
 let activeHttpServer: ReturnType<typeof createHttpServer> | null = null;
+let isNetworkMode = false;
 
-// Get allowed origins from environment or default to localhost
-const getAllowedOrigins = () => {
-  const origins = process.env.ALLOWED_ORIGINS;
-  if (origins) {
-    return origins.split(',').map(o => o.trim());
-  }
-  // Default: allow localhost in all forms
-  return ['http://localhost:3000', 'http://127.0.0.1:3000'];
-};
+// Get allowed origins from environment or default to localhost (+ LAN IPv4s in --network mode)
+const getAllowedOrigins = () =>
+  resolveAllowedOrigins({
+    allowedOriginsEnv: process.env.ALLOWED_ORIGINS,
+    isNetworkMode,
+    port: 3000,
+  });
 
 // Auto-detect and configure database
 async function configureDatabase() {
@@ -82,6 +82,7 @@ async function configureDatabase() {
 async function startServer() {
   const args = process.argv.slice(2);
   const isNetwork = args.includes('--network');
+  isNetworkMode = isNetwork;
   const HOST = isNetwork ? '0.0.0.0' : '127.0.0.1';
   
   // Configure database (auto-detect PostgreSQL)
@@ -110,7 +111,7 @@ async function startServer() {
         const allowed = getAllowedOrigins();
         // No Origin header (server-to-server) is allowed; same-origin
         // requests may omit the header depending on the browser.
-        if (!origin || allowed.includes(origin)) {
+        if (!origin || allowed.includes(origin) || isSameHostNetworkOrigin(origin, req.headers.host, { allowedOriginsEnv: process.env.ALLOWED_ORIGINS, isNetworkMode })) {
           return callback(null, true);
         }
         // Origin present but not in allow-list → reject

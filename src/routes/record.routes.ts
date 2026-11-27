@@ -1,6 +1,5 @@
 import express from 'express';
-import { recordService, classService, studentService, teacherService, isPostgres, DEFAULT_SCHOOL_ID } from '../../services';
-import db from '../../db';
+import { recordService, classService, studentService, teacherService, DEFAULT_SCHOOL_ID } from '../../services';
 import { requireAuth, requireClassAccess, resolveCallerSchoolId, withWriteQueue, postLimiter, readLimiter } from './middleware';
 import { io } from '../../server';
 import { validate, attendanceRecordsPayloadSchema } from '../../src/lib/validation';
@@ -71,18 +70,15 @@ recordRouter.post('/', postLimiter, requireAuth, validate(attendanceRecordsPaylo
     }
   }
 
-  if (!isPostgres() && records.length > 1) {
-    const insertMany = db.transaction((items: AttendanceInput[]) => {
-      for (const r of items) {
-        recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
-      }
-    });
-    insertMany(records);
-  } else {
-    for (const r of records) {
-      await recordService.insert(r.classId, r.studentId, r.date, r.status, r.reason || null);
-    }
-  }
+  await recordService.insertMany(
+    records.map((r) => ({
+      classId: r.classId,
+      studentId: r.studentId,
+      date: r.date,
+      status: r.status,
+      reason: r.reason || null,
+    }))
+  );
   res.json({ success: true });
   const classIds = [...new Set(records.map((r) => r.classId))];
   classIds.forEach((cid) => io?.to(cid).emit('records_updated'));

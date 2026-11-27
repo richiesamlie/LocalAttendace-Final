@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Download, Upload, HardDrive, Cloud, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store';
+import { api } from '../lib/api';
 import UpdateCard from './UpdateCard';
 
 export default function Settings() {
@@ -13,15 +14,7 @@ export default function Settings() {
   const handleExportBackup = async () => {
     try {
       setImportStatus('idle');
-      const response = await fetch('/api/admin/database/backup', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to download database backup.');
-      }
-      const blob = await response.blob();
+      const blob = await api.downloadDatabaseBackup();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -41,17 +34,7 @@ export default function Settings() {
     if (!file) return;
 
     try {
-      const response = await fetch('/api/admin/database/restore', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: file,
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Invalid SQLite Database or Server Error');
-      }
+      await api.restoreDatabaseBackup(file);
 
       setImportStatus('success');
       setTimeout(() => window.location.reload(), 1500);
@@ -83,22 +66,25 @@ export default function Settings() {
             <Cloud className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Google Drive Sync</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Cloud Backup Sync (Google Drive / OneDrive)</h2>
             <p className="text-slate-600 dark:text-slate-400 text-sm mt-2 leading-relaxed">
-              Because this is a secure, local-only application, it does not connect directly to the internet to sync your data. 
-              However, you can easily sync your database to Google Drive (or OneDrive/Dropbox) using their desktop apps.
+              Because this is a local-first application, it does not upload your data to external servers automatically.
+              You can back up your database to Google Drive, OneDrive, or Dropbox using exported snapshot files.
             </p>
+            <div className="mt-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs sm:text-sm text-amber-900 dark:text-amber-200">
+              <strong>Important:</strong> Do not run Teacher Assistant directly from inside a live cloud-sync folder.
+              SQLite uses active write-ahead log files (<code>database.sqlite</code>, <code>-wal</code>, <code>-shm</code>) that can be corrupted if synced while the server is running.
+            </div>
             
-            <div className="mt-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
-              <h3 className="font-medium text-slate-900 dark:text-white mb-3">How to set up automatic cloud sync:</h3>
+            <div className="mt-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-700">
+              <h3 className="font-medium text-slate-900 dark:text-white mb-3">How to safely back up to the cloud:</h3>
               <ol className="list-decimal list-inside space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                <li>Download and install <strong>Google Drive for Desktop</strong> on your computer.</li>
-                <li>Close the Local Attendance app (close the terminal window).</li>
-                <li>Move the entire <code>LocalAttendance</code> folder into your Google Drive folder on your computer.</li>
-                <li>Run the <code>start-app.bat</code> file from its new location inside Google Drive.</li>
+                <li>Keep Teacher Assistant installed in a normal local folder (outside Google Drive / OneDrive).</li>
+                <li>Click <strong>Download Backup (.sqlite)</strong> below (or exit Teacher Assistant completely before copying <code>database.sqlite</code>).</li>
+                <li>Save the exported backup snapshot into your Google Drive, OneDrive, or Dropbox folder.</li>
               </ol>
               <p className="mt-4 text-sm text-slate-600 dark:text-slate-300 italic">
-              That&apos;s it! Every time you take attendance, the <code>database.sqlite</code> file will automatically sync to your Google Drive in the background.
+                Each downloaded <code>.sqlite</code> snapshot is self-contained and safe to store or restore on any computer.
               </p>
             </div>
           </div>

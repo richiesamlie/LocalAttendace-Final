@@ -1,6 +1,6 @@
 # Architecture — Teacher Assistant
 
-**Last Updated:** 2026-11-10
+**Last Updated:** 2026-11-27
 **Branch:** `main`
 
 ## Tech Stack
@@ -8,14 +8,14 @@
 | Layer | Technology |
 |-------|------------|
 | Frontend | React 19, TypeScript, Vite 6, Tailwind CSS 4 |
-| State | Zustand 5 (primary), React Query 5 (caching + real-time Socket.IO sync) |
+| State | Zustand 5 (primary classroom state), React Query 5 (auth & admin monitor queries) |
 | Backend | Express 4.22+, better-sqlite3 12, optional PostgreSQL (`pg` 8.22+) |
 | Realtime | Socket.IO 4 (`allowRequest` origin check + JWT handshake auth + tenant-verified rooms) |
 | Auth | JWT (access token 1h + refresh token 7d rotation), httpOnly cookies |
 | Validation | Zod 4 |
 | Security | Helmet (CSP), express-rate-limit, prepared statements, PII log redaction, multi-school tenant isolation |
-| Password hashing | bcrypt cost 12 (async-only; no sync hash paths) |
-| Container | Docker multi-stage (alpine, non-root UID 1001, capability drops) |
+| Password hashing | bcrypt cost 12 (async on all runtime HTTP paths; sync only during first-run SQLite schema bootstrap) |
+| Container | Docker multi-stage (`node:22-alpine`, pre-bundled `dist-server/index.cjs`, non-root UID 1001, capability drops) |
 
 ## Architecture Overview
 
@@ -34,7 +34,7 @@ Components (15+ pages)
 
 ### Frontend State (src/store.ts + src/hooks/useData.ts + src/hooks/useSocket.ts)
 
-**Hybrid approach** — Zustand is the primary state source, React Query provides caching/deduplication, and `useSocket` reconciles real-time Socket.IO events (`students_updated`, `records_updated`, `events_updated`, `timetable_updated`, `seating_updated`, `notes_updated`) across both React Query caches and the active Zustand store.
+**Hybrid approach** — Zustand is the primary state source for classroom data, React Query manages auth and admin monitoring queries, and `useSocket` debounces real-time Socket.IO events (`students_updated`, `records_updated`, `events_updated`, `timetable_updated`, `seating_updated`, `notes_updated`) into granular Zustand slice reloads (`reloadClassResource` / `reloadClassData`).
 
 ## Backend Structure
 
@@ -42,7 +42,7 @@ Components (15+ pages)
 
 | Module | Route Prefix | Purpose |
 |--------|--------------|---------|
-| auth.routes.ts | /auth | login, register-school, logout, refresh, verify, me, verify-password |
+| auth.routes.ts | /auth | login, register-school (configurable via `ALLOW_PUBLIC_SCHOOL_REGISTRATION`), config, logout, refresh, verify, me, verify-password |
 | class.routes.ts | /classes | class CRUD, dashboard payload, teachers, invites |
 | student.routes.ts | /classes, /students | student CRUD + sync (`/:classId/students`, `/:id`) |
 | record.routes.ts | /, /records | attendance records (`/classes/:classId/records`, `POST /records`) |
@@ -53,7 +53,7 @@ Components (15+ pages)
 | invite.routes.ts | /invites | invite redemption (`POST /invites/redeem`) |
 | session.routes.ts | /sessions | session management (`GET /sessions`, `POST /sessions/revoke`) |
 | teacher.routes.ts | /teachers | school-scoped teacher list + register |
-| admin.routes.ts | /admin | settings (school-scoped), database, metrics, profiling, resources (system-admin) |
+| admin.routes.ts | /admin | settings (school-scoped), database, metrics, profiling, resources, update (system-admin) |
 | health.routes.ts | /health | health check (constant-time, no DB info leak) |
 
 ### Middleware Stack (src/routes/middleware.ts)
@@ -241,8 +241,8 @@ Service layer abstracts the driver; both SQLite and Postgres paths are tested.
 ## Container Architecture (Docker)
 
 Multi-stage Dockerfile:
-1. **Builder stage** — `node:20-alpine`, `npm ci --ignore-scripts --no-audit --no-fund`, builds frontend
-2. **Production stage** — `node:20-alpine`, copies built assets + server source, runs as non-root user (UID 1001)
+1. **Builder stage** — `node:22-alpine`, `npm ci --ignore-scripts --no-audit --no-fund`, builds frontend (`dist/`) and pre-bundled server (`dist-server/index.cjs`)
+2. **Production stage** — `node:22-alpine`, installs production dependencies, copies `dist/`, `dist-server/`, and `.env.example`, runs `node dist-server/index.cjs --network` as non-root user (UID 1001)
 
 `docker-compose.yml` hardening:
 - `security_opt: no-new-privileges:true`
@@ -251,6 +251,7 @@ Multi-stage Dockerfile:
 - `cpus: 1.0` / `memory: 512M` / `pids: 100` (resource limits)
 - Named volume `teacher-assistant-data` (not bind mount)
 - `tmpfs: /app/backups` (100M cap, ephemeral)
+- `COOKIE_SECURE=${COOKIE_SECURE:-false}` defaults to `false` for plain-HTTP local/LAN Docker (set `COOKIE_SECURE=true` in `.env` behind HTTPS)
 
 Healthcheck uses Node.js HTTP (already in image) instead of wget.
 
@@ -296,34 +297,37 @@ adminRouter.get('/settings', async (_req, res) => {
 
 ## Windows Desktop & Deployment Architecture
 
-### Native System Tray Runner (`TeacherAssistant.exe`)
+### Native System Tray Runner & Self-Updater (`TeacherAssistant.exe`)
 
-For standard Windows desktop environments, the application includes a native, lightweight GUI tray runner written in C# WinForms ([`tray/TeacherAssistantTray.cs`](../tray/TeacherAssistantTray.cs)):
+For standard Windows desktop environments, the application includes a native, lightweight GUI tray runner written in C# WinForms ([`tray/TeacherAssistantTray.cs`](../tray/TeacherAssistantTray.cs)), paired with [`tray/UpdateManager.cs`](../tray/UpdateManager.cs) and [`tray/LocalControlServer.cs`](../tray/LocalControlServer.cs):
 
 ```
-[ TeacherAssistant.exe (C# WinForms, ~20KB) ]
+[ TeacherAssistant.exe (C# WinForms, ~75KB) ]
   ├── Single-Instance Mutex (Local\TeacherAssistant_Tray_SingleInstance_App)
-  ├── System Tray NotifyIcon & Context Menu (Open, Mode, Restart, Exit)
+  ├── System Tray NotifyIcon & Context Menu (Open, Mode, Restart, Check/Install Updates, Exit)
+  ├── LocalControlServer (127.0.0.1 ephemeral port, X-Tray-Token authenticated bridge for Admin UI)
+  ├── UpdateManager (RSA-2048 manifest check, SHA-256 download verify, rollback on /api/health failure)
   ├── Background Thread: Polling /api/health with SynchronizationContext.Post()
   └── Child Process: Hidden Node.js runtime (dist-server/index.cjs)
 ```
 
 1. **Zero-Dependency Compilation**:
-   - Compiled using the built-in Windows .NET Framework compiler (`%windir%\Microsoft.NET\Framework64\v4.0.30319\csc.exe`) via [`scripts/build-tray.ps1`](../scripts/build-tray.ps1).
-   - Produces a standalone `/target:winexe` binary (~20 KB) with no external runtimes required.
+   - Compiled using the built-in Windows .NET Framework compiler (`%windir%\Microsoft.NET\Framework64\v4.0.30319\csc.exe`) via [`scripts/build-tray.ps1`](../scripts/build-tray.ps1), embedding `installer/update-public-key.xml` when present.
+   - Produces a standalone `/target:winexe` binary with no external runtimes required.
 2. **Single-Instance Enforcement**:
    - Uses a session-scoped `Local\` mutex. If launched while already running, the secondary instance sends a browser open signal to `http://127.0.0.1:3000` and exits immediately.
 3. **Thread-Safe Asynchronous Health Monitoring**:
    - Spawns the backend engine asynchronously, then polls `http://127.0.0.1:3000/api/health` from a background worker thread.
    - Dispatches UI status and balloon tips to the main WinForms thread using `SynchronizationContext.Post()`, ensuring stability even before context menu Win32 window handles (`HWND`) are allocated.
 4. **Lifecycle & Clean Shutdown**:
-   - Listens to `Application.ApplicationExit` and `SystemEvents.SessionEnding` to gracefully terminate the backend child process and free port 3000.
+   - Listens to `Application.ApplicationExit` and `SystemEvents.SessionEnding` to gracefully flush SQLite WAL via `/api/_internal/shutdown` and terminate the backend child process.
 
 ### Release Packaging Pipeline
 
-The release pipeline ([`scripts/build-release.ps1`](../scripts/build-release.ps1)) generates two release artifacts:
+The release pipeline ([`scripts/build-release.ps1`](../scripts/build-release.ps1)) generates the v2.0.1 release artifacts:
 1. **`TeacherAssistant-Setup.exe`**: Built via NSIS (`installer/teacher-assistant.nsi`). Installs per-user to `$LOCALAPPDATA\Programs\Teacher Assistant` (zero admin rights required), registers uninstaller with running process termination hooks, and supports opt-in autostart via `$SMSTARTUP`.
-2. **`TeacherAssistant-v1.0.0-Windows-Portable.zip`**: Self-contained portable distribution bundling portable Node.js (Node 22 LTS), production SQLite driver, bundled frontend assets, and `TeacherAssistant.exe`.
+2. **`TeacherAssistant-v2.0.1-Windows-Portable.zip`**: Self-contained portable distribution bundling portable Node.js (Node 22 LTS), production SQLite/bcrypt drivers, bundled frontend/server assets, `version.json`, and `TeacherAssistant.exe`.
+3. **`TeacherAssistant-v2.0.1-AppBundle.zip` & `update-manifest.json`**: Fast incremental payload (when `runtimeHash` matches) and signed manifest for automatic or on-demand desktop self-updates.
 
 ## See Also
 

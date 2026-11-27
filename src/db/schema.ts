@@ -123,23 +123,6 @@ export function initSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_seating_class ON seating_layout(class_id);
   `);
 
-  const tables = _db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='class_teachers'").all();
-  if (tables.length === 0) {
-    _db.exec(`
-      CREATE TABLE IF NOT EXISTS class_teachers (
-        class_id TEXT NOT NULL,
-        teacher_id TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'teacher',
-        PRIMARY KEY (class_id, teacher_id),
-        FOREIGN KEY (class_id) REFERENCES classes (id) ON DELETE CASCADE,
-        FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
-      );
-      CREATE INDEX IF NOT EXISTS idx_class_teachers_class ON class_teachers(class_id);
-      CREATE INDEX IF NOT EXISTS idx_class_teachers_teacher ON class_teachers(teacher_id);
-    `);
-    _db.exec(`INSERT OR IGNORE INTO class_teachers (class_id, teacher_id, role) SELECT id, teacher_id, 'owner' FROM classes`);
-  }
-
   ensureColumn('students', 'is_flagged', 'INTEGER DEFAULT 0');
   ensureColumn('students', 'is_archived', 'INTEGER DEFAULT 0');
 
@@ -296,7 +279,7 @@ export function initSchema(): void {
       DEFAULTS.TEACHER_ID, DEFAULTS.TEACHER_USERNAME, hash, DEFAULTS.TEACHER_NAME, 1
     );
     if (insertResult.changes > 0) {
-      console.log(`[db] Default administrator created. Password: ${defaultPassword} (change immediately!)`);
+      console.log(`[db] Default administrator created (username: ${DEFAULTS.TEACHER_USERNAME}). Change the initial password immediately!`);
     }
 
     _db.exec(`UPDATE classes SET teacher_id = '${DEFAULTS.TEACHER_ID}' WHERE teacher_id IS NULL`);

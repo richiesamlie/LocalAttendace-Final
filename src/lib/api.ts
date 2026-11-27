@@ -60,15 +60,26 @@ async function attemptTokenRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function fetchWithAuthRetry(
+  endpoint: string,
+  options?: RequestInit,
+  includeJsonHeader = true,
+): Promise<Response> {
   const url = `${API_BASE}${endpoint}`;
+  const buildHeaders = (): HeadersInit | undefined => {
+    if (includeJsonHeader) {
+      return {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      };
+    }
+    return options?.headers;
+  };
+
   let response = await fetch(url, {
     ...options,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers: buildHeaders(),
   });
 
   if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/register-school' && endpoint !== '/auth/refresh') {
@@ -77,10 +88,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
       response = await fetch(url, {
         ...options,
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
+        headers: buildHeaders(),
       });
     }
     if (response.status === 401 && endpoint !== '/auth/verify' && endpoint !== '/auth/verify-password' && typeof window !== 'undefined') {
@@ -88,19 +96,29 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     }
   }
 
+  return response;
+}
+
+async function throwResponseError(response: Response): Promise<never> {
+  let message = response.statusText;
+  try {
+    const body = await response.json();
+    if (body?.error) message = body.error;
+  } catch { /* ignore JSON parse errors */ }
+  throw new ApiError(message, response.status);
+}
+
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const response = await fetchWithAuthRetry(endpoint, options, true);
   if (!response.ok) {
-    let message = response.statusText;
-    try {
-      const body = await response.json();
-      if (body?.error) message = body.error;
-    } catch { /* ignore JSON parse errors */ }
-    throw new ApiError(message, response.status);
+    return throwResponseError(response);
   }
   return response.json();
 }
 
 export const api = {
   // --- AUTH ---
+  getAuthConfig: () => fetchApi<{ allowPublicSchoolRegistration: boolean }>('/auth/config'),
   login: (username: string, password: string, schoolCode?: string) => fetchApi<{success: boolean, teacherId: string, username: string, name: string, isAdmin: boolean, schoolId?: string, schoolCode?: string, schoolName?: string}>('/auth/login', { method: 'POST', body: JSON.stringify(schoolCode ? { username, password, schoolCode } : { username, password }) }),
   registerSchool: (payload: { schoolName: string; schoolCode: string; username: string; password: string; adminName: string }) => fetchApi<{success: boolean, teacherId: string, username: string, name: string, isAdmin: boolean, schoolId: string, schoolCode: string, schoolName: string}>('/auth/register-school', { method: 'POST', body: JSON.stringify(payload) }),
   logout: () => fetchApi<{success: boolean}>('/auth/logout', { method: 'POST' }),
@@ -151,6 +169,28 @@ export const api = {
 
   getSettings: () => fetchApi<Record<string, string>>('/admin/settings'),
   saveSetting: (key: string, value: string) => fetchApi<{success: boolean}>('/admin/settings', { method: 'POST', body: JSON.stringify({ key, value }) }),
+  downloadDatabaseBackup: async (): Promise<Blob> => {
+    const response = await fetchWithAuthRetry('/admin/database/backup', { method: 'POST' }, false);
+    if (!response.ok) {
+      return throwResponseError(response);
+    }
+    return response.blob();
+  },
+  restoreDatabaseBackup: async (file: Blob): Promise<{ success: boolean; message?: string }> => {
+    const response = await fetchWithAuthRetry(
+      '/admin/database/restore',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      },
+      false,
+    );
+    if (!response.ok) {
+      return throwResponseError(response);
+    }
+    return response.json();
+  },
 
   // --- INVITES (Phase 2.2) ---
   createInvite: (classId: string, role?: string, expiresInHours?: number) => fetchApi<{success: boolean, code: string, inviteUrl: string, role: string, expiresAt: string}>(`/classes/${classId}/invites`, { method: 'POST', body: JSON.stringify({ role, expiresInHours }) }),

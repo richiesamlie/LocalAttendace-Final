@@ -16,12 +16,18 @@ import {
   UpdaterUnavailableError,
 } from '../lib/updater';
 import db, { DB_FILE } from '../../db';
-import { checkpointWal } from '../db/connection';
+import { checkpointWal, isPostgresMode } from '../db/connection';
 import { acquireRestoreLock, releaseRestoreLock } from '../db/writeQueue';
 import type { Teacher, SettingRow } from '../../src/types/db';
 import { metricsStore } from '../middleware/metricsStore';
 import { profileQuery, getAllIndexes, getTableStats, getOptimizationScore } from '../db/profiling';
 import { resourceMonitor } from '../middleware/resourceMonitor';
+
+function parseWindowMinutes(raw: unknown): number {
+  const parsed = Number.parseInt(typeof raw === 'string' ? raw : '60', 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return 60;
+  return Math.min(parsed, 1440);
+}
 
 export const adminRouter = express.Router();
 
@@ -72,6 +78,11 @@ adminRouter.post('/settings', validate(settingSchema), withWriteQueue(async (req
 }));
 
 adminRouter.post('/database/backup', requireSystemAdmin, async (_req, res) => {
+  if (isPostgresMode()) {
+    return res.status(501).json({
+      error: 'SQLite database backup is not available in PostgreSQL mode. Use pg_dump instead.',
+    });
+  }
   try {
     const dbPath = path.resolve(process.env.DB_FILE || DB_FILE);
     // F-016: async fs.access instead of sync existsSync
@@ -90,6 +101,12 @@ adminRouter.post('/database/backup', requireSystemAdmin, async (_req, res) => {
 });
 
 adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Promise<void> => {
+  if (isPostgresMode()) {
+    res.status(501).json({
+      error: 'SQLite database restore is not available in PostgreSQL mode. Use pg_restore instead.',
+    });
+    return;
+  }
   let lockAcquired = false;
   let lockReleased = false;
   const safeReleaseRestoreLock = () => {
@@ -173,9 +190,10 @@ adminRouter.post('/database/restore', requireSystemAdmin, async (req, res): Prom
 });
 
 // Performance metrics endpoints (admin only)
-adminRouter.get('/metrics', requireSystemAdmin, async (req, res) => {  try {
+adminRouter.get('/metrics', requireSystemAdmin, async (req, res) => {
+  try {
     // Get time window from query param (in minutes), default to last hour
-    const windowMinutes = parseInt(req.query.window as string || '60', 10);
+    const windowMinutes = parseWindowMinutes(req.query.window);
     const windowMs = windowMinutes * 60 * 1000;
 
     const aggregated = metricsStore.getAggregated(windowMs);
@@ -213,7 +231,11 @@ adminRouter.delete('/metrics', requireSystemAdmin, async (_req, res) => {  try {
 });
 
 // Query profiling endpoints (admin only)
-adminRouter.post('/profiling/query', requireSystemAdmin, async (req, res) => {  try {
+adminRouter.post('/profiling/query', requireSystemAdmin, async (req, res) => {
+  if (isPostgresMode()) {
+    return res.status(501).json({ error: 'SQLite query profiler is only available in SQLite mode' });
+  }
+  try {
     const { sql } = req.body;
     if (!sql || typeof sql !== 'string') {
       return res.status(400).json({ error: 'SQL query is required' });
@@ -239,6 +261,9 @@ adminRouter.post('/profiling/query', requireSystemAdmin, async (req, res) => {  
 });
 
 adminRouter.get('/profiling/statements', requireSystemAdmin, async (_req, res) => {
+  if (isPostgresMode()) {
+    return res.status(501).json({ error: 'SQLite query profiler is only available in SQLite mode' });
+  }
   const sampleQueries = [
     { name: 'getStudentsByClass', sql: "SELECT id, class_id, name, roll_number, parent_name, parent_phone, is_flagged, is_archived FROM students WHERE class_id = 'class_default' AND is_archived = 0 ORDER BY name" },
     { name: 'getRecordsByClass', sql: "SELECT student_id, class_id, date, status, reason FROM attendance_records WHERE class_id = 'class_default'" },
@@ -261,7 +286,11 @@ adminRouter.get('/profiling/statements', requireSystemAdmin, async (_req, res) =
   });
 });
 
-adminRouter.get('/profiling/indexes', requireSystemAdmin, async (_req, res) => {  try {
+adminRouter.get('/profiling/indexes', requireSystemAdmin, async (_req, res) => {
+  if (isPostgresMode()) {
+    return res.status(501).json({ error: 'SQLite query profiler is only available in SQLite mode' });
+  }
+  try {
     const indexes = getAllIndexes();
     return res.json({ indexes });
   } catch (error) {
@@ -270,7 +299,11 @@ adminRouter.get('/profiling/indexes', requireSystemAdmin, async (_req, res) => {
   }
 });
 
-adminRouter.get('/profiling/stats', requireSystemAdmin, async (_req, res) => {  try {
+adminRouter.get('/profiling/stats', requireSystemAdmin, async (_req, res) => {
+  if (isPostgresMode()) {
+    return res.status(501).json({ error: 'SQLite query profiler is only available in SQLite mode' });
+  }
+  try {
     const stats = getTableStats();
     const indexes = getAllIndexes();
     
@@ -296,9 +329,10 @@ adminRouter.get('/resources', requireSystemAdmin, async (_req, res) => {  try {
   }
 });
 
-adminRouter.get('/resources/history', requireSystemAdmin, async (req, res) => {  try {
+adminRouter.get('/resources/history', requireSystemAdmin, async (req, res) => {
+  try {
     // Get time window from query param (in minutes), default to last hour
-    const windowMinutes = parseInt(req.query.window as string || '60', 10);
+    const windowMinutes = parseWindowMinutes(req.query.window);
     const windowMs = windowMinutes * 60 * 1000;
 
     const current = resourceMonitor.getCurrent();
@@ -313,9 +347,10 @@ adminRouter.get('/resources/history', requireSystemAdmin, async (req, res) => { 
   }
 });
 
-adminRouter.get('/resources/alerts', requireSystemAdmin, async (req, res) => {  try {
+adminRouter.get('/resources/alerts', requireSystemAdmin, async (req, res) => {
+  try {
     // Get time window from query param (in minutes), default to last hour
-    const windowMinutes = parseInt(req.query.window as string || '60', 10);
+    const windowMinutes = parseWindowMinutes(req.query.window);
     const windowMs = windowMinutes * 60 * 1000;
 
     const alerts = resourceMonitor.getAlerts(windowMs);

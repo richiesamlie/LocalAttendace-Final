@@ -67,4 +67,31 @@ describe('Admin profiling endpoint security', () => {
     expect(res.body).toHaveProperty('analysis');
     expect(res.body).toHaveProperty('score');
   });
+
+  it('returns 501 for SQLite query profiling when DB_TYPE is postgres', async () => {
+    const admin = await teacherService.getByUsername('admin') as { id: string; username: string };
+    const cookie = await adminCookie();
+    const prevDbType = process.env.DB_TYPE;
+    const getByIdSpy = vi.spyOn(teacherService, 'getById').mockResolvedValue({
+      id: admin.id,
+      username: admin.username,
+      name: 'Administrator',
+      is_admin: 1,
+      school_id: 'school_default',
+    } as never);
+    process.env.DB_TYPE = 'postgres';
+    try {
+      const res = await request(app)
+        .post('/api/admin/profiling/query')
+        .set('Cookie', cookie)
+        .send({ sql: 'SELECT id, name FROM teachers LIMIT 1' });
+
+      expect(res.status).toBe(501);
+      expect(String(res.body.error)).toMatch(/SQLite/i);
+    } finally {
+      getByIdSpy.mockRestore();
+      if (prevDbType === undefined) delete process.env.DB_TYPE;
+      else process.env.DB_TYPE = prevDbType;
+    }
+  });
 });

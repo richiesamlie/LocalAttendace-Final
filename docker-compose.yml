@@ -57,6 +57,8 @@ services:
     environment:
       - DB_FILE=/app/data/database.sqlite
       - NODE_ENV=production
+      # Default to false for plain-HTTP local/LAN Docker; set COOKIE_SECURE=true in .env behind HTTPS
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
 
     # F-029: healthcheck uses node (already in image) rather than wget
     # (which would require installing busybox-extras in alpine).

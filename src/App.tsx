@@ -47,6 +47,7 @@ const VALID_PAGES = new Set([
 
 function LoginScreen() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [allowRegistration, setAllowRegistration] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [schoolCode, setSchoolCode] = useState('');
@@ -55,6 +56,25 @@ function LoginScreen() {
   const [error, setError] = useState('');
   const loginMutation = useLogin();
   const registerSchoolMutation = useRegisterSchool();
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getAuthConfig()
+      .then((cfg) => {
+        if (cancelled) return;
+        const allowed = cfg.allowPublicSchoolRegistration !== false;
+        setAllowRegistration(allowed);
+        if (!allowed) {
+          setMode('login');
+        }
+      })
+      .catch(() => {
+        // Default to showing the toggle if /auth/config is unavailable
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,18 +250,20 @@ function LoginScreen() {
           </form>
         )}
 
-        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === 'login' ? 'register' : 'login');
-              setError('');
-            }}
-            className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline focus-ring rounded px-2 py-1"
-          >
-            {mode === 'login' ? 'New school? Register a school workspace' : 'Already have an account? Back to Log In'}
-          </button>
-        </div>
+        {allowRegistration && (
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'login' ? 'register' : 'login');
+                setError('');
+              }}
+              className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline focus-ring rounded px-2 py-1"
+            >
+              {mode === 'login' ? 'New school? Register a school workspace' : 'Already have an account? Back to Log In'}
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
@@ -268,6 +290,7 @@ export default function App() {
   const clearAuth = useStore(state => state.clearAuth);
   
   const authQuery = useAuth();
+  const { refetch: refetchAuth } = authQuery;
   const logoutMutation = useLogout();
   useClassSync(120000); // Fallback polling every 2 min — WebSocket handles real-time sync
   useSocket();           // Real-time sync via WebSocket
@@ -275,11 +298,11 @@ export default function App() {
   useEffect(() => {
     const handleAuthExpired = () => {
       clearAuth();
-      void authQuery.refetch();
+      void refetchAuth();
     };
     window.addEventListener('ta:auth-expired', handleAuthExpired);
     return () => window.removeEventListener('ta:auth-expired', handleAuthExpired);
-  }, [clearAuth, authQuery]);
+  }, [clearAuth, refetchAuth]);
 
   useEffect(() => {
     // Only fetch full data if authenticated

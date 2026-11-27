@@ -40,13 +40,13 @@ npm run start:network
 ```bash
 npm run lint                              # TypeScript check (blocking)
 npm run lint:eslint -- --max-warnings=0   # ESLint blocking gate
-npm run test:critical                     # 226 fast tests
-npm test                                  # 510 full suite
+npm run test:critical                     # fast security/contract tests
+npm test                                  # full Vitest suite (in-memory DB)
 bun install --frozen-lockfile             # Bun parity check
 bun run lint                              # Bun lint parity
 bun audit --audit-level=high              # Bun security audit
 npm audit --omit=dev --audit-level=high   # npm security audit
-bun run build                             # Frontend build
+bun run build                             # Frontend + server bundle build
 ```
 
 ### Security Checks
@@ -64,27 +64,19 @@ npm audit --json > npm-audit.json || true
 
 ---
 
-## 2) Script Entry Points (Bun-first)
+## 2) Script Entry Points
 
-All operational script families are Bun-first:
+Operational script families:
 - `start-app.bat`, `start-app.sh`
 - `start-internal-site.bat`, `start-internal-site.sh`
 - `setup-env.ps1`, `setup-env.sh`
 - `clean-db.ps1`, `clean-db.sh`
 - `scripts/setup-postgres.bat`, `scripts/setup-postgres.sh`
 
-Policy:
-- Avoid reintroducing `npm` / `npx` in `.bat` / `.sh` / `.ps1` scripts (Bun is the standard).
-- Prefer:
-  - `bun run <script>`
-  - `bun install --frozen-lockfile`
-  - `bun x <tool>`
-
-Exceptions (post-audit):
-- CI runs `npm install` to keep `package-lock.json` current for the
-  Full Test Suite CI lane and `npm audit` gate
-- Backend server uses `npx tsx server.ts` because `better-sqlite3`
-  native bindings don't load in Bun on Windows
+Runtime conventions:
+- Windows end-user launchers (`start-app.bat`, `start-internal-site.bat`) prefer bundled portable Node.js 22 (`node/node.exe`) executing `dist-server/index.cjs` (with `tsx` / `npm` fallback only in source checkouts).
+- Shell/CI workflows support both `npm` (Node 22 LTS) and `bun` (`bun run <script>`, `bun install --frozen-lockfile`, `bun x <tool>`).
+- Backend server uses `npx tsx server.ts` in source dev mode because `better-sqlite3` native bindings target Node 22 ABI on Windows.
 
 ---
 

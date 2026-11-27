@@ -30,9 +30,15 @@ describe('Dockerfile hardening (F-028)', () => {
     expect(fromCount).toBeGreaterThanOrEqual(2);
   });
 
-  it('uses node:20-alpine base (minimal)', () => {
+  it('uses node:22-alpine base (minimal, matches better-sqlite3 prebuild ABI)', () => {
     const dockerfile = readFileSync(join(repoRoot, 'Dockerfile'), 'utf8');
-    expect(dockerfile).toContain('node:20-alpine');
+    expect(dockerfile).toContain('node:22-alpine');
+  });
+
+  it('starts the pre-bundled production server (dist-server/index.cjs)', () => {
+    const dockerfile = readFileSync(join(repoRoot, 'Dockerfile'), 'utf8');
+    expect(dockerfile).toContain('dist-server/index.cjs');
+    expect(dockerfile).not.toMatch(/CMD\s*\[[^\]]*tsx/);
   });
 
   it('runs as non-root user (USER nodejs)', () => {
